@@ -274,6 +274,33 @@ def test_duplicate_role_does_not_satisfy_item_mapping() -> None:
         )
 
 
+def test_segment_list_must_follow_item_and_role_order() -> None:
+    rows = segments(7)
+    rows[0]["role"], rows[1]["role"] = (
+        rows[1]["role"],
+        rows[0]["role"],
+    )
+    with pytest.raises(ValidationError, match="order"):
+        validate_speaking_assessment(
+            session("listen_and_repeat"),
+            rows,
+            [],
+            FEEDBACK,
+        )
+
+
+def test_segment_time_ranges_must_not_overlap() -> None:
+    rows = segments(7)
+    rows[1]["start"] = rows[0]["end"] - 0.1
+    with pytest.raises(ValidationError, match="overlap|chronological"):
+        validate_speaking_assessment(
+            session("listen_and_repeat"),
+            rows,
+            [],
+            FEEDBACK,
+        )
+
+
 def test_segment_time_cannot_exceed_session_duration() -> None:
     attempt = session("listen_and_repeat")
     attempt["duration_seconds"] = 120
@@ -556,6 +583,135 @@ def test_registration_requires_mapping_inspection(tmp_path: Path) -> None:
             segments(7),
             [],
         )
+
+
+def test_null_attempt_duration_uses_inspection_for_segment_bounds(
+    tmp_path: Path,
+) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    attempt = registration_attempt(prompt, transcript)
+    attempt["duration_seconds"] = None
+    inspection_data = inspection("/private/source/practice.m4a")
+    inspection_data["duration_seconds"] = 75.0
+
+    with pytest.raises(ValidationError, match="duration"):
+        register_speaking_session(
+            tmp_path,
+            MANIFEST,
+            attempt,
+            prompt,
+            transcript,
+            FEEDBACK,
+            [],
+            segments(7),
+            inspection_data,
+        )
+
+    assert not (tmp_path / "tracker/speaking/attempts").exists()
+
+
+def test_null_attempt_duration_uses_inspection_for_timestamp_bounds(
+    tmp_path: Path,
+) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    attempt = registration_attempt(prompt, transcript)
+    attempt["duration_seconds"] = None
+    inspection_data = inspection("/private/source/practice.m4a")
+    inspection_data["duration_seconds"] = 78.0
+    event = counted_event()
+    event["audio_timestamp"] = "01:18–01:19"
+    feedback = FEEDBACK.replace("00:12–00:14", "01:18–01:19")
+
+    with pytest.raises(ValidationError, match="duration"):
+        register_speaking_session(
+            tmp_path,
+            MANIFEST,
+            attempt,
+            prompt,
+            transcript,
+            feedback,
+            [event],
+            segments(7),
+            inspection_data,
+        )
+
+    assert not (tmp_path / "tracker/speaking/attempts").exists()
+
+
+def test_attempt_duration_matches_inspection_with_precise_tolerance(
+    tmp_path: Path,
+) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    attempt = registration_attempt(prompt, transcript)
+    near_inspection = inspection("/private/source/near.m4a")
+    near_inspection["duration_seconds"] = 120.0000005
+
+    path = register_speaking_session(
+        tmp_path / "near",
+        MANIFEST,
+        attempt,
+        prompt,
+        transcript,
+        FEEDBACK,
+        [],
+        segments(7),
+        near_inspection,
+    )
+
+    assert path.exists()
+
+    far_inspection = inspection("/private/source/far.m4a")
+    far_inspection["duration_seconds"] = 120.000002
+    with pytest.raises(ValidationError, match="duration"):
+        register_speaking_session(
+            tmp_path / "far",
+            MANIFEST,
+            registration_attempt(prompt, transcript),
+            prompt,
+            transcript,
+            FEEDBACK,
+            [],
+            segments(7),
+            far_inspection,
+        )
+
+    assert not (tmp_path / "far/tracker").exists()
+
+
+def test_persisted_inspection_contains_only_approved_fields(
+    tmp_path: Path,
+) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    inspection_data = inspection("/private/source/practice.m4a")
+    inspection_data["private_note"] = "must not persist"
+
+    path = register_speaking_session(
+        tmp_path,
+        MANIFEST,
+        registration_attempt(prompt, transcript),
+        prompt,
+        transcript,
+        FEEDBACK,
+        [],
+        segments(7),
+        inspection_data,
+    )
+
+    persisted = json.loads((path / "audio-inspection.json").read_text())
+    assert set(persisted) == {
+        "duration_seconds",
+        "codec",
+        "sample_rate_hz",
+        "channels",
+        "mean_dbfs",
+        "peak_dbfs",
+        "clipping",
+        "decodable",
+    }
 
 
 def test_cli_registers_valid_speaking_session(

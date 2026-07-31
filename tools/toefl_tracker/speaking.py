@@ -1,7 +1,7 @@
 import json
 import re
 from collections.abc import Mapping
-from math import isfinite
+from math import isclose, isfinite
 from pathlib import Path
 from re import Match
 
@@ -24,6 +24,21 @@ _TIMESTAMP_TOKEN = (
     r"[0-5][0-9]:[0-5][0-9]"
     r"(?:–[0-5][0-9]:[0-5][0-9])?"
 )
+_INSPECTION_FIELDS = (
+    "path",
+    "duration_seconds",
+    "codec",
+    "sample_rate_hz",
+    "channels",
+    "mean_dbfs",
+    "peak_dbfs",
+    "clipping",
+    "decodable",
+)
+_PERSISTED_INSPECTION_FIELDS = tuple(
+    field for field in _INSPECTION_FIELDS if field != "path"
+)
+_DURATION_TOLERANCE_SECONDS = 1e-6
 
 
 def _ordered_heading_matches(feedback: str) -> list[Match[str]]:
@@ -130,23 +145,35 @@ def validate_speaking_assessment(
         raise ValidationError("speaking duration must be a positive number")
     if not isinstance(segments, list):
         raise ValidationError("speaking segments must be a list of mappings")
-    mapped: set[tuple[int, str]] = set()
+    mapped: list[tuple[int, str]] = []
+    seen: set[tuple[int, str]] = set()
+    previous_end: float | int | None = None
     for row in segments:
         if not isinstance(row, Mapping):
             raise ValidationError("each speaking segment must be a mapping")
         pair = _validate_segment(row, expected)
+        if previous_end is not None and row["start"] < previous_end:
+            raise ValidationError(
+                "speaking segments overlap or are not chronological"
+            )
         if duration is not None and row["end"] > duration:
             raise ValidationError("speaking segment exceeds session duration")
-        if pair in mapped:
+        if pair in seen:
             raise ValidationError("incomplete examiner/learner mapping")
-        mapped.add(pair)
-    expected_pairs = {
+        mapped.append(pair)
+        seen.add(pair)
+        previous_end = row["end"]
+    expected_pairs = [
         (item, role)
         for item in range(1, expected + 1)
         for role in ("examiner", "learner")
-    }
-    if mapped != expected_pairs:
+    ]
+    if seen != set(expected_pairs):
         raise ValidationError("incomplete examiner/learner mapping")
+    if mapped != expected_pairs:
+        raise ValidationError(
+            "speaking segments must follow item and role order"
+        )
 
     heading_matches = _ordered_heading_matches(feedback)
     timestamp_block = feedback[
@@ -184,18 +211,7 @@ def validate_speaking_assessment(
 def _validated_inspection(inspection: object) -> tuple[dict, str]:
     if not isinstance(inspection, Mapping):
         raise ValidationError("speaking inspection must be a mapping")
-    required = {
-        "path",
-        "duration_seconds",
-        "codec",
-        "sample_rate_hz",
-        "channels",
-        "mean_dbfs",
-        "peak_dbfs",
-        "clipping",
-        "decodable",
-    }
-    if required - inspection.keys():
+    if set(_INSPECTION_FIELDS) - inspection.keys():
         raise ValidationError("speaking inspection is missing required fields")
     source_path = inspection["path"]
     if (
@@ -223,8 +239,10 @@ def _validated_inspection(inspection: object) -> tuple[dict, str]:
         or type(inspection["decodable"]) is not bool
     ):
         raise ValidationError("speaking inspection field types are invalid")
-    persisted = dict(inspection)
-    del persisted["path"]
+    persisted = {
+        field: inspection[field]
+        for field in _PERSISTED_INSPECTION_FIELDS
+    }
     return persisted, source_path
 
 
@@ -239,8 +257,34 @@ def register_speaking_session(
     segments: list[dict],
     inspection: dict,
 ) -> Path:
-    validate_speaking_assessment(attempt, segments, events, feedback)
     persisted_inspection, source_path = _validated_inspection(inspection)
+    if not isinstance(attempt, Mapping):
+        raise ValidationError("speaking attempt must be a mapping")
+    inspection_duration = persisted_inspection["duration_seconds"]
+    attempt_duration = attempt.get("duration_seconds")
+    if attempt_duration is not None and (
+        type(attempt_duration) not in {int, float}
+        or not isfinite(attempt_duration)
+        or attempt_duration <= 0
+    ):
+        raise ValidationError("speaking duration must be a positive number")
+    if attempt_duration is not None and not isclose(
+        attempt_duration,
+        inspection_duration,
+        rel_tol=0.0,
+        abs_tol=_DURATION_TOLERANCE_SECONDS,
+    ):
+        raise ValidationError(
+            "attempt duration does not match audio inspection duration"
+        )
+    bounded_attempt = dict(attempt)
+    bounded_attempt["duration_seconds"] = inspection_duration
+    validate_speaking_assessment(
+        bounded_attempt,
+        segments,
+        events,
+        feedback,
+    )
     if attempt.get("audio_quality") != {
         "decodable": persisted_inspection["decodable"],
         "clipping": persisted_inspection["clipping"],
