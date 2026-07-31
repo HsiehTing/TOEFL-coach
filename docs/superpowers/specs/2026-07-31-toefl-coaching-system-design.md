@@ -205,9 +205,21 @@ task_score:
   scale: "0-5"
   value: 3
   confidence: "medium_high"
+task_metrics:
+  prompt_alignment: "limited"
+  elaboration: "partial"
 source_hash: "sha256:<hex-digest>"
+opportunities:
+  GRAM-NEGATION: 1
 parent_attempt_id: null
+revision_outcomes: null
 ```
+
+`opportunities` 記錄該次作答中可合理觀察某錯誤是否受控的使用機會數。只有值大於零的代碼才能推進 `improving` 或 `controlled`；沒有出現錯誤事件但具有使用機會，代表該次成功控制該問題。
+
+`task_metrics` 保存所選題型路線的結構化診斷，不跨不同 task type 平均；共用報告只能逐筆呈現，專屬報告才能比較同名指標。
+
+`revision` 的 `revision_outcomes` 必須記錄 `assigned`、`resolved`、`partly_resolved`、`unresolved`、`new_errors` 與 `resolution_rate`；其他 record type 的值為 `null`。`resolution_rate = resolved / assigned`，部分解決另列，不折算成任意權重。
 
 同一 attempt 目錄保存：
 
@@ -395,6 +407,8 @@ Discussion 任務專屬代碼使用 `DISCUSSION-*` 前綴，例如：
 
 Revision 與 targeted drill 不得用來滿足 controlled 條件。
 
+同一次計算符合多個狀態時，採用固定優先順序：`relapsed`、`controlled`、`improving`、`persistent`、`recurring`、`new`。
+
 若某次沒有相關使用機會，該 attempt 不使錯誤狀態前進或倒退。例如沒有使用否定結構時，不得據此宣稱雙重否定已控制。
 
 ## 11. 指標
@@ -442,6 +456,8 @@ Revision 與 targeted drill 不得用來滿足 controlled 條件。
 - 每三組 Take an Interview：Interview 專屬報告。
 
 同一次練習可能同時觸發共用與專屬報告。共用報告不得把不同 task scores 直接平均。
+
+從零重建衍生資料時，必須重新產生所有已跨越的三次邊界，例如七次正式練習應能恢復第 3 次與第 6 次報告。
 
 每份報告至少包含：
 
@@ -496,8 +512,10 @@ ETS 標準更新時：
 - 所有 YAML、JSONL 與 CSV 可解析。
 - 每個 error event 指向存在的 attempt。
 - 每個計數錯誤有 source excerpt 或音訊時間戳。
+- 每個用於 improving 或 controlled 判定的代碼，在相關 attempt 具有大於零的 opportunity count。
 - `polish` 不進入錯誤率。
 - revision 不增加 formal attempt/session 數。
+- revision outcome 總數與 resolution rate 一致。
 - 重複匯入不改變統計。
 - 每個評估引用存在的 rubric version。
 
