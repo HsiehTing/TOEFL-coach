@@ -49,7 +49,7 @@ def _dashboard(formals: list[dict], events: list[dict]) -> str:
         "meaning_changing_per_100_words",
         "task_metrics",
     ]
-    writer = csv.DictWriter(buffer, fieldnames=fields)
+    writer = csv.DictWriter(buffer, fieldnames=fields, lineterminator="\n")
     writer.writeheader()
     counts = Counter(
         event["attempt_id"]

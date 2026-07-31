@@ -143,3 +143,21 @@ def test_empty_modality_rebuilds_stable_dashboard_and_profile(
     assert first_profile == profile.read_text()
     assert first_dashboard.startswith("attempt_id,submitted_at,task_type")
     assert first_profile == "# Current Profile\n"
+
+
+def test_rebuilt_dashboard_uses_stable_lf_line_endings(tmp_path: Path) -> None:
+    write_attempt(
+        tmp_path,
+        "W-AD-1",
+        "academic_discussion",
+        "formal_original",
+    )
+
+    rebuild_modality(tmp_path, "writing")
+    dashboard = tmp_path / "tracker/writing/dashboard.csv"
+    first_bytes = dashboard.read_bytes()
+
+    assert b"\r\n" not in first_bytes
+    assert first_bytes.endswith(b"\n")
+    rebuild_modality(tmp_path, "writing")
+    assert dashboard.read_bytes() == first_bytes
