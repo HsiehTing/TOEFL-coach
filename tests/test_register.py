@@ -355,3 +355,19 @@ def test_speaking_attempt_uses_transcript_filename(tmp_path: Path) -> None:
 
     assert (path / "transcript-original.md").read_text() == "response\n"
     assert not (path / "response-original.md").exists()
+
+
+def test_registration_extra_files_must_be_a_mapping(tmp_path: Path) -> None:
+    with pytest.raises(ValidationError, match="extra attempt files"):
+        register_attempt(
+            tmp_path,
+            MANIFEST,
+            valid_attempt(),
+            "prompt",
+            "response",
+            "feedback",
+            [],
+            extra_files=[],
+        )
+
+    assert not (tmp_path / "tracker").exists()

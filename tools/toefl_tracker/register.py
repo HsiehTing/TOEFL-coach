@@ -3,6 +3,7 @@ import os
 import shutil
 import tempfile
 import time
+from collections.abc import Mapping
 from contextlib import contextmanager
 from pathlib import Path
 from typing import BinaryIO, Iterator
@@ -131,7 +132,26 @@ def register_attempt(
     response: str,
     feedback: str,
     events: list[dict],
+    extra_files: Mapping[str, str] | None = None,
 ) -> Path:
+    if extra_files is None:
+        extra_files = {}
+    if not isinstance(extra_files, Mapping) or any(
+        not isinstance(name, str)
+        or Path(name).name != name
+        or name in {
+            "attempt.yaml",
+            "prompt.md",
+            "response-original.md",
+            "response-revision.md",
+            "transcript-original.md",
+            "transcript-revision.md",
+            "feedback-round-1.md",
+        }
+        or not isinstance(content, str)
+        for name, content in extra_files.items()
+    ):
+        raise ValidationError("extra attempt files are invalid")
     expected_hash = canonical_source_hash(prompt, response)
     if attempt["source_hash"] != expected_hash:
         raise ValidationError("source_hash does not match prompt and response")
@@ -173,6 +193,8 @@ def register_attempt(
             response_name = _response_filename(attempt["modality"], attempt["record_type"])
             atomic_write_text(staging / response_name, response.rstrip() + "\n")
             atomic_write_text(staging / "feedback-round-1.md", feedback.rstrip() + "\n")
+            for name, content in extra_files.items():
+                atomic_write_text(staging / name, content)
             appended = "".join(
                 json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n"
                 for event in events
