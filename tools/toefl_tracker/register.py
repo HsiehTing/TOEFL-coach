@@ -1,5 +1,10 @@
 import json
+import shutil
+import tempfile
+import time
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 
 import yaml
 
@@ -19,6 +24,25 @@ def _response_filename(modality: str, record_type: str) -> str:
     return "transcript-revision.md" if record_type == "revision" else "transcript-original.md"
 
 
+@contextmanager
+def _registration_lock(root: Path) -> Iterator[None]:
+    lock = root / "tracker" / ".register.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + 10
+    while True:
+        try:
+            lock.mkdir()
+            break
+        except FileExistsError:
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"timed out waiting for registration lock: {lock}")
+            time.sleep(0.01)
+    try:
+        yield
+    finally:
+        lock.rmdir()
+
+
 def register_attempt(
     root: Path,
     manifest: dict,
@@ -36,35 +60,49 @@ def register_attempt(
         validate_error_event(event)
         if event["attempt_id"] != attempt["attempt_id"]:
             raise ValidationError("event attempt_id does not match attempt")
-    for directory in _attempt_directories(root, attempt["modality"]):
-        existing = read_yaml(directory / "attempt.yaml")
-        if existing["attempt_id"] == attempt["attempt_id"]:
-            raise ValidationError("attempt_id already exists")
-        if existing["source_hash"] == attempt["source_hash"]:
-            raise ValidationError(f"duplicate source_hash: {existing['attempt_id']}")
-    if attempt["record_type"] == "revision":
-        parent = (
-            root
-            / "tracker"
-            / attempt["modality"]
-            / "attempts"
-            / attempt["parent_attempt_id"]
-        )
-        if not (parent / "attempt.yaml").exists():
-            raise ValidationError("revision parent does not exist")
-    destination = root / "tracker" / attempt["modality"] / "attempts" / attempt["attempt_id"]
-    destination.mkdir(parents=True, exist_ok=False)
-    atomic_write_text(
-        destination / "attempt.yaml", yaml.safe_dump(attempt, allow_unicode=True, sort_keys=False)
-    )
-    atomic_write_text(destination / "prompt.md", prompt.rstrip() + "\n")
-    response_name = _response_filename(attempt["modality"], attempt["record_type"])
-    atomic_write_text(destination / response_name, response.rstrip() + "\n")
-    atomic_write_text(destination / "feedback-round-1.md", feedback.rstrip() + "\n")
-    ledger = root / "tracker" / attempt["modality"] / "error-events.jsonl"
-    previous = ledger.read_text(encoding="utf-8") if ledger.exists() else ""
-    appended = "".join(
-        json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n" for event in events
-    )
-    atomic_write_text(ledger, previous + appended)
-    return destination
+    with _registration_lock(root):
+        for directory in _attempt_directories(root, attempt["modality"]):
+            existing = read_yaml(directory / "attempt.yaml")
+            if existing["attempt_id"] == attempt["attempt_id"]:
+                raise ValidationError("attempt_id already exists")
+            if existing["source_hash"] == attempt["source_hash"]:
+                raise ValidationError(f"duplicate source_hash: {existing['attempt_id']}")
+        attempts = root / "tracker" / attempt["modality"] / "attempts"
+        if attempt["record_type"] == "revision":
+            parent = attempts / attempt["parent_attempt_id"]
+            if not (parent / "attempt.yaml").exists():
+                raise ValidationError("revision parent does not exist")
+        attempts.mkdir(parents=True, exist_ok=True)
+        destination = attempts / attempt["attempt_id"]
+        staging = Path(tempfile.mkdtemp(prefix=f".{attempt['attempt_id']}.", dir=attempts))
+        ledger = root / "tracker" / attempt["modality"] / "error-events.jsonl"
+        ledger_existed = ledger.exists()
+        previous = ledger.read_text(encoding="utf-8") if ledger_existed else ""
+        ledger_updated = False
+        try:
+            atomic_write_text(
+                staging / "attempt.yaml",
+                yaml.safe_dump(attempt, allow_unicode=True, sort_keys=False),
+            )
+            atomic_write_text(staging / "prompt.md", prompt.rstrip() + "\n")
+            response_name = _response_filename(attempt["modality"], attempt["record_type"])
+            atomic_write_text(staging / response_name, response.rstrip() + "\n")
+            atomic_write_text(staging / "feedback-round-1.md", feedback.rstrip() + "\n")
+            appended = "".join(
+                json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n"
+                for event in events
+            )
+            atomic_write_text(ledger, previous + appended)
+            ledger_updated = True
+            staging.rename(destination)
+        except Exception:
+            if ledger_updated:
+                if ledger_existed:
+                    atomic_write_text(ledger, previous)
+                else:
+                    ledger.unlink(missing_ok=True)
+            raise
+        finally:
+            if staging.exists():
+                shutil.rmtree(staging)
+        return destination
