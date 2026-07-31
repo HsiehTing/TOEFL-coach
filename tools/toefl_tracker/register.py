@@ -1,10 +1,11 @@
 import json
+import os
 import shutil
 import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import BinaryIO, Iterator
 
 import yaml
 
@@ -12,10 +13,27 @@ from toefl_tracker.io import atomic_write_text, canonical_source_hash, read_yaml
 from toefl_tracker.models import ValidationError
 from toefl_tracker.validation import validate_attempt, validate_error_event
 
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
+
+
+_LEGACY_LOCK_STALE_SECONDS = 300
+_STAGING_PREFIX = ".register-"
+
 
 def _attempt_directories(root: Path, modality: str) -> list[Path]:
     base = root / "tracker" / modality / "attempts"
-    return sorted(path for path in base.glob("*") if path.is_dir()) if base.exists() else []
+    return (
+        sorted(
+            path
+            for path in base.glob("*")
+            if path.is_dir() and not path.name.startswith(".")
+        )
+        if base.exists()
+        else []
+    )
 
 
 def _response_filename(modality: str, record_type: str) -> str:
@@ -24,23 +42,85 @@ def _response_filename(modality: str, record_type: str) -> str:
     return "transcript-revision.md" if record_type == "revision" else "transcript-original.md"
 
 
+def _process_is_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _reclaim_legacy_directory_lock(lock: Path) -> None:
+    if not lock.is_dir():
+        return
+    owner_is_dead = False
+    try:
+        owner = json.loads((lock / "owner.json").read_text(encoding="utf-8"))
+        pid = owner.get("pid")
+        owner_is_dead = type(pid) is int and pid > 0 and not _process_is_alive(pid)
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
+    try:
+        old_enough = time.time() - lock.stat().st_mtime >= _LEGACY_LOCK_STALE_SECONDS
+    except FileNotFoundError:
+        return
+    if not (owner_is_dead or old_enough):
+        raise TimeoutError(f"active legacy registration lock: {lock}")
+    try:
+        shutil.rmtree(lock)
+    except (FileNotFoundError, NotADirectoryError):
+        pass
+
+
+def _acquire_file_lock(handle: BinaryIO) -> None:
+    if os.name == "nt":
+        handle.seek(0)
+        if not handle.read(1):
+            handle.write(b"\0")
+            handle.flush()
+        handle.seek(0)
+        while True:
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                return
+            except OSError:
+                time.sleep(0.01)
+    else:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+
+
+def _release_file_lock(handle: BinaryIO) -> None:
+    if os.name == "nt":
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
 @contextmanager
 def _registration_lock(root: Path) -> Iterator[None]:
     lock = root / "tracker" / ".register.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
-    deadline = time.monotonic() + 10
-    while True:
+    _reclaim_legacy_directory_lock(lock)
+    with lock.open("a+b") as handle:
+        _acquire_file_lock(handle)
         try:
-            lock.mkdir()
-            break
-        except FileExistsError:
-            if time.monotonic() >= deadline:
-                raise TimeoutError(f"timed out waiting for registration lock: {lock}")
-            time.sleep(0.01)
-    try:
-        yield
-    finally:
-        lock.rmdir()
+            yield
+        finally:
+            _release_file_lock(handle)
+
+
+def _cleanup_abandoned_staging(attempts: Path) -> None:
+    if not attempts.exists():
+        return
+    for path in attempts.iterdir():
+        is_known_staging = path.name.startswith(
+            (_STAGING_PREFIX, ".W-", ".S-")
+        )
+        if path.is_dir() and is_known_staging:
+            shutil.rmtree(path)
 
 
 def register_attempt(
@@ -61,20 +141,25 @@ def register_attempt(
         if event["attempt_id"] != attempt["attempt_id"]:
             raise ValidationError("event attempt_id does not match attempt")
     with _registration_lock(root):
+        attempts = root / "tracker" / attempt["modality"] / "attempts"
+        _cleanup_abandoned_staging(attempts)
         for directory in _attempt_directories(root, attempt["modality"]):
             existing = read_yaml(directory / "attempt.yaml")
             if existing["attempt_id"] == attempt["attempt_id"]:
                 raise ValidationError("attempt_id already exists")
             if existing["source_hash"] == attempt["source_hash"]:
                 raise ValidationError(f"duplicate source_hash: {existing['attempt_id']}")
-        attempts = root / "tracker" / attempt["modality"] / "attempts"
         if attempt["record_type"] == "revision":
             parent = attempts / attempt["parent_attempt_id"]
             if not (parent / "attempt.yaml").exists():
                 raise ValidationError("revision parent does not exist")
         attempts.mkdir(parents=True, exist_ok=True)
         destination = attempts / attempt["attempt_id"]
-        staging = Path(tempfile.mkdtemp(prefix=f".{attempt['attempt_id']}.", dir=attempts))
+        staging = Path(
+            tempfile.mkdtemp(
+                prefix=f"{_STAGING_PREFIX}{attempt['attempt_id']}.", dir=attempts
+            )
+        )
         ledger = root / "tracker" / attempt["modality"] / "error-events.jsonl"
         ledger_existed = ledger.exists()
         previous = ledger.read_text(encoding="utf-8") if ledger_existed else ""

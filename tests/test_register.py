@@ -228,6 +228,41 @@ def test_concurrent_registrations_preserve_all_ledger_events(
     }
 
 
+def test_registration_reclaims_stale_directory_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    stale_lock = tmp_path / "tracker/.register.lock"
+    stale_lock.mkdir(parents=True)
+    (stale_lock / "owner.json").write_text('{"pid": 999999999}\n')
+    monotonic_values = iter([0.0, 11.0])
+    monkeypatch.setattr(
+        register_module.time, "monotonic", lambda: next(monotonic_values)
+    )
+
+    path = register_attempt(
+        tmp_path, MANIFEST, valid_attempt(), "prompt", "response", "feedback", []
+    )
+
+    assert (path / "attempt.yaml").exists()
+    assert not stale_lock.is_dir()
+
+
+def test_registration_cleans_abandoned_hidden_staging_directory(
+    tmp_path: Path,
+) -> None:
+    attempts = tmp_path / "tracker/writing/attempts"
+    abandoned = attempts / ".W-AD-20260730-999.crashed"
+    abandoned.mkdir(parents=True)
+    (abandoned / "prompt.md").write_text("partial\n")
+
+    path = register_attempt(
+        tmp_path, MANIFEST, valid_attempt(), "prompt", "response", "feedback", []
+    )
+
+    assert (path / "attempt.yaml").exists()
+    assert not abandoned.exists()
+
+
 def test_hash_mismatch_is_rejected_before_writing(tmp_path: Path) -> None:
     attempt = valid_attempt()
     attempt["source_hash"] = canonical_source_hash("different", "content")
