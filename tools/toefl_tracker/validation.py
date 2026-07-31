@@ -1,5 +1,6 @@
 import re
 from datetime import date, datetime
+from math import isclose
 
 from toefl_tracker.models import (
     LEVELS, MODALITIES, RECORD_TYPES, SEVERITIES, STATUSES, TASK_TYPES, ValidationError
@@ -18,7 +19,7 @@ def validate_attempt(data: dict, manifest: dict) -> None:
     missing = REQUIRED_ATTEMPT_FIELDS - data.keys()
     if missing:
         raise ValidationError(f"missing attempt fields: {sorted(missing)}")
-    if data["schema_version"] != 1:
+    if type(data["schema_version"]) is not int or data["schema_version"] != 1:
         raise ValidationError("unsupported attempt schema_version")
     if data["modality"] not in MODALITIES:
         raise ValidationError("invalid modality")
@@ -45,7 +46,7 @@ def validate_attempt(data: dict, manifest: dict) -> None:
         raise ValidationError("source_hash must be a SHA-256 digest")
     opportunities = data["opportunities"]
     if not isinstance(opportunities, dict) or any(
-        not isinstance(value, int) or value < 0 for value in opportunities.values()
+        type(value) is not int or value < 0 for value in opportunities.values()
     ):
         raise ValidationError("opportunities must map codes to non-negative integers")
     if not isinstance(data["task_metrics"], dict):
@@ -53,7 +54,7 @@ def validate_attempt(data: dict, manifest: dict) -> None:
     if data["timed"] not in {True, False, None}:
         raise ValidationError("timed must be true, false, or null")
     if data["duration_seconds"] is not None and (
-        not isinstance(data["duration_seconds"], int) or data["duration_seconds"] <= 0
+        type(data["duration_seconds"]) is not int or data["duration_seconds"] <= 0
     ):
         raise ValidationError("duration_seconds must be a positive integer or null")
     if not isinstance(data["assistance"], dict):
@@ -62,9 +63,9 @@ def validate_attempt(data: dict, manifest: dict) -> None:
         raise ValidationError("assistance fields are invalid")
     if data["modality"] == "writing":
         score = data.get("task_score", {})
-        if data.get("word_count", -1) < 0:
+        if type(data.get("word_count")) is not int or data["word_count"] < 0:
             raise ValidationError("writing word_count must be non-negative")
-        if score.get("scale") != "0-5" or not isinstance(score.get("value"), int) or not 0 <= score["value"] <= 5:
+        if score.get("scale") != "0-5" or type(score.get("value")) is not int or not 0 <= score["value"] <= 5:
             raise ValidationError("writing task_score must be an integer on scale 0-5")
     if data["modality"] == "speaking" and data.get("result_type") != "diagnostic_only":
         raise ValidationError("speaking result_type must be diagnostic_only")
@@ -79,13 +80,18 @@ def validate_attempt(data: dict, manifest: dict) -> None:
         keys = {"assigned", "resolved", "partly_resolved", "unresolved", "new_errors", "resolution_rate"}
         if not isinstance(outcomes, dict) or set(outcomes) != keys:
             raise ValidationError("revision_outcomes fields are invalid")
-        if outcomes["assigned"] <= 0:
+        if type(outcomes["assigned"]) is not int or outcomes["assigned"] <= 0:
             raise ValidationError("revision assigned count must be positive")
+        for field in {"resolved", "partly_resolved", "unresolved", "new_errors"}:
+            if type(outcomes[field]) is not int or outcomes[field] < 0:
+                raise ValidationError(f"revision {field} count must be non-negative")
         completed = outcomes["resolved"] + outcomes["partly_resolved"] + outcomes["unresolved"]
         if completed != outcomes["assigned"]:
             raise ValidationError("revision outcome counts do not reconcile")
         expected_rate = outcomes["resolved"] / outcomes["assigned"]
-        if abs(outcomes["resolution_rate"] - expected_rate) > 1e-9:
+        if type(outcomes["resolution_rate"]) not in {int, float} or not isclose(
+            outcomes["resolution_rate"], expected_rate, rel_tol=0.0, abs_tol=1e-9
+        ):
             raise ValidationError("revision resolution_rate is inconsistent")
 
 
@@ -98,6 +104,8 @@ def validate_error_event(data: dict) -> None:
     missing = required - data.keys()
     if missing:
         raise ValidationError(f"missing event fields: {sorted(missing)}")
+    if type(data["taxonomy_version"]) is not int or data["taxonomy_version"] != 1:
+        raise ValidationError("unsupported taxonomy_version")
     if data["level"] not in LEVELS:
         raise ValidationError("invalid event level")
     if data["severity"] not in SEVERITIES:
@@ -106,7 +114,13 @@ def validate_error_event(data: dict) -> None:
         raise ValidationError("invalid historical_status")
     if data["opportunity_present"] is not True:
         raise ValidationError("an error event requires opportunity_present=true")
+    source_excerpt = data["source_excerpt"]
+    audio_timestamp = data["audio_timestamp"]
+    has_source_excerpt = isinstance(source_excerpt, str) and bool(source_excerpt.strip())
+    has_audio_timestamp = isinstance(audio_timestamp, str) and bool(re.fullmatch(
+        r"[0-5][0-9]:[0-5][0-9](?:–[0-5][0-9]:[0-5][0-9])?", audio_timestamp
+    ))
     if data["level"] in {"must_fix", "should_fix"} and not (
-        str(data["source_excerpt"]).strip() or data["audio_timestamp"]
+        has_source_excerpt or has_audio_timestamp
     ):
         raise ValidationError("counted event requires traceable evidence")
