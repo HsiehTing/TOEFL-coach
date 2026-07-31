@@ -42,3 +42,23 @@ def test_each_open_response_standard_states_the_score_boundary() -> None:
         assert "0–5" in text
         assert "模擬 task score" in text
         assert "不得換算完整 Writing section band" in text
+
+
+def test_skill_routes_references_and_enforces_iteration() -> None:
+    text = (SKILL / "SKILL.md").read_text()
+    assert len(text.splitlines()) < 180
+    assert "references/email-feedback.md" in text
+    assert "references/discussion-feedback.md" in text
+    assert "references/writing-error-taxonomy.md" in text
+    assert "第一輪不提供完整範文" in text
+    assert "最多三個" in text
+    assert "tools/validate_tracker.py" in text
+
+
+def test_task_contracts_have_distinct_required_fields() -> None:
+    email = (SKILL / "references/email-feedback.md").read_text()
+    discussion = (SKILL / "references/discussion-feedback.md").read_text()
+    assert "Register and politeness" in email
+    assert "Original contribution" not in email
+    assert "Original contribution" in discussion
+    assert "Register and politeness" not in discussion
