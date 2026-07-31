@@ -16,6 +16,22 @@ def audit_workspace(root: Path) -> list[str]:
     except (OSError, TypeError, ValueError) as error:
         problems.append(f"{manifest_path}: {error}")
         manifest = {"rubrics": {}}
+    score_policy_path = root / "standards/ets-2026/score-policy.md"
+    if not score_policy_path.exists():
+        problems.append(f"{score_policy_path}: missing")
+    else:
+        try:
+            score_policy = score_policy_path.read_text(encoding="utf-8")
+            required_policy_text = {
+                "單題結果不得宣稱為完整 section band",
+                "official_basis",
+                "simulated_task_score",
+                "diagnostic_only",
+            }
+            if not all(phrase in score_policy for phrase in required_policy_text):
+                problems.append(f"{score_policy_path}: invalid score-policy contract")
+        except OSError as error:
+            problems.append(f"{score_policy_path}: {error}")
 
     for modality in ("writing", "speaking"):
         base = root / "tracker" / modality
@@ -78,6 +94,8 @@ def audit_workspace(root: Path) -> list[str]:
                     continue
                 try:
                     event = json.loads(line)
+                    if not isinstance(event, dict):
+                        raise ValueError("event must be a JSON mapping")
                     validate_error_event(event)
                     if event["attempt_id"] not in attempts:
                         problems.append(f"orphan event {event['event_id']}")
@@ -118,10 +136,14 @@ def audit_workspace(root: Path) -> list[str]:
                 for relative in expected_files:
                     expected = raw_base / relative
                     actual = base / relative
-                    if (
-                        not actual.exists()
-                        or actual.read_text(encoding="utf-8")
-                        != expected.read_text(encoding="utf-8")
-                    ):
+                    try:
+                        stale = (
+                            not actual.exists()
+                            or actual.read_text(encoding="utf-8")
+                            != expected.read_text(encoding="utf-8")
+                        )
+                    except OSError:
+                        stale = True
+                    if stale:
                         problems.append(f"{modality}: stale derived file {relative}")
     return sorted(problems)
