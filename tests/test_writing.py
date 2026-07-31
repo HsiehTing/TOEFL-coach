@@ -182,3 +182,25 @@ def test_polish_event_does_not_require_counted_evidence() -> None:
         "source_excerpt": "",
     }
     validate_writing_assessment(row, [event], VALID_FEEDBACK)
+
+
+def test_historical_discussion_fixture_is_valid() -> None:
+    import json
+    from pathlib import Path
+
+    import yaml
+
+    from toefl_tracker.io import canonical_source_hash
+
+    fixture = Path(__file__).parent / "fixtures/writing/history-discussion"
+    attempt_data = yaml.safe_load((fixture / "attempt-input.yaml").read_text())
+    prompt = (fixture / "prompt.md").read_text()
+    response = (fixture / "response.md").read_text()
+    attempt_data["source_hash"] = canonical_source_hash(prompt, response)
+    event_data = [
+        json.loads(line)
+        for line in (fixture / "events.jsonl").read_text().splitlines()
+        if line.strip()
+    ]
+    feedback = (fixture / "feedback.md").read_text()
+    validate_writing_assessment(attempt_data, event_data, feedback)

@@ -1,0 +1,2 @@
+attempt_id,submitted_at,task_type,timed,score,word_count,duration_seconds,counted_errors,errors_per_100_words,meaning_changing_per_100_words,task_metrics
+W-AD-20260731-001,2026-07-31T00:00:00+08:00,academic_discussion,,3,183,,7,3.83,1.09,"{""elaboration"": ""partial"", ""original_contribution"": ""limited"", ""position"": ""clear"", ""prompt_alignment"": ""limited""}"
