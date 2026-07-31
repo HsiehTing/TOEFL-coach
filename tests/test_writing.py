@@ -117,3 +117,68 @@ def test_feedback_must_include_each_counted_excerpt() -> None:
     }
     with pytest.raises(ValidationError, match="evidence"):
         validate_writing_assessment(row, [event], VALID_FEEDBACK)
+
+
+@pytest.mark.parametrize(
+    "feedback",
+    [
+        VALID_FEEDBACK.replace("# Evidence\n", ""),
+        VALID_FEEDBACK.replace(
+            "# Evidence\n",
+            "# Evidence\n# Evidence\n",
+            1,
+        ),
+        VALID_FEEDBACK.replace(
+            "# Why this level",
+            "# TEMPORARY",
+        )
+        .replace(
+            "# Why not the next level",
+            "# Why this level",
+        )
+        .replace(
+            "# TEMPORARY",
+            "# Why not the next level",
+        ),
+        VALID_FEEDBACK.replace("# Result", "Embedded prose: # Result"),
+    ],
+    ids=["missing", "duplicate", "wrong-order", "embedded-prose"],
+)
+def test_required_headings_must_be_unique_ordered_markdown_headings(
+    feedback: str,
+) -> None:
+    row = attempt(
+        "academic_discussion",
+        "ets-writing-discussion-2025-applicable-2026",
+    )
+    with pytest.raises(ValidationError, match="headings"):
+        validate_writing_assessment(row, [], feedback)
+
+
+@pytest.mark.parametrize("row", [None, [], "attempt"])
+def test_attempt_must_be_a_mapping(row: object) -> None:
+    with pytest.raises(ValidationError, match="attempt"):
+        validate_writing_assessment(row, [], VALID_FEEDBACK)
+
+
+@pytest.mark.parametrize("event", [None, [], "event"])
+def test_each_event_must_be_a_mapping(event: object) -> None:
+    row = attempt(
+        "academic_discussion",
+        "ets-writing-discussion-2025-applicable-2026",
+    )
+    with pytest.raises(ValidationError, match="event"):
+        validate_writing_assessment(row, [event], VALID_FEEDBACK)
+
+
+def test_polish_event_does_not_require_counted_evidence() -> None:
+    row = attempt(
+        "academic_discussion",
+        "ets-writing-discussion-2025-applicable-2026",
+    )
+    event = {
+        "event_id": "ERR-OPTIONAL",
+        "level": "polish",
+        "source_excerpt": "",
+    }
+    validate_writing_assessment(row, [event], VALID_FEEDBACK)

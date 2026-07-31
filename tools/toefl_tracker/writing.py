@@ -1,4 +1,6 @@
 import re
+from collections.abc import Mapping
+from re import Match
 
 from toefl_tracker.models import ValidationError
 
@@ -17,11 +19,25 @@ REQUIRED_HEADINGS = (
 )
 
 
+def _ordered_heading_matches(feedback: str) -> list[Match[str]]:
+    matches = list(
+        re.finditer(r"(?m)^(# [^\r\n]+?)[ \t]*\r?$", feedback)
+    )
+    headings = tuple(match.group(1) for match in matches)
+    if headings != REQUIRED_HEADINGS:
+        raise ValidationError(
+            "first-round feedback headings are missing, duplicated, or out of order"
+        )
+    return matches
+
+
 def validate_writing_assessment(
     attempt: dict,
     events: list[dict],
     feedback: str,
 ) -> None:
+    if not isinstance(attempt, Mapping):
+        raise ValidationError("writing attempt must be a mapping")
     if attempt.get("modality") != "writing":
         raise ValidationError("writing assessment requires writing modality")
 
@@ -30,7 +46,7 @@ def validate_writing_assessment(
         raise ValidationError("writing task and rubric do not match")
 
     score = attempt.get("task_score")
-    if not isinstance(score, dict):
+    if not isinstance(score, Mapping):
         raise ValidationError("writing task score must be an integer from 0 to 5")
     value = score.get("value")
     if (
@@ -40,18 +56,21 @@ def validate_writing_assessment(
     ):
         raise ValidationError("writing task score must be an integer from 0 to 5")
 
-    if not isinstance(feedback, str) or any(
-        heading not in feedback for heading in REQUIRED_HEADINGS
-    ):
+    if not isinstance(feedback, str):
         raise ValidationError("first-round feedback is missing required headings")
 
-    priority_block = feedback.split("# Priorities", 1)[1].split(
-        "# Rewrite task", 1
-    )[0]
+    heading_matches = _ordered_heading_matches(feedback)
+    priority_block = feedback[
+        heading_matches[-2].end():heading_matches[-1].start()
+    ]
     if len(re.findall(r"(?m)^\d+\.\s", priority_block)) > 3:
         raise ValidationError("first-round feedback exceeds three priorities")
 
+    if not isinstance(events, list):
+        raise ValidationError("writing events must be a list of mappings")
     for event in events:
+        if not isinstance(event, Mapping):
+            raise ValidationError("each writing event must be a mapping")
         if event.get("level") not in {"must_fix", "should_fix"}:
             continue
         excerpt = event.get("source_excerpt")
