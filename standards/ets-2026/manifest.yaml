@@ -1,0 +1,19 @@
+schema_version: 1
+test_version: "TOEFL iBT 2026"
+effective_from: 2026-01-21
+last_verified: 2026-07-31
+rubrics:
+  ets-writing-email-2025-applicable-2026:
+    task_type: email
+    scale: "0-5"
+  ets-writing-discussion-2025-applicable-2026:
+    task_type: academic_discussion
+    scale: "0-5"
+  ets-speaking-blueprint-2026-diagnostic:
+    task_type: speaking
+    scale: diagnostic
+sources:
+  writing_tasks: "https://www.ets.org/toefl/test-takers/ibt/about/content/writing.html"
+  writing_rubric: "https://www.ets.org/content/dam/ets-org/pdfs/toefl/writing-rubrics.pdf"
+  test_blueprint: "https://www.es.ets.org/pdfs/toefl/toefl-ibt-test-specifications-2026.pdf"
+  score_scale: "https://www.ets.org/toefl/institutions/ibt/score-scale-update.html"
