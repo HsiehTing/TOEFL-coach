@@ -37,6 +37,8 @@ Give these parts in order:
 6. 最多三個 priorities.
 7. A bounded re-recording task.
 
+Across these parts, name every dimension in the selected route's `Required evidence` and mark it as an observed strength, observed issue, no issue found, or unavailable; never silently omit a listed dimension.
+
 Do not convert the session to a Speaking section band. Do not provide complete model responses before the learner re-records.
 
 ## Revision

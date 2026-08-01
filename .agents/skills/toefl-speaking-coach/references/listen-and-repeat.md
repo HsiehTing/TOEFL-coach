@@ -10,6 +10,8 @@ Use rubric ID `ets-speaking-blueprint-2026-diagnostic`.
 - Stress, rhythm, and intonation
 - Accurate items as positive control evidence
 
+Compare the exact source and learner tokens before classifying or counting any omission, addition, substitution, or word-order difference. Never report a reconstruction difference that the transcripts do not support.
+
 Treat 7 items as one formal session. Do not evaluate reasons, examples, or interview content development.
 
 Assign re-recording only for the smallest set of items that demonstrates the top priorities.
