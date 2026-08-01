@@ -1,0 +1,4 @@
+interface:
+  display_name: "TOEFL Speaking Coach"
+  short_description: "Analyze and track TOEFL 2026 speaking practice"
+  default_prompt: "Analyze this TOEFL 2026 speaking recording, confirm the speaker mapping, and give me a focused re-recording task."
