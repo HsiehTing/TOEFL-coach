@@ -1,4 +1,5 @@
 import json
+from hashlib import sha256
 import sys
 from pathlib import Path
 
@@ -63,7 +64,7 @@ Evidence.
 # Why not the next level
 Evidence.
 # Timestamp evidence
-00:12–00:14 omission.
+00:13–00:14 omission.
 # Priorities
 1. Preserve function words.
 # Re-record task
@@ -127,7 +128,7 @@ def counted_event(attempt_id: str = "S-LR-20260731-001") -> dict:
         "taxonomy_version": 1,
         "code": "LR-OMISSION",
         "source_excerpt": None,
-        "audio_timestamp": "00:12–00:14",
+        "audio_timestamp": "00:13–00:14",
         "suggested_revision": "Repeat the omitted function word.",
         "reason": "The source word is absent.",
         "level": "must_fix",
@@ -418,7 +419,7 @@ def test_counted_timestamp_cannot_exceed_session_duration() -> None:
     event = {
         "event_id": "S-1",
         "level": "should_fix",
-        "audio_timestamp": "00:12–00:14",
+        "audio_timestamp": "00:13–00:14",
     }
     with pytest.raises(ValidationError, match="duration"):
         validate_speaking_assessment(
@@ -433,7 +434,7 @@ def test_counted_timestamp_exactly_present_is_accepted() -> None:
     event = {
         "event_id": "S-1",
         "level": "must_fix",
-        "audio_timestamp": "00:12–00:14",
+        "audio_timestamp": "00:13–00:14",
     }
     validate_speaking_assessment(
         session("listen_and_repeat"),
@@ -498,7 +499,9 @@ def test_registration_persists_artifacts_without_copying_raw_audio(
     assert "path" not in inspection_data
     assert str(source) not in (path / "audio-inspection.json").read_text()
     assert (path / "segments.yaml").exists()
-    assert (path / "source-reference.txt").read_text() == f"{source}\n"
+    assert (path / "source-reference.txt").read_text() == (
+        f"source:{sha256(str(source).encode('utf-8')).hexdigest()}\n"
+    )
     assert not list(path.glob("*.m4a"))
     assert source.read_bytes() == b"private audio"
 
@@ -757,5 +760,5 @@ def test_cli_registers_valid_speaking_session(
     destination = root / "tracker/speaking/attempts/S-LR-20260731-001"
     assert capsys.readouterr().out.strip() == str(destination)
     assert (destination / "source-reference.txt").read_text() == (
-        "/private/source/practice.m4a\n"
+        "source:" + sha256(b"/private/source/practice.m4a").hexdigest() + "\n"
     )

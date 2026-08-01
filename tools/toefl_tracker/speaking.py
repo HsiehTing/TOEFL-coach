@@ -1,5 +1,6 @@
 import json
 import re
+from hashlib import sha256
 from collections.abc import Mapping
 from math import isclose, isfinite
 from pathlib import Path
@@ -135,6 +136,8 @@ def validate_speaking_assessment(
         raise ValidationError("speaking audio_quality must contain booleans")
     if audio_quality["decodable"] is not True:
         raise ValidationError("speaking audio must be decodable")
+    if audio_quality["clipping"] is True:
+        raise ValidationError("clipped audio cannot be used for a formal speaking assessment")
 
     duration = attempt.get("duration_seconds")
     if duration is not None and (
@@ -199,9 +202,16 @@ def validate_speaking_assessment(
         timestamp = event.get("audio_timestamp")
         if not isinstance(timestamp, str):
             raise ValidationError("counted speaking event requires a timestamp")
-        _, timestamp_end = _seconds_from_timestamp(timestamp)
+        timestamp_start, timestamp_end = _seconds_from_timestamp(timestamp)
         if duration is not None and timestamp_end > duration:
             raise ValidationError("speaking timestamp exceeds session duration")
+        if not any(
+            row["role"] == "learner"
+            and row["start"] <= timestamp_start
+            and row["end"] >= timestamp_end
+            for row in segments
+        ):
+            raise ValidationError("speaking timestamp must be within a learner segment")
         if timestamp not in evidence_timestamps:
             raise ValidationError(
                 f"feedback omits timestamp: {event.get('event_id')}"
@@ -307,7 +317,8 @@ def register_speaking_session(
             allow_unicode=True,
             sort_keys=False,
         ),
-        "source-reference.txt": source_path + "\n",
+        # Preserve a stable audit reference without committing a local path or URL.
+        "source-reference.txt": "source:" + sha256(source_path.encode("utf-8")).hexdigest() + "\n",
     }
     return register_attempt(
         root,

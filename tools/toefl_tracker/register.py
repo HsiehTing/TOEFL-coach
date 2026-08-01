@@ -121,6 +121,18 @@ def _cleanup_abandoned_staging(attempts: Path) -> None:
             (_STAGING_PREFIX, ".W-", ".S-")
         )
         if path.is_dir() and is_known_staging:
+            # A completed staging directory is durable crash-recovery state.
+            marker = path / ".ready"
+            attempt_file = path / "attempt.yaml"
+            if marker.exists() and attempt_file.exists():
+                try:
+                    attempt_id = read_yaml(attempt_file)["attempt_id"]
+                    destination = attempts / attempt_id
+                    if not destination.exists():
+                        path.rename(destination)
+                        continue
+                except (OSError, KeyError, ValidationError, yaml.YAMLError):
+                    pass
             shutil.rmtree(path)
 
 
@@ -169,10 +181,17 @@ def register_attempt(
                 raise ValidationError("attempt_id already exists")
             if existing["source_hash"] == attempt["source_hash"]:
                 raise ValidationError(f"duplicate source_hash: {existing['attempt_id']}")
-        if attempt["record_type"] == "revision":
+        if attempt["record_type"] in {"revision", "re_evaluation"}:
             parent = attempts / attempt["parent_attempt_id"]
             if not (parent / "attempt.yaml").exists():
                 raise ValidationError("revision parent does not exist")
+            parent_attempt = read_yaml(parent / "attempt.yaml")
+            if (
+                parent_attempt.get("record_type") != "formal_original"
+                or parent_attempt.get("modality") != attempt["modality"]
+                or parent_attempt.get("task_type") != attempt["task_type"]
+            ):
+                raise ValidationError("revision parent must be matching formal original")
         attempts.mkdir(parents=True, exist_ok=True)
         destination = attempts / attempt["attempt_id"]
         staging = Path(
@@ -199,6 +218,10 @@ def register_attempt(
                 json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n"
                 for event in events
             )
+            # The sidecar lets a later registration recover evidence even if the
+            # process dies after the aggregate ledger is written.
+            atomic_write_text(staging / "events.jsonl", appended)
+            atomic_write_text(staging / ".ready", "ready\n")
             atomic_write_text(ledger, previous + appended)
             ledger_updated = True
             staging.rename(destination)

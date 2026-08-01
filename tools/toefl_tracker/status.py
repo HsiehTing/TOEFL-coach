@@ -57,7 +57,7 @@ def classify_code(code: str, attempts: list[dict], events: list[dict]) -> str | 
         or max(severities[-2:]) < max(severities[-4:-2])
     ):
         return "improving"
-    if len(series) >= 5 and sum(value > 0 for value in series[-5:]) >= 3:
+    if len(series) >= 3 and sum(value > 0 for value in series[-5:]) >= 3:
         return "persistent"
     affected = sum(value > 0 for value in series)
     return "new" if affected == 1 else "recurring"

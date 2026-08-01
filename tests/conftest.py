@@ -77,7 +77,7 @@ def fluency_event(attempt_id: str, event_id: str, status: str) -> dict:
         "taxonomy_version": 1,
         "code": "SPK-FLUENCY",
         "source_excerpt": "",
-        "audio_timestamp": "00:10–00:12",
+        "audio_timestamp": "00:13–00:14",
         "suggested_revision": "Repeat the answer with one planned pause.",
         "reason": "Repeated repairs interrupt connected speech.",
         "level": "should_fix",
@@ -118,7 +118,7 @@ Fixture evidence.
 # Why not the next level
 Fixture evidence.
 # Timestamp evidence
-00:10–00:12 repeated repair.
+00:13–00:14 repeated repair.
 # Priorities
 1. Reduce repeated repair.
 # Re-record task

@@ -16,18 +16,22 @@ REQUIRED_ATTEMPT_FIELDS = {
 
 
 def validate_attempt(data: dict, manifest: dict) -> None:
+    if not isinstance(data, dict):
+        raise ValidationError("attempt must be a mapping")
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("rubrics"), dict):
+        raise ValidationError("manifest rubrics must be a mapping")
     missing = REQUIRED_ATTEMPT_FIELDS - data.keys()
     if missing:
         raise ValidationError(f"missing attempt fields: {sorted(missing)}")
     if type(data["schema_version"]) is not int or data["schema_version"] != 1:
         raise ValidationError("unsupported attempt schema_version")
-    if data["modality"] not in MODALITIES:
+    if not isinstance(data["modality"], str) or data["modality"] not in MODALITIES:
         raise ValidationError("invalid modality")
-    if data["task_type"] not in TASK_TYPES[data["modality"]]:
+    if not isinstance(data["task_type"], str) or data["task_type"] not in TASK_TYPES[data["modality"]]:
         raise ValidationError("task_type does not match modality")
-    if data["record_type"] not in RECORD_TYPES:
+    if not isinstance(data["record_type"], str) or data["record_type"] not in RECORD_TYPES:
         raise ValidationError("invalid record_type")
-    if data["rubric_version"] not in manifest["rubrics"]:
+    if not isinstance(data["rubric_version"], str) or data["rubric_version"] not in manifest["rubrics"]:
         raise ValidationError("unknown rubric_version")
     rubric_task = manifest["rubrics"][data["rubric_version"]]["task_type"]
     if rubric_task not in {data["task_type"], data["modality"]}:
@@ -69,10 +73,10 @@ def validate_attempt(data: dict, manifest: dict) -> None:
             raise ValidationError("writing task_score must be an integer on scale 0-5")
     if data["modality"] == "speaking" and data.get("result_type") != "diagnostic_only":
         raise ValidationError("speaking result_type must be diagnostic_only")
-    if data["record_type"] == "revision" and not data["parent_attempt_id"]:
-        raise ValidationError("revision requires parent_attempt_id")
-    if data["record_type"] != "revision" and data["parent_attempt_id"] is not None:
-        raise ValidationError("only revisions may have parent_attempt_id")
+    if data["record_type"] in {"revision", "re_evaluation"} and not isinstance(data["parent_attempt_id"], str):
+        raise ValidationError("revision or re_evaluation requires parent_attempt_id")
+    if data["record_type"] not in {"revision", "re_evaluation"} and data["parent_attempt_id"] is not None:
+        raise ValidationError("only revisions or re_evaluations may have parent_attempt_id")
     outcomes = data["revision_outcomes"]
     if data["record_type"] != "revision" and outcomes is not None:
         raise ValidationError("only revisions may have revision_outcomes")
@@ -96,6 +100,8 @@ def validate_attempt(data: dict, manifest: dict) -> None:
 
 
 def validate_error_event(data: dict) -> None:
+    if not isinstance(data, dict):
+        raise ValidationError("error event must be a mapping")
     required = {
         "event_id", "attempt_id", "taxonomy_version", "code", "source_excerpt",
         "audio_timestamp", "suggested_revision", "reason", "level", "severity",
