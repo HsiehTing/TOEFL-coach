@@ -223,7 +223,7 @@ def test_registration_cleans_abandoned_hidden_staging_directory(
     tmp_path: Path,
 ) -> None:
     attempts = tmp_path / "tracker/writing/attempts"
-    abandoned = attempts / ".W-AD-20260730-999.crashed"
+    abandoned = attempts / ".register-W-AD-20260730-999.crashed"
     abandoned.mkdir(parents=True)
     (abandoned / "prompt.md").write_text("partial\n")
 

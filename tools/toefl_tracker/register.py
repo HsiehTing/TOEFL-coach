@@ -15,7 +15,7 @@ from toefl_tracker.canonical import (
     load_canonical_events,
     write_aggregate_events,
 )
-from toefl_tracker.io import atomic_write_text, canonical_source_hash, read_yaml
+from toefl_tracker.io import atomic_write_text, canonical_source_hash, fsync_directory, read_yaml
 from toefl_tracker.models import (
     ValidatedPracticeRegistration,
     ValidatedReevaluationRegistration,
@@ -125,24 +125,18 @@ def _registration_lock(root: Path) -> Iterator[None]:
 def _cleanup_abandoned_staging(attempts: Path) -> None:
     if not attempts.exists():
         return
+    removed_staging = False
     for path in attempts.iterdir():
-        is_known_staging = path.name.startswith(
-            (_STAGING_PREFIX, ".W-", ".S-")
-        )
-        if path.is_dir() and is_known_staging:
-            # A completed staging directory is durable crash-recovery state.
-            marker = path / ".ready"
-            attempt_file = path / "attempt.yaml"
-            if marker.exists() and attempt_file.exists():
-                try:
-                    attempt_id = read_yaml(attempt_file)["attempt_id"]
-                    destination = attempts / attempt_id
-                    if not destination.exists():
-                        path.rename(destination)
-                        continue
-                except (OSError, KeyError, ValidationError, yaml.YAMLError):
-                    pass
+        if path.is_dir() and path.name.startswith(_STAGING_PREFIX):
             shutil.rmtree(path)
+            removed_staging = True
+    if removed_staging:
+        fsync_directory(attempts)
+
+
+def recover_registration_state(root: Path, modality: str = "writing") -> None:
+    with _registration_lock(root):
+        _cleanup_abandoned_staging(root / "tracker" / modality / "attempts")
 
 
 def _validate_extra_files(extra_files: Mapping[str, str]) -> None:
@@ -256,6 +250,8 @@ def publish_registration(
                 staging / "attempt.yaml",
                 yaml.safe_dump(attempt, allow_unicode=True, sort_keys=False),
             )
+            if failpoint is not None:
+                failpoint("after_attempt")
             if isinstance(registration, ValidatedPracticeRegistration):
                 atomic_write_text(staging / "prompt.md", registration.prompt.rstrip() + "\n")
                 response_name = _response_filename(
@@ -273,10 +269,16 @@ def publish_registration(
                 staging / "feedback-round-1.md", registration.feedback.rstrip() + "\n"
             )
             atomic_write_text(staging / "events.jsonl", canonical_jsonl(events))
-            atomic_write_text(staging / ".ready", "ready\n")
             if failpoint is not None:
-                failpoint("before_publish")
+                failpoint("after_events")
+            fsync_directory(staging)
+            if failpoint is not None:
+                failpoint("after_staging_fsync")
+                failpoint("before_rename")
             staging.rename(destination)
+            fsync_directory(attempts)
+            if failpoint is not None:
+                failpoint("after_rename")
         finally:
             if staging.exists():
                 shutil.rmtree(staging)
