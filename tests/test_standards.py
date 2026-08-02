@@ -1,5 +1,6 @@
 from datetime import date
 from pathlib import Path
+import re
 
 import yaml
 
@@ -30,3 +31,19 @@ def test_score_policy_forbids_task_to_section_conversion() -> None:
     assert "單題結果不得宣稱為完整 section band" in policy
     assert "0–5" in policy
     assert "1–6" in policy
+
+
+def test_coach_taxonomies_match_machine_readable_codes() -> None:
+    taxonomy = yaml.safe_load(
+        (ROOT / "standards/ets-2026/taxonomy.yaml").read_text(encoding="utf-8")
+    )
+    for modality, reference in {
+        "writing": ROOT / ".agents/skills/toefl-writing-coach/references/writing-error-taxonomy.md",
+        "speaking": ROOT / ".agents/skills/toefl-speaking-coach/references/speaking-error-taxonomy.md",
+    }.items():
+        documented = set(re.findall(r"`([A-Z][A-Z0-9-]+)`", reference.read_text(encoding="utf-8")))
+        authoritative = {
+            code for code, entry in taxonomy["codes"].items()
+            if entry["modality"] in {modality, "all"}
+        }
+        assert documented == authoritative

@@ -57,3 +57,20 @@ def test_lower_recent_severity_is_improving_even_when_rate_is_flat() -> None:
     history[2]["severity"] = "clarity_reducing"
     history[3]["severity"] = "clarity_reducing"
     assert classify_code("GRAM-NEGATION", rows, history) == "improving"
+
+
+def test_unclassified_never_advances_status() -> None:
+    rows = [
+        {
+            "attempt_id": "W-AD-20260731-001",
+            "record_type": "formal_original",
+            "opportunities": {"UNCLASSIFIED": 1},
+        }
+    ]
+    history = [{
+        "attempt_id": "W-AD-20260731-001",
+        "code": "UNCLASSIFIED",
+        "level": "must_fix",
+        "severity": "meaning_changing",
+    }]
+    assert classify_code("UNCLASSIFIED", rows, history) is None

@@ -112,11 +112,17 @@ def validate_error_event(data: dict) -> None:
         raise ValidationError(f"missing event fields: {sorted(missing)}")
     if type(data["taxonomy_version"]) is not int or data["taxonomy_version"] != 1:
         raise ValidationError("unsupported taxonomy_version")
-    if data["level"] not in LEVELS:
+    if not isinstance(data["level"], str) or data["level"] not in LEVELS:
         raise ValidationError("invalid event level")
-    if data["severity"] not in SEVERITIES:
+    if not isinstance(data["severity"], str) or data["severity"] not in SEVERITIES:
         raise ValidationError("invalid event severity")
-    if data["historical_status"] not in STATUSES:
+    if data["historical_status"] is None:
+        if data.get("code") != "UNCLASSIFIED":
+            raise ValidationError("invalid historical_status")
+    elif (
+        not isinstance(data["historical_status"], str)
+        or data["historical_status"] not in STATUSES
+    ):
         raise ValidationError("invalid historical_status")
     if data["opportunity_present"] is not True:
         raise ValidationError("an error event requires opportunity_present=true")

@@ -22,5 +22,6 @@
 | `DISCUSSION-CONTRIBUTION` | Discussion | The post adds no meaningful original contribution. |
 | `DISCUSSION-ELABORATION` | Discussion | An explanation or example is incomplete or unclear. |
 | `DISCUSSION-SUPPORT` | Discussion | A claim lacks relevant reasons, details, or causal connection. |
+| `UNCLASSIFIED` | Taxonomy review | Use only as `polish` with `taxonomy_review_required: true`; it never enters rates or status. |
 
 Use `must_fix` for meaning/task-completion failures, `should_fix` for recurring clarity or control problems, and `polish` for optional sophistication. Only the first two levels enter rates.

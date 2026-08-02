@@ -18,5 +18,6 @@
 | `INTERVIEW-RELEVANCE` | Interview | Content is off-topic or weakly connected. |
 | `INTERVIEW-ELABORATION` | Interview | A claim lacks explanation, example, or detail. |
 | `INTERVIEW-COHERENCE` | Interview | Connections between ideas are unclear. |
+| `UNCLASSIFIED` | Taxonomy review | Use only as `polish` with `taxonomy_review_required: true`; it never enters rates or status. |
 
 Do not create pronunciation events from recording distortion alone. Every counted event requires an audio timestamp and `must_fix` or `should_fix`; optional refinement is `polish`.
