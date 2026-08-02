@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from toefl_tracker.event_validation import validate_event_context
+from toefl_tracker.event_validation import SpeakingEvidenceContext, validate_event_context
 from toefl_tracker.models import ValidationError
 
 
@@ -90,6 +90,125 @@ def test_duplicate_event_id_is_rejected(context: EventContext) -> None:
 def test_stored_status_must_equal_recomputed_status(context: EventContext) -> None:
     event = context.event(historical_status="controlled")
     with pytest.raises(ValidationError, match="historical_status"):
+        validate_event_context(**context.args(event))
+
+
+def test_event_must_bind_to_current_attempt(context: EventContext) -> None:
+    event = context.event(attempt_id="W-AD-20260801-999")
+    with pytest.raises(ValidationError, match="attempt_id does not match"):
+        validate_event_context(**context.args(event))
+
+
+@pytest.mark.parametrize("field", ["suggested_revision", "reason"])
+def test_event_correction_and_reason_must_not_be_blank(
+    context: EventContext, field: str
+) -> None:
+    event = context.event(**{field: "  "})
+    with pytest.raises(ValidationError, match=field):
+        validate_event_context(**context.args(event))
+
+
+def speaking_args(context: EventContext, event: dict, evidence: SpeakingEvidenceContext) -> dict:
+    context.attempt.update({
+        "attempt_id": "S-LR-20260802-001",
+        "modality": "speaking",
+        "task_type": "listen_and_repeat",
+        "opportunities": {"LR-OMISSION": 1},
+    })
+    event["attempt_id"] = context.attempt["attempt_id"]
+    event["code"] = "LR-OMISSION"
+    event["task_specific"] = True
+    event["source_excerpt"] = ""
+    event["audio_timestamp"] = "00:10–00:11"
+    return context.args(event, speaking_context=evidence)
+
+
+def test_counted_speaking_event_requires_timestamp(context: EventContext) -> None:
+    event = context.event()
+    args = speaking_args(
+        context,
+        event,
+        SpeakingEvidenceContext(
+            learner_segments=({"start": 0, "end": 30},),
+            duration_seconds=60,
+            reliable_dimensions={"reconstruction"},
+        ),
+    )
+    event["audio_timestamp"] = None
+    event["source_excerpt"] = "listener transcript evidence"
+    with pytest.raises(ValidationError, match="requires a timestamp"):
+        validate_event_context(**args)
+
+
+def test_counted_speaking_event_must_fit_learner_segment(context: EventContext) -> None:
+    event = context.event()
+    args = speaking_args(
+        context,
+        event,
+        SpeakingEvidenceContext(
+            learner_segments=({"start": 0, "end": 10},),
+            duration_seconds=60,
+            reliable_dimensions={"reconstruction"},
+        ),
+    )
+    with pytest.raises(ValidationError, match="learner segment"):
+        validate_event_context(**args)
+
+
+def test_counted_speaking_event_must_fit_duration(context: EventContext) -> None:
+    event = context.event()
+    args = speaking_args(
+        context,
+        event,
+        SpeakingEvidenceContext(
+            learner_segments=({"start": 0, "end": 60},),
+            duration_seconds=10,
+            reliable_dimensions={"reconstruction"},
+        ),
+    )
+    with pytest.raises(ValidationError, match="exceeds duration"):
+        validate_event_context(**args)
+
+
+def test_counted_speaking_event_requires_reliable_dimension(context: EventContext) -> None:
+    event = context.event()
+    args = speaking_args(
+        context,
+        event,
+        SpeakingEvidenceContext(
+            learner_segments=({"start": 0, "end": 60},),
+            duration_seconds=60,
+            reliable_dimensions=set(),
+        ),
+    )
+    with pytest.raises(ValidationError, match="reliable dimension"):
+        validate_event_context(**args)
+
+
+def test_counted_speaking_event_rejects_empty_timestamp_range(context: EventContext) -> None:
+    event = context.event()
+    args = speaking_args(
+        context,
+        event,
+        SpeakingEvidenceContext(
+            learner_segments=({"start": 0, "end": 60},),
+            duration_seconds=60,
+            reliable_dimensions={"reconstruction"},
+        ),
+    )
+    event["audio_timestamp"] = "00:10–00:10"
+    with pytest.raises(ValidationError, match="invalid timestamp range"):
+        validate_event_context(**args)
+
+
+def test_unclassified_still_requires_positive_opportunity(context: EventContext) -> None:
+    event = context.event(
+        code="UNCLASSIFIED",
+        level="polish",
+        historical_status=None,
+        taxonomy_review_required=True,
+    )
+    with pytest.raises(ValidationError, match="positive opportunity"):
         validate_event_context(**context.args(event))
 
 

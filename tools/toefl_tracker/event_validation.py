@@ -1,7 +1,9 @@
 import unicodedata
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
+from math import isfinite
 from pathlib import Path
+import re
 from typing import Any
 
 from toefl_tracker.models import ValidationError
@@ -13,8 +15,8 @@ from toefl_tracker.validation import validate_error_event
 @dataclass(frozen=True)
 class SpeakingEvidenceContext:
     learner_segments: Sequence[Mapping[str, object]] = ()
-    feedback_timestamps: Collection[str] = ()
     duration_seconds: float | int | None = None
+    reliable_dimensions: Collection[str] = ()
 
 
 def normalized_contains(response: str, excerpt: str) -> bool:
@@ -47,12 +49,74 @@ def _event_id(row: Mapping[str, Any]) -> str:
     return value
 
 
-def _validate_speaking_evidence(event: dict, context: SpeakingEvidenceContext) -> None:
+def _timestamp_seconds(timestamp: str) -> tuple[int, int]:
+    match = re.fullmatch(
+        r"([0-5][0-9]):([0-5][0-9])"
+        r"(?:–([0-5][0-9]):([0-5][0-9]))?",
+        timestamp,
+    )
+    if match is None:
+        raise ValidationError("counted speaking event requires a valid timestamp")
+    start = int(match.group(1)) * 60 + int(match.group(2))
+    end = (
+        int(match.group(3)) * 60 + int(match.group(4))
+        if match.group(3) is not None
+        else start
+    )
+    if match.group(3) is not None and end <= start:
+        raise ValidationError("counted speaking event has an invalid timestamp range")
+    return start, end
+
+
+def _validate_speaking_evidence(
+    event: dict, entry: TaxonomyEntry, context: SpeakingEvidenceContext | None
+) -> None:
+    if event["level"] not in {"must_fix", "should_fix"}:
+        return
+    if context is None:
+        raise ValidationError("counted speaking event requires evidence context")
     timestamp = event.get("audio_timestamp")
     if not isinstance(timestamp, str):
-        return
-    if context.feedback_timestamps and timestamp not in context.feedback_timestamps:
-        raise ValidationError("speaking feedback omits event timestamp")
+        raise ValidationError("counted speaking event requires a timestamp")
+    start, end = _timestamp_seconds(timestamp)
+    duration = context.duration_seconds
+    if (
+        type(duration) not in {int, float}
+        or not isfinite(duration)
+        or duration <= 0
+    ):
+        raise ValidationError("speaking evidence context has an invalid duration")
+    if end > duration:
+        raise ValidationError("speaking timestamp exceeds duration")
+    if isinstance(context.learner_segments, (str, bytes)) or not isinstance(
+        context.learner_segments, Sequence
+    ):
+        raise ValidationError("speaking evidence context has invalid learner segments")
+    contained = False
+    for segment in context.learner_segments:
+        if not isinstance(segment, Mapping):
+            raise ValidationError("speaking evidence context has invalid learner segments")
+        segment_start = segment.get("start")
+        segment_end = segment.get("end")
+        if (
+            type(segment_start) not in {int, float}
+            or type(segment_end) not in {int, float}
+            or not isfinite(segment_start)
+            or not isfinite(segment_end)
+            or segment_start < 0
+            or segment_end <= segment_start
+        ):
+            raise ValidationError("speaking evidence context has invalid learner segments")
+        contained = contained or (segment_start <= start and segment_end >= end)
+    if not contained:
+        raise ValidationError("speaking timestamp must be within a learner segment")
+    dimensions = context.reliable_dimensions
+    if isinstance(dimensions, (str, bytes)) or not isinstance(dimensions, Collection):
+        raise ValidationError("speaking evidence context has invalid reliable dimensions")
+    if any(not isinstance(dimension, str) for dimension in dimensions):
+        raise ValidationError("speaking evidence context has invalid reliable dimensions")
+    if entry.dimension not in dimensions:
+        raise ValidationError("speaking event requires a reliable dimension")
 
 
 def _entry_for_event(
@@ -100,6 +164,8 @@ def validate_event_context(
         raise ValidationError("response must be a string")
     validate_error_event(event)
     entry = _entry_for_event(load_taxonomy(root), attempt, event)
+    if event["attempt_id"] != attempt.get("attempt_id"):
+        raise ValidationError("event attempt_id does not match current attempt")
     current = _mapping_rows(current_events, "current_events")
     previous_attempts = _mapping_rows(historical_attempts, "historical_attempts")
     previous_events = _mapping_rows(historical_events, "historical_events")
@@ -112,13 +178,6 @@ def validate_event_context(
     if event_id in other_ids:
         raise ValidationError("event_id already exists")
 
-    if entry.taxonomy_review_required:
-        if event.get("taxonomy_review_required") is not True:
-            raise ValidationError("UNCLASSIFIED requires taxonomy_review_required=true")
-        if event["level"] != "polish" or event["historical_status"] is not None:
-            raise ValidationError("UNCLASSIFIED is excluded from status and rates")
-        return
-
     opportunities = attempt.get("opportunities")
     code = event["code"]
     if (
@@ -127,6 +186,12 @@ def validate_event_context(
         or opportunities[code] <= 0
     ):
         raise ValidationError("event code requires a positive opportunity")
+    if entry.taxonomy_review_required:
+        if event.get("taxonomy_review_required") is not True:
+            raise ValidationError("UNCLASSIFIED requires taxonomy_review_required=true")
+        if event["level"] != "polish" or event["historical_status"] is not None:
+            raise ValidationError("UNCLASSIFIED is excluded from status and rates")
+        return
     if attempt.get("modality") == "writing":
         excerpt = event.get("source_excerpt")
         if (
@@ -135,8 +200,8 @@ def validate_event_context(
             or not normalized_contains(response, excerpt)
         ):
             raise ValidationError("writing excerpt is not present in immutable response")
-    elif attempt.get("modality") == "speaking" and speaking_context is not None:
-        _validate_speaking_evidence(event, speaking_context)
+    elif attempt.get("modality") == "speaking":
+        _validate_speaking_evidence(event, entry, speaking_context)
 
     expected = expected_historical_status(
         code, attempt, current, previous_attempts, previous_events

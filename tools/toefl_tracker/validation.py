@@ -110,6 +110,9 @@ def validate_error_event(data: dict) -> None:
     missing = required - data.keys()
     if missing:
         raise ValidationError(f"missing event fields: {sorted(missing)}")
+    for field in ("event_id", "attempt_id", "code", "suggested_revision", "reason"):
+        if not isinstance(data[field], str) or not data[field].strip():
+            raise ValidationError(f"{field} must be a non-empty string")
     if type(data["taxonomy_version"]) is not int or data["taxonomy_version"] != 1:
         raise ValidationError("unsupported taxonomy_version")
     if not isinstance(data["level"], str) or data["level"] not in LEVELS:

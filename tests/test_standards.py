@@ -47,3 +47,13 @@ def test_coach_taxonomies_match_machine_readable_codes() -> None:
             if entry["modality"] in {modality, "all"}
         }
         assert documented == authoritative
+
+
+def test_listen_and_repeat_taxonomy_uses_reconstruction_dimension() -> None:
+    taxonomy = yaml.safe_load(
+        (ROOT / "standards/ets-2026/taxonomy.yaml").read_text(encoding="utf-8")
+    )
+    assert {
+        taxonomy["codes"][code]["dimension"]
+        for code in ("LR-OMISSION", "LR-ADDITION", "LR-SUBSTITUTION", "LR-WORD-ORDER")
+    } == {"reconstruction"}

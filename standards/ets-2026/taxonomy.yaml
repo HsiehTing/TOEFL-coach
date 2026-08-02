@@ -28,10 +28,10 @@ codes:
   SPK-FLUENCY: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: fluency}
   SPK-GRAMMAR: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: grammar}
   SPK-VOCABULARY: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: vocabulary}
-  LR-OMISSION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: source_reconstruction}
-  LR-ADDITION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: source_reconstruction}
-  LR-SUBSTITUTION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: source_reconstruction}
-  LR-WORD-ORDER: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: source_reconstruction}
+  LR-OMISSION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: reconstruction}
+  LR-ADDITION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: reconstruction}
+  LR-SUBSTITUTION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: reconstruction}
+  LR-WORD-ORDER: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: reconstruction}
   INTERVIEW-DIRECTNESS: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [take_an_interview], dimension: directness}
   INTERVIEW-RELEVANCE: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [take_an_interview], dimension: relevance}
   INTERVIEW-ELABORATION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [take_an_interview], dimension: elaboration}
