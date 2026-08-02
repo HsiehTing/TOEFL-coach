@@ -9,7 +9,7 @@ import yaml
 from test_validation import valid_attempt
 from toefl_tracker.audit import audit_workspace
 from toefl_tracker.canonical import canonical_jsonl
-from toefl_tracker.io import read_yaml
+from toefl_tracker.io import canonical_source_hash, read_yaml
 from toefl_tracker.reports import rebuild_modality
 from validate_tracker import main as validate_tracker_main
 
@@ -291,3 +291,47 @@ def test_audit_ignores_personal_report_notes_when_comparing_derived_files(
 
     assert not any("derived report set is stale" in problem for problem in problems)
     assert not any(str(note) in problem for problem in problems)
+
+
+def test_audit_accumulates_each_invalid_revision_relationship(
+    populated_workspace: Path,
+) -> None:
+    original = read_yaml(
+        populated_workspace / "tracker/writing/attempts/W-AD-20260101-001/attempt.yaml"
+    )
+    for attempt_id, parent_id, task_type, rubric in [
+        ("W-REV-MISSING", "W-NOT-THERE", "academic_discussion", "ets-writing-discussion-2025-applicable-2026"),
+        ("W-REV-MISMATCH", original["attempt_id"], "email", "ets-writing-email-2025-applicable-2026"),
+    ]:
+        prompt = f"Prompt {attempt_id}"
+        response = f"Response {attempt_id}"
+        attempt = {
+            **original,
+            "attempt_id": attempt_id,
+            "record_type": "revision",
+            "parent_attempt_id": parent_id,
+            "task_type": task_type,
+            "rubric_version": rubric,
+            "submitted_at": "2026-02-01T10:00:00+08:00",
+            "source_hash": canonical_source_hash(prompt, response),
+            "revision_outcomes": {
+                "assigned": 1,
+                "resolved": 1,
+                "partly_resolved": 0,
+                "unresolved": 0,
+                "new_errors": 0,
+                "resolution_rate": 1.0,
+            },
+        }
+        directory = populated_workspace / "tracker/writing/attempts" / attempt_id
+        directory.mkdir()
+        (directory / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+        (directory / "prompt.md").write_text(prompt, encoding="utf-8")
+        (directory / "response-revision.md").write_text(response, encoding="utf-8")
+        (directory / "feedback-round-1.md").write_text("feedback\n", encoding="utf-8")
+        (directory / "events.jsonl").write_text("", encoding="utf-8")
+
+    problems = audit_workspace(populated_workspace)
+
+    assert any("writing: W-REV-MISSING: revision parent does not exist" in row for row in problems)
+    assert any("writing: W-REV-MISMATCH: revision parent must be matching formal original" in row for row in problems)

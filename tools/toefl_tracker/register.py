@@ -237,48 +237,59 @@ def _reevaluation_order_key(attempt: dict) -> tuple[datetime, str]:
     raise ValidationError("re-evaluation has an unsupported schema_version")
 
 
-def validate_persisted_attempt_relationships(
+def persisted_attempt_relationship_problems(
     attempts: list[dict], incoming_attempt_id: str | None = None
-) -> None:
-    """Apply registration's cross-attempt invariants to persisted records."""
+) -> list[tuple[str, str]]:
+    """Return every independently verifiable cross-attempt contract violation."""
+    problems: list[tuple[str, str]] = []
     by_id: dict[str, dict] = {}
     source_hashes: dict[str, dict] = {}
     for attempt in attempts:
         attempt_id = attempt.get("attempt_id")
         if not isinstance(attempt_id, str) or not attempt_id:
-            raise ValidationError("attempt_id must be a non-empty string")
+            problems.append(("<unknown>", "attempt_id must be a non-empty string"))
+            continue
         if attempt_id in by_id:
-            raise ValidationError("duplicate attempt_id")
+            problems.append((attempt_id, "duplicate attempt_id"))
+            continue
         by_id[attempt_id] = attempt
         if attempt.get("record_type") != "re_evaluation":
             source_hash = attempt.get("source_hash")
             if source_hash in source_hashes:
-                raise ValidationError(
-                    f"duplicate source_hash: {source_hashes[source_hash]['attempt_id']}"
+                problems.append(
+                    (attempt_id, f"duplicate source_hash: {source_hashes[source_hash]['attempt_id']}")
                 )
-            source_hashes[source_hash] = attempt
+            else:
+                source_hashes[source_hash] = attempt
 
     by_parent: dict[str, list[dict]] = {}
-    for attempt in attempts:
+    for attempt_id, attempt in by_id.items():
         if attempt.get("record_type") not in {"revision", "re_evaluation"}:
             continue
         parent_id = attempt.get("parent_attempt_id")
         parent = by_id.get(parent_id)
         if parent is None:
-            raise ValidationError("revision parent does not exist")
+            problems.append((attempt_id, "revision parent does not exist"))
+            continue
         if (
             parent.get("record_type") != "formal_original"
             or parent.get("modality") != attempt.get("modality")
             or parent.get("task_type") != attempt.get("task_type")
         ):
-            raise ValidationError("revision parent must be matching formal original")
+            problems.append((attempt_id, "revision parent must be matching formal original"))
+            continue
         if attempt.get("record_type") == "re_evaluation":
-            if attempt.get("schema_version") == 2:
-                validate_reevaluation_metadata(attempt)
-            elif attempt.get("schema_version") != 1:
-                raise ValidationError("re-evaluation has an unsupported schema_version")
+            try:
+                if attempt.get("schema_version") == 2:
+                    validate_reevaluation_metadata(attempt)
+                elif attempt.get("schema_version") != 1:
+                    raise ValidationError("re-evaluation has an unsupported schema_version")
+            except ValidationError as error:
+                problems.append((attempt_id, str(error)))
+                continue
             if attempt.get("source_hash") != parent.get("source_hash"):
-                raise ValidationError("re-evaluation source_hash must match formal parent")
+                problems.append((attempt_id, "re-evaluation source_hash must match formal parent"))
+                continue
             by_parent.setdefault(parent_id, []).append(attempt)
 
     for parent_id, reevaluations in by_parent.items():
@@ -289,25 +300,41 @@ def validate_persisted_attempt_relationships(
             )
             if incoming is not None:
                 existing = [row for row in reevaluations if row is not incoming]
-                predecessor = max(existing, key=_reevaluation_order_key) if existing else by_id[parent_id]
+                try:
+                    predecessor = max(existing, key=_reevaluation_order_key) if existing else by_id[parent_id]
+                    incoming_key = _reevaluation_order_key(incoming)
+                    predecessor_key = _reevaluation_order_key(predecessor)
+                except ValidationError as error:
+                    problems.append((incoming["attempt_id"], str(error)))
+                    continue
                 expected_supersedes = (
                     f"{predecessor['attempt_id']}@{predecessor['rubric_version']}"
                 )
                 if incoming["supersedes_evaluation_id"] != expected_supersedes:
-                    raise ValidationError(
-                        "supersedes_evaluation_id must identify the immediate predecessor"
+                    problems.append(
+                        (incoming["attempt_id"], "supersedes_evaluation_id must identify the immediate predecessor")
                     )
-                if _reevaluation_order_key(incoming) <= _reevaluation_order_key(predecessor):
-                    raise ValidationError(
-                        "re-evaluation ordering key must be strictly later than its immediate predecessor"
+                elif incoming_key <= predecessor_key:
+                    problems.append(
+                        (incoming["attempt_id"], "re-evaluation ordering key must be strictly later than its immediate predecessor")
                     )
                 continue
         predecessor = by_id[parent_id]
-        for attempt in sorted(reevaluations, key=_reevaluation_order_key):
-            if _reevaluation_order_key(attempt) <= _reevaluation_order_key(predecessor):
-                raise ValidationError(
-                    "re-evaluation ordering key must be strictly later than its immediate predecessor"
-                )
+        ordered: list[tuple[tuple[datetime, str], dict]] = []
+        for attempt in reevaluations:
+            try:
+                ordered.append((_reevaluation_order_key(attempt), attempt))
+            except ValidationError as error:
+                problems.append((attempt["attempt_id"], str(error)))
+        for attempt_key, attempt in sorted(ordered):
+            try:
+                if attempt_key <= _reevaluation_order_key(predecessor):
+                    raise ValidationError(
+                        "re-evaluation ordering key must be strictly later than its immediate predecessor"
+                    )
+            except ValidationError as error:
+                problems.append((attempt["attempt_id"], str(error)))
+                continue
             if attempt.get("schema_version") == 1:
                 predecessor = attempt
                 continue
@@ -315,10 +342,21 @@ def validate_persisted_attempt_relationships(
                 f"{predecessor['attempt_id']}@{predecessor['rubric_version']}"
             )
             if attempt["supersedes_evaluation_id"] != expected_supersedes:
-                raise ValidationError(
-                    "supersedes_evaluation_id must identify the immediate predecessor"
+                problems.append(
+                    (attempt["attempt_id"], "supersedes_evaluation_id must identify the immediate predecessor")
                 )
+                continue
             predecessor = attempt
+    return problems
+
+
+def validate_persisted_attempt_relationships(
+    attempts: list[dict], incoming_attempt_id: str | None = None
+) -> None:
+    """Apply registration's cross-attempt invariants with fail-fast semantics."""
+    problems = persisted_attempt_relationship_problems(attempts, incoming_attempt_id)
+    if problems:
+        raise ValidationError(problems[0][1])
 
 
 def _validate_existing_attempts(root: Path, attempt: dict, attempts: Path) -> None:

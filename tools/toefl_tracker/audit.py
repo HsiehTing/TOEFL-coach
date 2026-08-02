@@ -11,7 +11,7 @@ import yaml
 from toefl_tracker.event_validation import SpeakingEvidenceContext, validate_event_context
 from toefl_tracker.io import canonical_source_hash, read_yaml
 from toefl_tracker.models import TASK_TYPES, ValidationError
-from toefl_tracker.register import validate_persisted_attempt_relationships
+from toefl_tracker.register import persisted_attempt_relationship_problems
 from toefl_tracker.reports import rebuild_modality
 from toefl_tracker.speaking import validate_speaking_assessment
 from toefl_tracker.validation import validate_attempt, validate_error_event
@@ -245,10 +245,12 @@ def audit_workspace(root: Path) -> list[str]:
                 if event["attempt_id"] not in attempts:
                     problems.append(f"orphan event {event['event_id']}")
 
-        try:
-            validate_persisted_attempt_relationships(list(attempts.values()))
-        except _PARSE_ERRORS as error:
-            problems.append(f"{modality}: {error}")
+        relationship_problems = persisted_attempt_relationship_problems(
+            list(attempts.values())
+        )
+        if relationship_problems:
+            for attempt_id, reason in relationship_problems:
+                problems.append(f"{modality}: {attempt_id}: {reason}")
             invalid_data = True
 
         history_attempts: list[dict] = []
