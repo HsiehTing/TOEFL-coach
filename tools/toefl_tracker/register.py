@@ -334,6 +334,7 @@ def persisted_attempt_relationship_problems(
                     )
             except ValidationError as error:
                 problems.append((attempt["attempt_id"], str(error)))
+                predecessor = attempt
                 continue
             if attempt.get("schema_version") == 1:
                 predecessor = attempt
@@ -345,6 +346,7 @@ def persisted_attempt_relationship_problems(
                 problems.append(
                     (attempt["attempt_id"], "supersedes_evaluation_id must identify the immediate predecessor")
                 )
+                predecessor = attempt
                 continue
             predecessor = attempt
     return problems

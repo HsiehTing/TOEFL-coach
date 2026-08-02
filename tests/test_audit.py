@@ -335,3 +335,37 @@ def test_audit_accumulates_each_invalid_revision_relationship(
 
     assert any("writing: W-REV-MISSING: revision parent does not exist" in row for row in problems)
     assert any("writing: W-REV-MISMATCH: revision parent must be matching formal original" in row for row in problems)
+
+
+def test_audit_keeps_actual_lineage_predecessor_after_bad_supersedes_link(
+    populated_workspace: Path,
+) -> None:
+    original = read_yaml(
+        populated_workspace / "tracker/writing/attempts/W-AD-20260101-001/attempt.yaml"
+    )
+    original_evaluation = f"{original['attempt_id']}@{original['rubric_version']}"
+    e1 = _persist_reevaluation(
+        populated_workspace,
+        "W-AD-20260101-001-E1",
+        "2026-08-02T09:00:00+08:00",
+        "NOT-THE-ORIGINAL",
+    )
+    e2 = _persist_reevaluation(
+        populated_workspace,
+        "W-AD-20260101-001-E2",
+        "2026-08-02T10:00:00+08:00",
+        f"W-AD-20260101-001-E1@{original['rubric_version']}",
+    )
+    _persist_reevaluation(
+        populated_workspace,
+        "W-AD-20260101-001-E3",
+        "2026-08-02T11:00:00+08:00",
+        original_evaluation,
+    )
+
+    problems = audit_workspace(populated_workspace)
+
+    assert any("W-AD-20260101-001-E1: supersedes_evaluation_id" in row for row in problems)
+    assert not any("W-AD-20260101-001-E2: supersedes_evaluation_id" in row for row in problems)
+    assert any("W-AD-20260101-001-E3: supersedes_evaluation_id" in row for row in problems)
+    assert e1.exists() and e2.exists()
