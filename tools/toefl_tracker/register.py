@@ -5,6 +5,7 @@ import tempfile
 import time
 from collections.abc import Mapping
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import BinaryIO, Callable, Iterator
 
@@ -194,6 +195,48 @@ def _validate_registration(
     raise TypeError("registration must be a validated registration bundle")
 
 
+def _normalized_lineage_timestamp(value: object, label: str) -> datetime:
+    if not isinstance(value, str):
+        raise ValidationError(f"{label} must be an ISO 8601 timestamp")
+    try:
+        timestamp = datetime.fromisoformat(value)
+    except ValueError as error:
+        raise ValidationError(f"{label} must be an ISO 8601 timestamp") from error
+    if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+        raise ValidationError(f"{label} must include a UTC offset for lineage")
+    return timestamp.astimezone(timezone.utc)
+
+
+def _reevaluation_order_key(attempt: dict) -> tuple[datetime, str]:
+    attempt_id = attempt.get("attempt_id")
+    if not isinstance(attempt_id, str) or not attempt_id:
+        raise ValidationError("re-evaluation attempt_id must be a non-empty string")
+    if attempt.get("record_type") == "formal_original":
+        return (
+            _normalized_lineage_timestamp(
+                attempt.get("submitted_at"), "formal parent submitted_at"
+            ),
+            attempt_id,
+        )
+    if attempt.get("schema_version") == 2:
+        return (
+            _normalized_lineage_timestamp(
+                attempt.get("evaluated_at"), "re-evaluation evaluated_at"
+            ),
+            attempt_id,
+        )
+    if attempt.get("schema_version") == 1:
+        # Schema-1 records predate evaluated_at. submitted_at is the only
+        # durable ordering fact, so it is the conservative lineage fallback.
+        return (
+            _normalized_lineage_timestamp(
+                attempt.get("submitted_at"), "legacy re-evaluation submitted_at"
+            ),
+            attempt_id,
+        )
+    raise ValidationError("re-evaluation has an unsupported schema_version")
+
+
 def _validate_existing_attempts(root: Path, attempt: dict, attempts: Path) -> None:
     for directory in _attempt_directories(root, attempt["modality"]):
         existing = read_yaml(directory / "attempt.yaml")
@@ -230,9 +273,7 @@ def _validate_existing_attempts(root: Path, attempt: dict, attempts: Path) -> No
             if prior_reevaluations:
                 predecessor = max(
                     prior_reevaluations,
-                    key=lambda candidate: (
-                        candidate["evaluated_at"], candidate["attempt_id"]
-                    ),
+                    key=_reevaluation_order_key,
                 )
             else:
                 predecessor = parent_attempt
@@ -242,6 +283,10 @@ def _validate_existing_attempts(root: Path, attempt: dict, attempts: Path) -> No
             if attempt["supersedes_evaluation_id"] != expected_supersedes:
                 raise ValidationError(
                     "supersedes_evaluation_id must identify the immediate predecessor"
+                )
+            if _reevaluation_order_key(attempt) <= _reevaluation_order_key(predecessor):
+                raise ValidationError(
+                    "re-evaluation ordering key must be strictly later than its immediate predecessor"
                 )
 
 

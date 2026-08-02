@@ -172,6 +172,83 @@ def test_reevaluation_rejects_lineage_rewind_or_branch(
         _publish_reevaluation(tmp_path, manifest, e3)
 
 
+def test_reevaluation_rejects_a_timestamp_before_its_predecessor(
+    tmp_path: Path,
+) -> None:
+    manifest = yaml.safe_load((ROOT / "standards/ets-2026/manifest.yaml").read_text())
+    original = _original(tmp_path, manifest)
+    e1 = _reevaluation(
+        original,
+        "W-AD-20260731-001-E1",
+        "2026-08-02T10:00:00+08:00",
+        f"{original['attempt_id']}@{original['rubric_version']}",
+    )
+    _publish_reevaluation(tmp_path, manifest, e1)
+    backdated_e2 = _reevaluation(
+        original,
+        "W-AD-20260731-001-E2",
+        "2026-08-02T09:00:00+08:00",
+        f"{e1['attempt_id']}@{e1['rubric_version']}",
+    )
+
+    with pytest.raises(ValidationError, match="ordering key"):
+        _publish_reevaluation(tmp_path, manifest, backdated_e2)
+
+
+def _persist_schema_one_reevaluation(
+    tmp_path: Path, original: dict, submitted_at: str
+) -> dict:
+    legacy = {
+        **original,
+        "schema_version": 1,
+        "attempt_id": "W-AD-20260731-001-LEGACY",
+        "record_type": "re_evaluation",
+        "parent_attempt_id": original["attempt_id"],
+        "submitted_at": submitted_at,
+    }
+    legacy.pop("evaluated_at", None)
+    legacy.pop("supersedes_evaluation_id", None)
+    directory = tmp_path / "tracker/writing/attempts" / legacy["attempt_id"]
+    directory.mkdir()
+    (directory / "attempt.yaml").write_text(yaml.safe_dump(legacy), encoding="utf-8")
+    return legacy
+
+
+def test_schema_one_history_uses_submitted_at_as_the_lineage_predecessor(
+    tmp_path: Path,
+) -> None:
+    manifest = yaml.safe_load((ROOT / "standards/ets-2026/manifest.yaml").read_text())
+    original = _original(tmp_path, manifest)
+    legacy = _persist_schema_one_reevaluation(
+        tmp_path, original, "2026-08-01T10:00:00+08:00"
+    )
+    successor = _reevaluation(
+        original,
+        "W-AD-20260731-001-E2",
+        "2026-08-02T10:00:00+08:00",
+        f"{legacy['attempt_id']}@{legacy['rubric_version']}",
+    )
+
+    _publish_reevaluation(tmp_path, manifest, successor)
+
+
+def test_schema_one_history_with_invalid_submitted_at_is_a_validation_error(
+    tmp_path: Path,
+) -> None:
+    manifest = yaml.safe_load((ROOT / "standards/ets-2026/manifest.yaml").read_text())
+    original = _original(tmp_path, manifest)
+    legacy = _persist_schema_one_reevaluation(tmp_path, original, "not-a-timestamp")
+    successor = _reevaluation(
+        original,
+        "W-AD-20260731-001-E2",
+        "2026-08-02T10:00:00+08:00",
+        f"{legacy['attempt_id']}@{legacy['rubric_version']}",
+    )
+
+    with pytest.raises(ValidationError, match="legacy re-evaluation submitted_at"):
+        _publish_reevaluation(tmp_path, manifest, successor)
+
+
 def test_generic_cli_publishes_schema_two_reevaluation_without_source_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
