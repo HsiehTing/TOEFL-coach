@@ -8,6 +8,8 @@ import yaml
 
 from test_validation import valid_attempt
 from toefl_tracker.audit import audit_workspace
+from toefl_tracker.canonical import canonical_jsonl
+from toefl_tracker.io import read_yaml
 from toefl_tracker.reports import rebuild_modality
 from validate_tracker import main as validate_tracker_main
 
@@ -144,3 +146,148 @@ def test_audit_continues_after_bad_utf8_and_cli_returns_nonzero(
     assert any(str(response) in row and "UTF-8" in row for row in problems)
     assert any("orphan event W-ORPHAN" in row for row in problems)
     assert validate_tracker_main() == 1
+
+
+def _persist_reevaluation(
+    workspace: Path, attempt_id: str, evaluated_at: str, supersedes: str
+) -> Path:
+    original = read_yaml(
+        workspace / "tracker/writing/attempts/W-AD-20260101-001/attempt.yaml"
+    )
+    reevaluation = {
+        **original,
+        "schema_version": 2,
+        "attempt_id": attempt_id,
+        "record_type": "re_evaluation",
+        "parent_attempt_id": original["attempt_id"],
+        "evaluated_at": evaluated_at,
+        "supersedes_evaluation_id": supersedes,
+        "task_score": {"scale": "0-5", "value": 4, "confidence": "medium"},
+    }
+    directory = workspace / "tracker/writing/attempts" / attempt_id
+    directory.mkdir()
+    (directory / "attempt.yaml").write_text(
+        yaml.safe_dump(reevaluation), encoding="utf-8"
+    )
+    (directory / "feedback-round-1.md").write_text("feedback\n", encoding="utf-8")
+    (directory / "events.jsonl").write_text("", encoding="utf-8")
+    return directory
+
+
+def test_audit_reuses_reevaluation_lineage_rules_and_rejects_event_sidecars(
+    populated_workspace: Path,
+) -> None:
+    original = read_yaml(
+        populated_workspace / "tracker/writing/attempts/W-AD-20260101-001/attempt.yaml"
+    )
+    original_evaluation = f"{original['attempt_id']}@{original['rubric_version']}"
+    e1 = _persist_reevaluation(
+        populated_workspace, "W-AD-20260101-001-E1", "2026-08-02T09:00:00+08:00", original_evaluation
+    )
+    e2 = _persist_reevaluation(
+        populated_workspace, "W-AD-20260101-001-E2", "2026-08-02T08:00:00+08:00", original_evaluation
+    )
+    event = {
+        "event_id": "E-ILLEGAL-REEVALUATION",
+        "attempt_id": "W-AD-20260101-001-E2",
+        "taxonomy_version": 1,
+        "code": "GRAM-ARTICLE",
+        "source_excerpt": "Fixture response W-AD-20260101-001",
+        "audio_timestamp": None,
+        "suggested_revision": "Use an article.",
+        "reason": "Fixture evidence.",
+        "level": "should_fix",
+        "severity": "clarity_reducing",
+        "task_specific": False,
+        "opportunity_present": True,
+        "historical_status": "new",
+    }
+    (e2 / "events.jsonl").write_text(canonical_jsonl([event]), encoding="utf-8")
+
+    problems = audit_workspace(populated_workspace)
+
+    assert any("immediate predecessor" in problem or "ordering key" in problem for problem in problems)
+    assert any(str(e2 / "events.jsonl") in problem and "must be empty" in problem for problem in problems)
+    assert e1.exists()
+
+
+def test_audit_finds_duplicate_hash_and_attempt_directory_without_manifest(
+    populated_workspace: Path,
+) -> None:
+    original = populated_workspace / "tracker/writing/attempts/W-AD-20260101-001"
+    duplicate = populated_workspace / "tracker/writing/attempts/W-AD-DUPLICATE"
+    shutil.copytree(original, duplicate)
+    attempt = read_yaml(duplicate / "attempt.yaml")
+    attempt["attempt_id"] = "W-AD-DUPLICATE"
+    attempt["submitted_at"] = "2026-02-01T10:00:00+08:00"
+    (duplicate / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    hidden = populated_workspace / "tracker/writing/attempts/W-ORPHAN-DIRECTORY"
+    hidden.mkdir()
+    (hidden / "events.jsonl").write_text("", encoding="utf-8")
+
+    problems = audit_workspace(populated_workspace)
+
+    assert any("duplicate source_hash" in problem for problem in problems)
+    assert any(str(hidden) in problem and "missing attempt.yaml" in problem for problem in problems)
+
+
+def test_audit_reports_writing_and_reevaluation_feedback_utf8(
+    populated_workspace: Path,
+) -> None:
+    original = read_yaml(
+        populated_workspace / "tracker/writing/attempts/W-AD-20260101-001/attempt.yaml"
+    )
+    reevaluation = _persist_reevaluation(
+        populated_workspace,
+        "W-AD-20260101-001-E1",
+        "2026-08-02T09:00:00+08:00",
+        f"{original['attempt_id']}@{original['rubric_version']}",
+    )
+    writing_feedback = populated_workspace / "tracker/writing/attempts/W-AD-20260101-001/feedback-round-1.md"
+    reevaluation_feedback = reevaluation / "feedback-round-1.md"
+    writing_feedback.write_bytes(b"\xff")
+    reevaluation_feedback.write_bytes(b"\xff")
+
+    problems = audit_workspace(populated_workspace)
+
+    assert any(str(writing_feedback) in problem and "UTF-8" in problem for problem in problems)
+    assert any(str(reevaluation_feedback) in problem and "UTF-8" in problem for problem in problems)
+
+
+def test_audit_preserves_schema_one_reevaluation_history(
+    populated_workspace: Path,
+) -> None:
+    original = read_yaml(
+        populated_workspace / "tracker/writing/attempts/W-AD-20260101-001/attempt.yaml"
+    )
+    legacy = _persist_reevaluation(
+        populated_workspace,
+        "W-AD-20260101-001-LEGACY",
+        "2026-08-02T09:00:00+08:00",
+        f"{original['attempt_id']}@{original['rubric_version']}",
+    )
+    attempt = read_yaml(legacy / "attempt.yaml")
+    attempt["schema_version"] = 1
+    attempt.pop("evaluated_at")
+    attempt.pop("supersedes_evaluation_id")
+    (legacy / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+
+    problems = audit_workspace(populated_workspace)
+
+    assert not any("supersedes_evaluation_id" in problem for problem in problems)
+
+
+def test_audit_ignores_personal_report_notes_when_comparing_derived_files(
+    populated_workspace: Path,
+) -> None:
+    rebuild_modality(populated_workspace, "writing")
+    rebuild_modality(populated_workspace, "speaking")
+    reports = populated_workspace / "tracker/writing/reports"
+    reports.mkdir(exist_ok=True)
+    note = reports / "my-notes.md"
+    note.write_text("keep this private note\n", encoding="utf-8")
+
+    problems = audit_workspace(populated_workspace)
+
+    assert not any("derived report set is stale" in problem for problem in problems)
+    assert not any(str(note) in problem for problem in problems)

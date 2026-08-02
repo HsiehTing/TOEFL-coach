@@ -273,6 +273,7 @@ def test_reevaluation_is_shown_beside_original_without_advancing_cadence(
             "parent_attempt_id": "W-AD-3",
             "evaluated_at": "2026-08-02T10:00:00+08:00",
             "supersedes_evaluation_id": "W-AD-3@ets-writing-discussion-2025-applicable-2026",
+            "rubric_version": "ets-writing-discussion-2026-revised",
             "task_score": {"scale": "0-5", "value": 4, "confidence": "medium"},
         }
     )
@@ -285,7 +286,8 @@ def test_reevaluation_is_shown_beside_original_without_advancing_cadence(
     report = (tmp_path / "tracker/writing/reports/writing-common-0003.md").read_text()
 
     assert "Original evaluation:" in report
-    assert "Re-evaluation:" in report
+    assert "Re-evaluation: `W-AD-3-E1` | simulated_task_score | result: 4" in report
+    assert "Warning: compared records span multiple rubric versions." in report
     assert not any(path.name.endswith("0004.md") for path in generated)
 
 

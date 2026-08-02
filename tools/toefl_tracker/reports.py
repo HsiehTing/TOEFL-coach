@@ -148,13 +148,17 @@ def _report_markdown(
         )
         for reevaluation in reevaluations.get(formal["attempt_id"], []):
             timeline.append(
-                f"  - Re-evaluation: `{reevaluation['attempt_id']}` | result: {_result_value(reevaluation)} | "
+                f"  - Re-evaluation: `{reevaluation['attempt_id']}` | {_result_label(reevaluation)} | result: {_result_value(reevaluation)} | "
                 f"rubric: `{reevaluation['rubric_version']}` | verified: {reevaluation['standard_verified_at']}"
             )
     recurring, rows = _recurring_lines(formals, events)
     focuses = _focuses(formals, events, rows)
     focus_lines = "\n".join(f"{number}. `{code}`" for number, code in enumerate(focuses, start=1))
-    rubrics = {formal["rubric_version"] for formal in formals}
+    formal_ids = {formal["attempt_id"] for formal in formals}
+    rubrics = {
+        row["rubric_version"]
+        for row in [*formals, *(reevaluation for parent, rows in reevaluations.items() if parent in formal_ids for reevaluation in rows)]
+    }
     attempt_ids = ", ".join(f"`{row['attempt_id']}`" for row in formals)
     boundary_text = (
         f"All records use rubric `{next(iter(rubrics))}`."

@@ -1,5 +1,6 @@
 import csv
 import json
+import re
 import shutil
 import tempfile
 from io import StringIO
@@ -9,7 +10,8 @@ import yaml
 
 from toefl_tracker.event_validation import SpeakingEvidenceContext, validate_event_context
 from toefl_tracker.io import canonical_source_hash, read_yaml
-from toefl_tracker.models import ValidationError
+from toefl_tracker.models import TASK_TYPES, ValidationError
+from toefl_tracker.register import validate_persisted_attempt_relationships
 from toefl_tracker.reports import rebuild_modality
 from toefl_tracker.speaking import validate_speaking_assessment
 from toefl_tracker.validation import validate_attempt, validate_error_event
@@ -118,8 +120,20 @@ def _audit_derived(root: Path, modality: str, invalid_data: bool, problems: list
                 shutil.copytree(attempts, expected_root / "tracker" / modality / "attempts")
             rebuild_modality(expected_root, modality)
             expected_base = expected_root / "tracker" / modality
-            expected_reports = {path.relative_to(expected_base) for path in (expected_base / "reports").glob("*.md")}
-            actual_reports = {path.relative_to(base) for path in (base / "reports").glob("*.md")} if (base / "reports").exists() else set()
+            scopes = ["common", *(task.replace("_", "-") for task in TASK_TYPES[modality])]
+            report_name = re.compile(
+                rf"^{re.escape(modality)}-({'|'.join(map(re.escape, scopes))})-\d{{4}}\.md$"
+            )
+            expected_reports = {
+                path.relative_to(expected_base)
+                for path in (expected_base / "reports").glob("*.md")
+                if report_name.fullmatch(path.name)
+            }
+            actual_reports = {
+                path.relative_to(base)
+                for path in (base / "reports").glob("*.md")
+                if report_name.fullmatch(path.name)
+            } if (base / "reports").exists() else set()
             if actual_reports != expected_reports:
                 problems.append(f"{modality}: derived report set is stale")
             for relative in [Path("error-events.jsonl"), Path("dashboard.csv"), Path("profile.md"), *sorted(expected_reports)]:
@@ -157,8 +171,17 @@ def audit_workspace(root: Path) -> list[str]:
         sidecars: dict[str, list[dict]] = {}
         speaking_contexts: dict[str, SpeakingEvidenceContext] = {}
         invalid_data = False
-        for path in sorted(base.glob("attempts/*/attempt.yaml")):
-            directory = path.parent
+        attempts_root = base / "attempts"
+        directories_on_disk = sorted(
+            path for path in attempts_root.glob("*")
+            if path.is_dir() and not path.name.startswith(".")
+        ) if attempts_root.exists() else []
+        for directory in directories_on_disk:
+            path = directory / "attempt.yaml"
+            if not path.exists():
+                problems.append(f"{directory}: missing attempt.yaml")
+                invalid_data = True
+                continue
             attempt = _load_yaml(path, problems)
             if attempt is None:
                 invalid_data = True
@@ -186,6 +209,9 @@ def audit_workspace(root: Path) -> list[str]:
                 if any(row.get("attempt_id") != attempt["attempt_id"] for row in rows):
                     problems.append(f"{sidecar}: canonical event attempt_id mismatch")
                     invalid_data = True
+                if attempt["record_type"] == "re_evaluation" and rows:
+                    problems.append(f"{sidecar}: re-evaluation event sidecar must be empty")
+                    invalid_data = True
             required = [directory / "feedback-round-1.md"]
             if attempt["record_type"] != "re_evaluation":
                 required.extend([directory / "prompt.md", directory / _response_name(attempt)])
@@ -193,6 +219,8 @@ def audit_workspace(root: Path) -> list[str]:
                 problems.append(f"{attempt['attempt_id']}: missing immutable evidence file")
                 invalid_data = True
                 continue
+            if _read_utf8(directory / "feedback-round-1.md", problems) is None:
+                invalid_data = True
             if attempt["record_type"] != "re_evaluation":
                 prompt = _read_utf8(directory / "prompt.md", problems)
                 response = _read_utf8(directory / _response_name(attempt), problems)
@@ -217,19 +245,11 @@ def audit_workspace(root: Path) -> list[str]:
                 if event["attempt_id"] not in attempts:
                     problems.append(f"orphan event {event['event_id']}")
 
-        for attempt_id, attempt in attempts.items():
-            if attempt["record_type"] not in {"revision", "re_evaluation"}:
-                continue
-            parent = attempts.get(attempt["parent_attempt_id"])
-            if parent is None:
-                problems.append(f"missing revision parent for {attempt_id}")
-                invalid_data = True
-            elif parent["record_type"] != "formal_original" or parent["modality"] != attempt["modality"] or parent["task_type"] != attempt["task_type"]:
-                problems.append(f"invalid revision parent for {attempt_id}")
-                invalid_data = True
-            elif attempt["record_type"] == "re_evaluation" and parent["source_hash"] != attempt["source_hash"]:
-                problems.append(f"{attempt_id}: re-evaluation source_hash mismatch")
-                invalid_data = True
+        try:
+            validate_persisted_attempt_relationships(list(attempts.values()))
+        except _PARSE_ERRORS as error:
+            problems.append(f"{modality}: {error}")
+            invalid_data = True
 
         history_attempts: list[dict] = []
         history_events: list[dict] = []
