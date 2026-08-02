@@ -10,7 +10,11 @@ from typing import BinaryIO, Callable, Iterator
 
 import yaml
 
-from toefl_tracker.canonical import canonical_jsonl, write_aggregate_events
+from toefl_tracker.canonical import (
+    canonical_jsonl,
+    load_canonical_events,
+    write_aggregate_events,
+)
 from toefl_tracker.io import atomic_write_text, canonical_source_hash, read_yaml
 from toefl_tracker.models import (
     ValidatedPracticeRegistration,
@@ -169,16 +173,24 @@ def _validate_registration(
     attempt = registration.attempt
     validate_attempt(attempt, manifest)
     if isinstance(registration, ValidatedPracticeRegistration):
+        if attempt["record_type"] == "re_evaluation":
+            raise ValidationError("registration bundle does not match record_type")
         _validate_extra_files(registration.extra_files)
         expected_hash = canonical_source_hash(registration.prompt, registration.response)
         if attempt["source_hash"] != expected_hash:
             raise ValidationError("source_hash does not match prompt and response")
+        event_ids: set[str] = set()
         for event in registration.events:
             validate_error_event(event)
             if event["attempt_id"] != attempt["attempt_id"]:
                 raise ValidationError("event attempt_id does not match attempt")
+            if event["event_id"] in event_ids:
+                raise ValidationError(f"duplicate event_id: {event['event_id']}")
+            event_ids.add(event["event_id"])
         return
     if isinstance(registration, ValidatedReevaluationRegistration):
+        if attempt["record_type"] != "re_evaluation":
+            raise ValidationError("registration bundle does not match record_type")
         return
     raise TypeError("registration must be a validated registration bundle")
 
@@ -203,6 +215,22 @@ def _validate_existing_attempts(root: Path, attempt: dict, attempts: Path) -> No
             raise ValidationError("revision parent must be matching formal original")
 
 
+def _validate_canonical_event_ids(
+    root: Path,
+    attempt: dict,
+    registration: ValidatedPracticeRegistration | ValidatedReevaluationRegistration,
+) -> None:
+    if not isinstance(registration, ValidatedPracticeRegistration):
+        return
+    existing_event_ids = {
+        event["event_id"]
+        for event in load_canonical_events(root, attempt["modality"])
+    }
+    for event in registration.events:
+        if event["event_id"] in existing_event_ids:
+            raise ValidationError(f"duplicate event_id: {event['event_id']}")
+
+
 def publish_registration(
     root: Path,
     manifest: dict,
@@ -215,6 +243,7 @@ def publish_registration(
         attempts = root / "tracker" / attempt["modality"] / "attempts"
         _cleanup_abandoned_staging(attempts)
         _validate_existing_attempts(root, attempt, attempts)
+        _validate_canonical_event_ids(root, attempt, registration)
         attempts.mkdir(parents=True, exist_ok=True)
         destination = attempts / attempt["attempt_id"]
         staging = Path(

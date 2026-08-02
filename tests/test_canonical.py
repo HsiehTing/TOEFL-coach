@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+import yaml
 
 from test_validation import MANIFEST, valid_attempt, valid_error_event
 from toefl_tracker.canonical import (
@@ -13,7 +14,11 @@ from toefl_tracker.canonical import (
     render_aggregate_events,
 )
 from toefl_tracker.io import canonical_source_hash
-from toefl_tracker.models import ValidationError, ValidatedPracticeRegistration
+from toefl_tracker.models import (
+    ValidatedPracticeRegistration,
+    ValidatedReevaluationRegistration,
+    ValidationError,
+)
 from toefl_tracker.register import publish_registration
 
 
@@ -74,8 +79,6 @@ def legacy_tracker(tmp_path: Path) -> Path:
     attempt["source_hash"] = canonical_source_hash("prompt", "response")
     attempt_directory = tmp_path / "tracker/writing/attempts" / attempt["attempt_id"]
     attempt_directory.mkdir(parents=True)
-    import yaml
-
     (attempt_directory / "attempt.yaml").write_text(
         yaml.safe_dump(attempt, allow_unicode=True, sort_keys=False), encoding="utf-8"
     )
@@ -152,3 +155,107 @@ def test_migration_rejects_duplicate_event_id(tmp_path: Path, legacy_tracker: Pa
 
     with pytest.raises(ValidationError, match="duplicate event_id"):
         migrate_event_sidecars(tmp_path, apply=True)
+
+
+def test_publish_rejects_duplicate_event_id_within_registration(
+    tmp_path: Path, manifest: dict, valid_registration: ValidatedPracticeRegistration
+) -> None:
+    duplicate = ValidatedPracticeRegistration(
+        attempt=valid_registration.attempt,
+        prompt=valid_registration.prompt,
+        response=valid_registration.response,
+        feedback=valid_registration.feedback,
+        events=(valid_registration.events[0], valid_registration.events[0]),
+    )
+
+    with pytest.raises(ValidationError, match="duplicate event_id"):
+        publish_registration(tmp_path, manifest, duplicate)
+
+    assert not (tmp_path / "tracker").exists()
+
+
+def test_publish_rejects_event_id_already_in_canonical_sidecar(
+    tmp_path: Path, manifest: dict
+) -> None:
+    first = _registration("W-AD-20260731-001")
+    publish_registration(tmp_path, manifest, first)
+    second = _registration("W-AD-20260731-002", response="second response")
+    duplicate_event = {**second.events[0], "event_id": first.events[0]["event_id"]}
+    duplicate = ValidatedPracticeRegistration(
+        attempt=second.attempt,
+        prompt=second.prompt,
+        response=second.response,
+        feedback=second.feedback,
+        events=(duplicate_event,),
+    )
+
+    with pytest.raises(ValidationError, match="duplicate event_id"):
+        publish_registration(tmp_path, manifest, duplicate)
+
+    assert not (
+        tmp_path / "tracker/writing/attempts/W-AD-20260731-002"
+    ).exists()
+
+
+def test_publish_rejects_reevaluation_bundle_for_practice_attempt(
+    tmp_path: Path, manifest: dict, valid_registration: ValidatedPracticeRegistration
+) -> None:
+    reevaluation = ValidatedReevaluationRegistration(
+        attempt=valid_registration.attempt,
+        feedback=valid_registration.feedback,
+    )
+
+    with pytest.raises(ValidationError, match="registration bundle does not match record_type"):
+        publish_registration(tmp_path, manifest, reevaluation)
+
+    assert not (tmp_path / "tracker").exists()
+
+
+def test_publish_rejects_practice_bundle_for_reevaluation_attempt(
+    tmp_path: Path, manifest: dict, valid_registration: ValidatedPracticeRegistration
+) -> None:
+    reevaluation_attempt = {
+        **valid_registration.attempt,
+        "record_type": "re_evaluation",
+        "parent_attempt_id": "W-AD-20260731-000",
+    }
+    practice = ValidatedPracticeRegistration(
+        attempt=reevaluation_attempt,
+        prompt=valid_registration.prompt,
+        response=valid_registration.response,
+        feedback=valid_registration.feedback,
+        events=valid_registration.events,
+    )
+
+    with pytest.raises(ValidationError, match="registration bundle does not match record_type"):
+        publish_registration(tmp_path, manifest, practice)
+
+    assert not (tmp_path / "tracker").exists()
+
+
+def test_migration_preflights_conflicts_before_creating_any_sidecars(
+    tmp_path: Path, legacy_tracker: Path
+) -> None:
+    second_attempt = valid_attempt()
+    second_attempt["attempt_id"] = "W-AD-20260731-002"
+    second_attempt["source_hash"] = canonical_source_hash("prompt", "second response")
+    second_directory = legacy_tracker / "attempts" / second_attempt["attempt_id"]
+    second_directory.mkdir()
+    (second_directory / "attempt.yaml").write_text(
+        yaml.safe_dump(second_attempt, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
+    second_event = {**valid_error_event(), "attempt_id": second_attempt["attempt_id"], "event_id": "ERR-002"}
+    ledger = legacy_tracker / "error-events.jsonl"
+    ledger.write_text(
+        canonical_jsonl((valid_error_event(), second_event)), encoding="utf-8"
+    )
+    (second_directory / "events.jsonl").write_text(
+        '{"event_id":"CONFLICT"}\n', encoding="utf-8"
+    )
+    before = tree_digest(tmp_path)
+
+    with pytest.raises(ValidationError, match="conflicting canonical event sidecar"):
+        migrate_event_sidecars(tmp_path, apply=True)
+
+    assert tree_digest(tmp_path) == before
+    assert not (legacy_tracker / "attempts/W-AD-20260731-001/events.jsonl").exists()

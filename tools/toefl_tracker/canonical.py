@@ -88,6 +88,7 @@ def _read_legacy_ledger(path: Path) -> list[dict]:
 def migrate_event_sidecars(root: Path, apply: bool) -> MigrationResult:
     created: list[str] = []
     unchanged: list[str] = []
+    planned_writes: list[tuple[Path, str]] = []
     for modality in sorted(MODALITIES):
         attempts = _attempt_directories(root, modality)
         by_attempt: dict[str, list[dict]] = defaultdict(list)
@@ -117,6 +118,8 @@ def migrate_event_sidecars(root: Path, apply: bool) -> MigrationResult:
                 unchanged.append(directory.name)
                 continue
             created.append(directory.name)
-            if apply:
-                atomic_write_text(sidecar, expected)
+            planned_writes.append((sidecar, expected))
+    if apply:
+        for sidecar, expected in planned_writes:
+            atomic_write_text(sidecar, expected)
     return MigrationResult(tuple(created), tuple(unchanged))
