@@ -219,21 +219,29 @@ def _validate_existing_attempts(root: Path, attempt: dict, attempts: Path) -> No
             validate_reevaluation_metadata(attempt)
             if attempt["source_hash"] != parent_attempt["source_hash"]:
                 raise ValidationError("re-evaluation source_hash must match formal parent")
-            expected_supersedes = {
-                f"{parent_attempt['attempt_id']}@{parent_attempt['rubric_version']}"
-            }
+            prior_reevaluations: list[dict] = []
             for directory in _attempt_directories(root, attempt["modality"]):
                 candidate = read_yaml(directory / "attempt.yaml")
                 if (
                     candidate.get("record_type") == "re_evaluation"
                     and candidate.get("parent_attempt_id") == attempt["parent_attempt_id"]
                 ):
-                    expected_supersedes.add(
-                        f"{candidate['attempt_id']}@{candidate['rubric_version']}"
-                    )
-            if attempt["supersedes_evaluation_id"] not in expected_supersedes:
+                    prior_reevaluations.append(candidate)
+            if prior_reevaluations:
+                predecessor = max(
+                    prior_reevaluations,
+                    key=lambda candidate: (
+                        candidate["evaluated_at"], candidate["attempt_id"]
+                    ),
+                )
+            else:
+                predecessor = parent_attempt
+            expected_supersedes = (
+                f"{predecessor['attempt_id']}@{predecessor['rubric_version']}"
+            )
+            if attempt["supersedes_evaluation_id"] != expected_supersedes:
                 raise ValidationError(
-                    "supersedes_evaluation_id must identify the parent or prior re-evaluation"
+                    "supersedes_evaluation_id must identify the immediate predecessor"
                 )
 
 

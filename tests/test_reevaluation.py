@@ -1,3 +1,5 @@
+import shutil
+import sys
 from pathlib import Path
 
 import pytest
@@ -5,6 +7,7 @@ import yaml
 
 from test_registration_gates import ROOT, WRITING_FEEDBACK
 from test_validation import valid_attempt
+from register_attempt import main as register_attempt_main
 from toefl_tracker.io import canonical_source_hash, read_yaml
 from toefl_tracker.models import ValidationError
 from toefl_tracker.register import publish_registration
@@ -26,6 +29,32 @@ def _original(tmp_path: Path, manifest: dict) -> dict:
         ),
     )
     return read_yaml(published / "attempt.yaml")
+
+
+def _reevaluation(
+    original: dict,
+    attempt_id: str,
+    evaluated_at: str,
+    supersedes_evaluation_id: str,
+) -> dict:
+    return {
+        **original,
+        "schema_version": 2,
+        "attempt_id": attempt_id,
+        "record_type": "re_evaluation",
+        "parent_attempt_id": original["attempt_id"],
+        "evaluated_at": evaluated_at,
+        "supersedes_evaluation_id": supersedes_evaluation_id,
+        "task_score": {"scale": "0-5", "value": 4, "confidence": "medium"},
+    }
+
+
+def _publish_reevaluation(tmp_path: Path, manifest: dict, attempt: dict) -> None:
+    publish_registration(
+        tmp_path,
+        manifest,
+        build_reevaluation_registration(tmp_path, manifest, attempt, WRITING_FEEDBACK),
+    )
 
 
 def test_schema_two_reevaluation_links_without_copying_source(tmp_path: Path) -> None:
@@ -91,3 +120,84 @@ def test_reevaluation_rejects_a_changed_source_hash(tmp_path: Path) -> None:
 
     with pytest.raises(ValidationError, match="source_hash"):
         build_reevaluation_registration(tmp_path, manifest, reevaluation, WRITING_FEEDBACK)
+
+
+def test_reevaluation_lineage_requires_the_immediate_predecessor(tmp_path: Path) -> None:
+    manifest = yaml.safe_load((ROOT / "standards/ets-2026/manifest.yaml").read_text())
+    original = _original(tmp_path, manifest)
+    original_evaluation = f"{original['attempt_id']}@{original['rubric_version']}"
+    e1 = _reevaluation(original, "W-AD-20260731-001-E1", "2026-08-02T09:00:00+08:00", original_evaluation)
+    _publish_reevaluation(tmp_path, manifest, e1)
+    e2 = _reevaluation(
+        original,
+        "W-AD-20260731-001-E2",
+        "2026-08-02T10:00:00+08:00",
+        f"{e1['attempt_id']}@{e1['rubric_version']}",
+    )
+    _publish_reevaluation(tmp_path, manifest, e2)
+    e3 = _reevaluation(
+        original,
+        "W-AD-20260731-001-E3",
+        "2026-08-02T11:00:00+08:00",
+        f"{e2['attempt_id']}@{e2['rubric_version']}",
+    )
+
+    _publish_reevaluation(tmp_path, manifest, e3)
+
+
+@pytest.mark.parametrize("supersedes", ["original", "nonlatest"])
+def test_reevaluation_rejects_lineage_rewind_or_branch(
+    tmp_path: Path, supersedes: str
+) -> None:
+    manifest = yaml.safe_load((ROOT / "standards/ets-2026/manifest.yaml").read_text())
+    original = _original(tmp_path, manifest)
+    original_evaluation = f"{original['attempt_id']}@{original['rubric_version']}"
+    e1 = _reevaluation(original, "W-AD-20260731-001-E1", "2026-08-02T09:00:00+08:00", original_evaluation)
+    _publish_reevaluation(tmp_path, manifest, e1)
+    e2 = _reevaluation(
+        original,
+        "W-AD-20260731-001-E2",
+        "2026-08-02T10:00:00+08:00",
+        f"{e1['attempt_id']}@{e1['rubric_version']}",
+    )
+    _publish_reevaluation(tmp_path, manifest, e2)
+    e3 = _reevaluation(
+        original,
+        "W-AD-20260731-001-E3",
+        "2026-08-02T11:00:00+08:00",
+        original_evaluation if supersedes == "original" else f"{e1['attempt_id']}@{e1['rubric_version']}",
+    )
+
+    with pytest.raises(ValidationError, match="immediate predecessor"):
+        _publish_reevaluation(tmp_path, manifest, e3)
+
+
+def test_generic_cli_publishes_schema_two_reevaluation_without_source_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shutil.copytree(ROOT / "standards", tmp_path / "standards")
+    manifest = yaml.safe_load((tmp_path / "standards/ets-2026/manifest.yaml").read_text())
+    original = _original(tmp_path, manifest)
+    reevaluation = _reevaluation(
+        original,
+        "W-AD-20260731-001-E1",
+        "2026-08-02T09:00:00+08:00",
+        f"{original['attempt_id']}@{original['rubric_version']}",
+    )
+    attempt_path = tmp_path / "reevaluation.yaml"
+    feedback_path = tmp_path / "feedback.md"
+    attempt_path.write_text(yaml.safe_dump(reevaluation), encoding="utf-8")
+    feedback_path.write_text(WRITING_FEEDBACK, encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", [
+        "register_attempt.py", "--root", str(tmp_path), "--attempt", str(attempt_path),
+        "--feedback", str(feedback_path),
+    ])
+
+    assert register_attempt_main() == 0
+
+    destination = tmp_path / "tracker/writing/attempts/W-AD-20260731-001-E1"
+    assert {path.name for path in destination.iterdir()} == {
+        "attempt.yaml", "feedback-round-1.md", "events.jsonl"
+    }
+    assert read_yaml(destination / "attempt.yaml")["source_hash"] == original["source_hash"]
+    assert (destination / "events.jsonl").read_text(encoding="utf-8") == ""
