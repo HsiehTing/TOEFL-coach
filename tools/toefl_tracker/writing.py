@@ -1,8 +1,21 @@
 import re
 from collections.abc import Mapping
+from collections.abc import Sequence
+from pathlib import Path
 from re import Match
 
-from toefl_tracker.models import ValidationError
+from toefl_tracker.models import (
+    ValidatedPracticeRegistration,
+    ValidatedReevaluationRegistration,
+    ValidationError,
+)
+from toefl_tracker.canonical import write_aggregate_events
+from toefl_tracker.register import (
+    _registration_lock,
+    publish_registration,
+    validate_practice_events,
+)
+from toefl_tracker.validation import validate_attempt, validate_reevaluation_metadata
 
 
 RUBRICS = {
@@ -82,3 +95,71 @@ def validate_writing_assessment(
             raise ValidationError(
                 f"feedback omits counted evidence: {event.get('event_id')}"
             )
+
+
+def build_reevaluation_registration(
+    root: Path,
+    manifest: dict,
+    attempt: dict,
+    feedback: str,
+) -> ValidatedReevaluationRegistration:
+    """Build a source-free, schema-v2 re-evaluation bundle."""
+    validate_attempt(attempt, manifest)
+    validate_reevaluation_metadata(attempt)
+    validate_writing_assessment(attempt, [], feedback)
+    registration = ValidatedReevaluationRegistration(attempt=attempt, feedback=feedback)
+    # Validate the parent relationship now for API callers. The publisher repeats
+    # it under its transaction lock before it writes anything.
+    with _registration_lock(root):
+        attempts = root / "tracker" / attempt["modality"] / "attempts"
+        from toefl_tracker.register import _validate_existing_attempts
+
+        _validate_existing_attempts(root, attempt, attempts)
+    return registration
+
+
+def build_writing_registration(
+    root: Path,
+    manifest: dict,
+    attempt: dict,
+    prompt: str,
+    response: str,
+    feedback: str,
+    events: Sequence[dict],
+) -> ValidatedPracticeRegistration | ValidatedReevaluationRegistration:
+    """Apply the Writing gate before handing a typed bundle to the publisher."""
+    validate_attempt(attempt, manifest)
+    if attempt["record_type"] == "re_evaluation":
+        return build_reevaluation_registration(root, manifest, attempt, feedback)
+    event_rows = tuple(events)
+    validate_writing_assessment(attempt, list(event_rows), feedback)
+    # This preflight gives direct builder callers the same error they would see
+    # during publication. publish_registration repeats it while locked.
+    with _registration_lock(root):
+        validate_practice_events(root, attempt, response, event_rows)
+    return ValidatedPracticeRegistration(
+        attempt=attempt,
+        prompt=prompt,
+        response=response,
+        feedback=feedback,
+        events=event_rows,
+        require_contextual_validation=True,
+    )
+
+
+def register_writing_attempt(
+    root: Path,
+    manifest: dict,
+    attempt: dict,
+    prompt: str,
+    response: str,
+    feedback: str,
+    events: Sequence[dict],
+) -> Path:
+    registration = build_writing_registration(
+        root, manifest, attempt, prompt, response, feedback, events
+    )
+    destination = publish_registration(root, manifest, registration)
+    with _registration_lock(root):
+        write_aggregate_events(root, attempt["modality"])
+    return destination

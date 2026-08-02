@@ -1,15 +1,22 @@
 import json
 import re
 from hashlib import sha256
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from math import isclose, isfinite
 from pathlib import Path
 from re import Match
 
 import yaml
 
-from toefl_tracker.models import LEVELS, ValidationError
-from toefl_tracker.register import register_attempt
+from toefl_tracker.event_validation import SpeakingEvidenceContext
+from toefl_tracker.canonical import write_aggregate_events
+from toefl_tracker.models import LEVELS, ValidatedPracticeRegistration, ValidationError
+from toefl_tracker.register import (
+    _registration_lock,
+    publish_registration,
+    validate_practice_events,
+)
+from toefl_tracker.validation import validate_attempt
 
 
 ITEM_COUNTS = {"listen_and_repeat": 7, "take_an_interview": 4}
@@ -256,17 +263,23 @@ def _validated_inspection(inspection: object) -> tuple[dict, str]:
     return persisted, source_path
 
 
-def register_speaking_session(
+def build_speaking_registration(
     root: Path,
     manifest: dict,
     attempt: dict,
     prompt: str,
     transcript: str,
     feedback: str,
-    events: list[dict],
-    segments: list[dict],
+    events: Sequence[dict],
+    segments: Sequence[dict],
     inspection: dict,
-) -> Path:
+    transcript_segments: Sequence[dict] = (),
+) -> ValidatedPracticeRegistration:
+    validate_attempt(attempt, manifest)
+    if isinstance(transcript_segments, (str, bytes)) or not isinstance(
+        transcript_segments, Sequence
+    ) or any(not isinstance(row, Mapping) for row in transcript_segments):
+        raise ValidationError("transcript_segments must be a sequence of mappings")
     persisted_inspection, source_path = _validated_inspection(inspection)
     if not isinstance(attempt, Mapping):
         raise ValidationError("speaking attempt must be a mapping")
@@ -289,10 +302,12 @@ def register_speaking_session(
         )
     bounded_attempt = dict(attempt)
     bounded_attempt["duration_seconds"] = inspection_duration
+    event_rows = tuple(events)
+    segment_rows = list(segments)
     validate_speaking_assessment(
         bounded_attempt,
-        segments,
-        events,
+        segment_rows,
+        list(event_rows),
         feedback,
     )
     if attempt.get("audio_quality") != {
@@ -313,14 +328,59 @@ def register_speaking_session(
             + "\n"
         ),
         "segments.yaml": yaml.safe_dump(
-            segments,
+            segment_rows,
             allow_unicode=True,
             sort_keys=False,
         ),
         # Preserve a stable audit reference without committing a local path or URL.
         "source-reference.txt": "source:" + sha256(source_path.encode("utf-8")).hexdigest() + "\n",
     }
-    return register_attempt(
+    reliable_dimensions = inspection.get("reliable_dimensions")
+    if reliable_dimensions is None:
+        # Reliability policy arrives with the transcript-preparation task. Until
+        # then, the confirmed technical/mapping gate supports all dimensions.
+        reliable_dimensions = {
+            "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
+            "vocabulary", "reconstruction", "directness", "relevance",
+            "elaboration", "coherence",
+        }
+    learner_segments = tuple(
+        row for row in segment_rows if row.get("role") == "learner"
+    )
+    speaking_context = SpeakingEvidenceContext(
+        learner_segments=learner_segments,
+        duration_seconds=persisted_inspection["duration_seconds"],
+        reliable_dimensions=reliable_dimensions,
+    )
+    with _registration_lock(root):
+        validate_practice_events(
+            root, attempt, transcript, event_rows, speaking_context
+        )
+    return ValidatedPracticeRegistration(
+        attempt=attempt,
+        prompt=prompt,
+        response=transcript,
+        feedback=feedback,
+        events=event_rows,
+        extra_files=extra_files,
+        require_contextual_validation=True,
+        speaking_context=speaking_context,
+    )
+
+
+def register_speaking_session(
+    root: Path,
+    manifest: dict,
+    attempt: dict,
+    prompt: str,
+    transcript: str,
+    feedback: str,
+    events: Sequence[dict],
+    segments: Sequence[dict],
+    inspection: dict,
+    transcript_segments: Sequence[dict] = (),
+) -> Path:
+    registration = build_speaking_registration(
         root,
         manifest,
         attempt,
@@ -328,5 +388,15 @@ def register_speaking_session(
         transcript,
         feedback,
         events,
-        extra_files=extra_files,
+        segments,
+        inspection,
+        transcript_segments,
     )
+    destination = publish_registration(
+        root,
+        manifest,
+        registration,
+    )
+    with _registration_lock(root):
+        write_aggregate_events(root, attempt["modality"])
+    return destination

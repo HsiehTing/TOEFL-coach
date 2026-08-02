@@ -11,6 +11,7 @@ from register_speaking_session import main as register_speaking_main
 from toefl_tracker.io import canonical_source_hash
 from toefl_tracker.models import ValidationError
 from toefl_tracker.speaking import (
+    build_speaking_registration,
     register_speaking_session,
     validate_speaking_assessment,
 )
@@ -511,6 +512,9 @@ def test_speaking_artifact_failure_rolls_back_attempt_and_ledger(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     root = tmp_path / "workspace"
+    import shutil
+
+    shutil.copytree(ROOT / "standards", root / "standards")
     prompt = "Seven source sentences"
     transcript = "Seven learner repetitions"
     first_attempt = registration_attempt(prompt, transcript)
@@ -536,6 +540,7 @@ def test_speaking_artifact_failure_rolls_back_attempt_and_ledger(
     )
     second_event = counted_event(second_attempt["attempt_id"])
     second_event["event_id"] = "ERR-20260731-0002"
+    second_event["historical_status"] = "recurring"
     original_write = register_module.atomic_write_text
 
     def fail_segments_write(path: Path, content: str) -> None:
@@ -585,6 +590,27 @@ def test_registration_requires_mapping_inspection(tmp_path: Path) -> None:
             [],
             segments(7),
             [],
+        )
+
+
+def test_builder_rejects_non_mapping_transcript_segments(tmp_path: Path) -> None:
+    import shutil
+
+    shutil.copytree(ROOT / "standards", tmp_path / "standards")
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    with pytest.raises(ValidationError, match="transcript_segments"):
+        build_speaking_registration(
+            tmp_path,
+            MANIFEST,
+            registration_attempt(prompt, transcript),
+            prompt,
+            transcript,
+            FEEDBACK,
+            [],
+            segments(7),
+            inspection("/private/source/practice.m4a"),
+            ["not a mapping"],
         )
 
 

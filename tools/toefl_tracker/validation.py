@@ -15,6 +15,21 @@ REQUIRED_ATTEMPT_FIELDS = {
 }
 
 
+def validate_reevaluation_metadata(data: dict) -> None:
+    """Validate fields unique to a newly registered schema-v2 re-evaluation."""
+    if data.get("record_type") != "re_evaluation":
+        raise ValidationError("schema_version 2 requires record_type re_evaluation")
+    if data.get("schema_version") != 2:
+        raise ValidationError("re-evaluation requires schema_version 2")
+    try:
+        datetime.fromisoformat(data["evaluated_at"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValidationError("evaluated_at must be ISO 8601") from error
+    supersedes = data.get("supersedes_evaluation_id")
+    if not isinstance(supersedes, str) or not supersedes.strip():
+        raise ValidationError("supersedes_evaluation_id must be a non-empty string")
+
+
 def validate_attempt(data: dict, manifest: dict) -> None:
     if not isinstance(data, dict):
         raise ValidationError("attempt must be a mapping")
@@ -23,7 +38,7 @@ def validate_attempt(data: dict, manifest: dict) -> None:
     missing = REQUIRED_ATTEMPT_FIELDS - data.keys()
     if missing:
         raise ValidationError(f"missing attempt fields: {sorted(missing)}")
-    if type(data["schema_version"]) is not int or data["schema_version"] != 1:
+    if type(data["schema_version"]) is not int or data["schema_version"] not in {1, 2}:
         raise ValidationError("unsupported attempt schema_version")
     if not isinstance(data["modality"], str) or data["modality"] not in MODALITIES:
         raise ValidationError("invalid modality")
@@ -31,6 +46,8 @@ def validate_attempt(data: dict, manifest: dict) -> None:
         raise ValidationError("task_type does not match modality")
     if not isinstance(data["record_type"], str) or data["record_type"] not in RECORD_TYPES:
         raise ValidationError("invalid record_type")
+    if data["schema_version"] == 2:
+        validate_reevaluation_metadata(data)
     if not isinstance(data["rubric_version"], str) or data["rubric_version"] not in manifest["rubrics"]:
         raise ValidationError("unknown rubric_version")
     rubric_task = manifest["rubrics"][data["rubric_version"]]["task_type"]

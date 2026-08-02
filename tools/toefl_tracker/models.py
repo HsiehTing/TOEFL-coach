@@ -25,6 +25,10 @@ class ValidatedPracticeRegistration:
     feedback: str
     events: tuple[dict, ...]
     extra_files: Mapping[str, str] = field(default_factory=dict)
+    # Gate builders set this marker and provide speaking evidence where needed.
+    # The publisher repeats contextual validation while holding its lock.
+    require_contextual_validation: bool = False
+    speaking_context: object | None = None
 
 
 @dataclass(frozen=True)

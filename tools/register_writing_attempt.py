@@ -15,19 +15,17 @@ def main() -> int:
     parser.add_argument("--feedback", type=Path, required=True)
     parser.add_argument("--events", type=Path, required=True)
     args = parser.parse_args()
-    manifest = read_yaml(args.root / "standards/ets-2026/manifest.yaml")
-    events = [json.loads(line) for line in args.events.read_text().splitlines() if line.strip()]
-    attempt = read_yaml(args.attempt)
-    if attempt.get("modality") == "speaking":
-        parser.error("Speaking registration requires register_speaking_session.py")
-    if attempt.get("modality") != "writing":
-        parser.error("register_attempt.py accepts Writing attempts only")
     prompt = args.prompt.read_text()
     response = args.response.read_text()
-    attempt["source_hash"] = canonical_source_hash(prompt, response)
+    attempt = read_yaml(args.attempt)
+    if attempt.get("record_type") != "re_evaluation":
+        attempt["source_hash"] = canonical_source_hash(prompt, response)
+    events = [
+        json.loads(line) for line in args.events.read_text().splitlines() if line.strip()
+    ]
     destination = register_writing_attempt(
         args.root,
-        manifest,
+        read_yaml(args.root / "standards/ets-2026/manifest.yaml"),
         attempt,
         prompt,
         response,

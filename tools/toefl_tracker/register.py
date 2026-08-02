@@ -21,7 +21,12 @@ from toefl_tracker.models import (
     ValidatedReevaluationRegistration,
     ValidationError,
 )
-from toefl_tracker.validation import validate_attempt, validate_error_event
+from toefl_tracker.event_validation import validate_event_context
+from toefl_tracker.validation import (
+    validate_attempt,
+    validate_error_event,
+    validate_reevaluation_metadata,
+)
 
 if os.name == "nt":
     import msvcrt
@@ -194,7 +199,10 @@ def _validate_existing_attempts(root: Path, attempt: dict, attempts: Path) -> No
         existing = read_yaml(directory / "attempt.yaml")
         if existing["attempt_id"] == attempt["attempt_id"]:
             raise ValidationError("attempt_id already exists")
-        if existing["source_hash"] == attempt["source_hash"]:
+        if (
+            attempt["record_type"] != "re_evaluation"
+            and existing["source_hash"] == attempt["source_hash"]
+        ):
             raise ValidationError(f"duplicate source_hash: {existing['attempt_id']}")
     if attempt["record_type"] in {"revision", "re_evaluation"}:
         parent = attempts / attempt["parent_attempt_id"]
@@ -207,6 +215,80 @@ def _validate_existing_attempts(root: Path, attempt: dict, attempts: Path) -> No
             or parent_attempt.get("task_type") != attempt["task_type"]
         ):
             raise ValidationError("revision parent must be matching formal original")
+        if attempt["record_type"] == "re_evaluation":
+            validate_reevaluation_metadata(attempt)
+            if attempt["source_hash"] != parent_attempt["source_hash"]:
+                raise ValidationError("re-evaluation source_hash must match formal parent")
+            expected_supersedes = {
+                f"{parent_attempt['attempt_id']}@{parent_attempt['rubric_version']}"
+            }
+            for directory in _attempt_directories(root, attempt["modality"]):
+                candidate = read_yaml(directory / "attempt.yaml")
+                if (
+                    candidate.get("record_type") == "re_evaluation"
+                    and candidate.get("parent_attempt_id") == attempt["parent_attempt_id"]
+                ):
+                    expected_supersedes.add(
+                        f"{candidate['attempt_id']}@{candidate['rubric_version']}"
+                    )
+            if attempt["supersedes_evaluation_id"] not in expected_supersedes:
+                raise ValidationError(
+                    "supersedes_evaluation_id must identify the parent or prior re-evaluation"
+                )
+
+
+def _historical_registration_state(root: Path, modality: str) -> tuple[list[dict], list[dict]]:
+    attempts = [
+        read_yaml(directory / "attempt.yaml")
+        for directory in _attempt_directories(root, modality)
+    ]
+    attempts.sort(
+        key=lambda row: (str(row.get("submitted_at", "")), str(row.get("attempt_id", "")))
+    )
+    return attempts, load_canonical_events(root, modality)
+
+
+def validate_practice_events(
+    root: Path,
+    attempt: dict,
+    response: str,
+    events: tuple[dict, ...],
+    speaking_context: object | None = None,
+) -> None:
+    """Validate evidence/status against the complete persisted modality history.
+
+    The caller must hold ``_registration_lock`` whenever this result is used to
+    publish. Gate builders also invoke it as a preflight for direct API users;
+    publication repeats it under the lock to close that race.
+    """
+    historical_attempts, historical_events = _historical_registration_state(
+        root, attempt["modality"]
+    )
+    for event in events:
+        validate_event_context(
+            root=root,
+            attempt=attempt,
+            response=response,
+            event=event,
+            current_events=events,
+            historical_attempts=historical_attempts,
+            historical_events=historical_events,
+            speaking_context=speaking_context,
+        )
+
+
+def validate_practice_context(
+    root: Path,
+    registration: ValidatedPracticeRegistration,
+) -> None:
+    """Compatibility adapter for publication of a typed registration bundle."""
+    validate_practice_events(
+        root,
+        registration.attempt,
+        registration.response,
+        registration.events,
+        registration.speaking_context,
+    )
 
 
 def _validate_canonical_event_ids(
@@ -238,6 +320,11 @@ def publish_registration(
         _cleanup_abandoned_staging(attempts)
         _validate_existing_attempts(root, attempt, attempts)
         _validate_canonical_event_ids(root, attempt, registration)
+        if (
+            isinstance(registration, ValidatedPracticeRegistration)
+            and registration.require_contextual_validation
+        ):
+            validate_practice_context(root, registration)
         attempts.mkdir(parents=True, exist_ok=True)
         destination = attempts / attempt["attempt_id"]
         staging = Path(
