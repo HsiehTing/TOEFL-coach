@@ -137,6 +137,16 @@ def inspection(attempt_id: str) -> dict:
         "peak_dbfs": -5.4,
         "clipping": False,
         "decodable": True,
+        "quality": {
+            "policy_version": 1,
+            "standard_basis": "diagnostic_internal",
+            "usable": True,
+            "dimension_set": "all",
+        },
+        "provenance": {
+            "executables": {"ffmpeg": "ffmpeg 8.1", "ffprobe": "ffprobe 8.1", "whisper-cli": "whisper 1.9"},
+            "model_identifier": "ggml-small.en.bin",
+        },
     }
 
 

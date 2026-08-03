@@ -19,8 +19,12 @@ def main() -> int:
         if args.preflight:
             print(json.dumps(dependencies.provenance, ensure_ascii=False, sort_keys=True))
             return 0
-        inspection = inspect_audio(args.audio)
-        inspection["provenance"] = dependencies.provenance
+        inspection = inspect_audio(
+            args.audio,
+            ffmpeg=dependencies.ffmpeg,
+            ffprobe=dependencies.ffprobe,
+            provenance=dependencies.provenance,
+        )
         result = json.dumps(inspection, ensure_ascii=False, indent=2) + "\n"
     except AudioInspectionError as error:
         parser.error(str(error))

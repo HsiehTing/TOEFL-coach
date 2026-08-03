@@ -13,7 +13,7 @@ from toefl_tracker.io import canonical_source_hash, read_yaml
 from toefl_tracker.models import TASK_TYPES, ValidationError
 from toefl_tracker.register import persisted_attempt_relationship_problems
 from toefl_tracker.reports import rebuild_modality
-from toefl_tracker.speaking import validate_speaking_assessment
+from toefl_tracker.speaking import validate_persisted_inspection, validate_speaking_assessment
 from toefl_tracker.validation import validate_attempt, validate_error_event
 
 
@@ -87,9 +87,7 @@ def _audit_speaking_artifacts(
             raise ValidationError("speaking segments must be a list of mappings")
         if not isinstance(inspection, dict):
             raise ValidationError("speaking inspection must be a mapping")
-        required = {"duration_seconds", "codec", "sample_rate_hz", "channels", "mean_dbfs", "peak_dbfs", "clipping", "decodable"}
-        if set(inspection) != required:
-            raise ValidationError("speaking inspection fields are invalid")
+        inspection = validate_persisted_inspection(inspection)
         validate_speaking_assessment(attempt, segments, events, feedback)
         reliable = {
             "intelligibility", "pronunciation", "prosody", "fluency", "grammar",

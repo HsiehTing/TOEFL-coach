@@ -1,6 +1,7 @@
 import json
 from hashlib import sha256
 import sys
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ import toefl_tracker.register as register_module
 from register_speaking_session import main as register_speaking_main
 from toefl_tracker.io import canonical_source_hash
 from toefl_tracker.models import ValidationError
+from toefl_tracker.audio import inspect_audio
 from toefl_tracker.speaking import (
     build_speaking_registration,
     register_speaking_session,
@@ -119,6 +121,16 @@ def inspection(path: str) -> dict:
         "peak_dbfs": -5.4,
         "clipping": False,
         "decodable": True,
+        "quality": {
+            "policy_version": 1,
+            "standard_basis": "diagnostic_internal",
+            "usable": True,
+            "dimension_set": "all",
+        },
+        "provenance": {
+            "executables": {"ffmpeg": "ffmpeg 8.1", "ffprobe": "ffprobe 8.1", "whisper-cli": "whisper 1.9"},
+            "model_identifier": "ggml-small.en.bin",
+        },
     }
 
 
@@ -507,6 +519,54 @@ def test_registration_persists_artifacts_without_copying_raw_audio(
     assert source.read_bytes() == b"private audio"
 
 
+def test_audio_inspection_artifact_is_accepted_by_speaking_gate(tmp_path: Path) -> None:
+    source = tmp_path / "private/practice.m4a"
+    source.parent.mkdir()
+    source.write_bytes(b"private audio")
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    provenance = {
+        "executables": {"ffmpeg": "ffmpeg 8.1", "ffprobe": "ffprobe 8.1", "whisper-cli": "whisper 1.9"},
+        "model_identifier": "ggml-small.en.bin",
+    }
+
+    def runner(command: list[str], **kwargs: object):
+        if command[0] == "/resolved/ffprobe":
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps({
+                    "format": {"duration": "120"},
+                    "streams": [{"codec_type": "audio", "codec_name": "aac", "sample_rate": "48000", "channels": 1}],
+                }),
+                "",
+            )
+        return subprocess.CompletedProcess(command, 0, "", "mean_volume: -30.0 dB\nmax_volume: -5.4 dB\n")
+
+    artifact = inspect_audio(
+        source,
+        runner=runner,
+        ffmpeg="/resolved/ffmpeg",
+        ffprobe="/resolved/ffprobe",
+        provenance=provenance,
+    )
+    destination = register_speaking_session(
+        tmp_path / "workspace",
+        MANIFEST,
+        registration_attempt(prompt, transcript),
+        prompt,
+        transcript,
+        FEEDBACK,
+        [],
+        segments(7),
+        artifact,
+    )
+
+    persisted = json.loads((destination / "audio-inspection.json").read_text())
+    assert persisted["quality"]["usable"] is True
+    assert persisted["provenance"] == provenance
+
+
 def test_speaking_artifact_failure_rolls_back_attempt_and_ledger(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -740,6 +800,8 @@ def test_persisted_inspection_contains_only_approved_fields(
         "peak_dbfs",
         "clipping",
         "decodable",
+        "quality",
+        "provenance",
     }
 
 

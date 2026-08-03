@@ -1,10 +1,15 @@
 import json
+import os
+import subprocess
 from pathlib import Path
 from subprocess import CompletedProcess
 
 import pytest
+import yaml
 
 from toefl_tracker.audio import AudioInspectionError
+import toefl_tracker.quality as quality_module
+import toefl_tracker.transcription as transcription_module
 from toefl_tracker.quality import quality_decision
 from toefl_tracker.transcription import preflight_audio_tools, transcribe_audio
 
@@ -66,6 +71,46 @@ def test_preflight_rejects_wrong_or_repository_model(
         )
 
 
+def test_preflight_requires_explicit_model_environment(dependency_probe: DependencyProbe) -> None:
+    dependency_probe.environ.clear()
+
+    with pytest.raises(AudioInspectionError, match="TOEFL_WHISPER_MODEL"):
+        preflight_audio_tools(which=dependency_probe.which, environ=dependency_probe.environ)
+
+
+def test_preflight_uses_stable_repository_root_when_cwd_is_nested(
+    tmp_path: Path, dependency_probe: DependencyProbe, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repository_root = tmp_path / "repository"
+    nested_directory = repository_root / "nested" / "directory"
+    nested_directory.mkdir(parents=True)
+    repository_model = repository_root / "models" / "ggml-small.en.bin"
+    repository_model.parent.mkdir()
+    repository_model.write_bytes(b"model fixture")
+    dependency_probe.environ["TOEFL_WHISPER_MODEL"] = str(repository_model)
+    monkeypatch.chdir(nested_directory)
+    monkeypatch.setattr(transcription_module, "_repository_root", lambda: repository_root)
+
+    with pytest.raises(AudioInspectionError, match="outside the repository"):
+        preflight_audio_tools(which=dependency_probe.which, environ=dependency_probe.environ)
+
+
+def test_preflight_rejects_unreadable_model(
+    dependency_probe: DependencyProbe, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_access = os.access
+
+    def deny_model(path: str | Path, mode: int) -> bool:
+        if Path(path) == dependency_probe.model and mode == os.R_OK:
+            return False
+        return real_access(path, mode)
+
+    monkeypatch.setattr(transcription_module.os, "access", deny_model)
+
+    with pytest.raises(AudioInspectionError, match="model is not readable"):
+        preflight_audio_tools(which=dependency_probe.which, environ=dependency_probe.environ)
+
+
 def test_transcription_normalizes_to_wav_and_cleans_temporary_files(
     tmp_path: Path, dependency_probe: DependencyProbe
 ) -> None:
@@ -121,6 +166,32 @@ def test_transcription_rejects_malformed_whisper_segments(
         transcribe_audio(audio, dependencies, runner=runner)
 
 
+@pytest.mark.parametrize("suffix", [".aac", ".flac", ".m4a", ".mp3", ".mp4", ".ogg", ".wav"])
+def test_transcription_rejects_media_stored_inside_repository(
+    tmp_path: Path, dependency_probe: DependencyProbe, suffix: str
+) -> None:
+    repository_root = tmp_path / "repository"
+    audio = repository_root / "media" / f"input{suffix}"
+    audio.parent.mkdir(parents=True)
+    audio.write_bytes(b"fixture")
+    dependencies = preflight_audio_tools(which=dependency_probe.which, environ=dependency_probe.environ)
+
+    with pytest.raises(AudioInspectionError, match="outside the repository"):
+        transcribe_audio(audio, dependencies, repository_root=repository_root)
+
+
+@pytest.mark.parametrize("suffix", [".aac", ".flac", ".m4a", ".mp3", ".mp4", ".ogg", ".wav"])
+def test_all_accepted_raw_media_extensions_are_gitignored(suffix: str) -> None:
+    path = f"private-audio{suffix}"
+    result = subprocess.run(
+        ["git", "check-ignore", "-q", "--", path],
+        cwd=Path(__file__).parents[1],
+        check=False,
+    )
+
+    assert result.returncode == 0
+
+
 def test_provenance_contains_identifiers_but_not_local_paths(
     dependency_probe: DependencyProbe,
 ) -> None:
@@ -172,3 +243,30 @@ def test_quality_policy_is_versioned_diagnostic_internal() -> None:
     decision = quality_decision({"mean_dbfs": -30.0, "peak_dbfs": -5.0})
 
     assert decision.standard_basis == "diagnostic_internal"
+
+
+@pytest.mark.parametrize("value", ["-20", True, float("nan"), float("inf")])
+def test_quality_policy_rejects_non_numeric_or_nonfinite_thresholds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, value: object
+) -> None:
+    policy = yaml.safe_load((Path(__file__).parents[1] / "standards/ets-2026/audio-quality-policy.yaml").read_text())
+    policy["thresholds_dbfs"]["text_only_peak_lt"] = value
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(yaml.safe_dump(policy), encoding="utf-8")
+    monkeypatch.setattr(quality_module, "_POLICY_PATH", policy_path)
+
+    with pytest.raises(AudioInspectionError, match="quality policy"):
+        quality_decision({"mean_dbfs": -30.0, "peak_dbfs": -5.0})
+
+
+def test_quality_policy_rejects_invalid_threshold_order(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    policy = yaml.safe_load((Path(__file__).parents[1] / "standards/ets-2026/audio-quality-policy.yaml").read_text())
+    policy["thresholds_dbfs"]["inaudible_peak_lte"] = -10.0
+    policy_path = tmp_path / "policy.yaml"
+    policy_path.write_text(yaml.safe_dump(policy), encoding="utf-8")
+    monkeypatch.setattr(quality_module, "_POLICY_PATH", policy_path)
+
+    with pytest.raises(AudioInspectionError, match="quality policy"):
+        quality_decision({"mean_dbfs": -30.0, "peak_dbfs": -5.0})

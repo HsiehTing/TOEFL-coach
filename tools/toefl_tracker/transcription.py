@@ -11,9 +11,6 @@ from pathlib import Path
 from toefl_tracker.audio import AudioInspectionError
 
 
-DEFAULT_MODEL_PATH = Path(
-    "/Users/twinb00599242/Library/Application Support/TOEFL/models/ggml-small.en.bin"
-)
 _MODEL_BASENAME = "ggml-small.en.bin"
 _AUDIO_SUFFIXES = {".aac", ".flac", ".m4a", ".mp3", ".mp4", ".ogg", ".wav"}
 
@@ -46,6 +43,16 @@ def _tool_version(executable: str, runner: Callable) -> str:
     return output[0]
 
 
+def _repository_root() -> Path:
+    """Return the checkout root independently of the caller's working directory."""
+    return Path(__file__).parents[2].resolve()
+
+
+def _must_be_outside_repository(path: Path, repository_root: Path) -> None:
+    if path.is_relative_to(repository_root):
+        raise AudioInspectionError("audio and model files must be stored outside the repository")
+
+
 def preflight_audio_tools(
     model_path: Path | str | None = None,
     *,
@@ -67,15 +74,16 @@ def preflight_audio_tools(
 
     configured_model = model_path if model_path is not None else environment.get("TOEFL_WHISPER_MODEL")
     if not configured_model:
-        configured_model = DEFAULT_MODEL_PATH
+        raise AudioInspectionError("TOEFL_WHISPER_MODEL must explicitly name the local model")
     model = Path(configured_model).expanduser().resolve()
     if model.name != _MODEL_BASENAME:
         raise AudioInspectionError(f"model must be named {_MODEL_BASENAME}")
     if not model.is_file():
         raise AudioInspectionError(f"model is missing: {_MODEL_BASENAME}")
-    root = (repository_root or Path.cwd()).resolve()
-    if model.is_relative_to(root):
-        raise AudioInspectionError("model must be stored outside the repository")
+    if not os.access(model, os.R_OK):
+        raise AudioInspectionError("model is not readable")
+    root = (repository_root or _repository_root()).resolve()
+    _must_be_outside_repository(model, root)
 
     return AudioDependencies(
         ffmpeg=paths["ffmpeg"],
@@ -124,6 +132,8 @@ def transcribe_audio(
     path: Path,
     dependencies: AudioDependencies,
     runner: Callable = subprocess.run,
+    *,
+    repository_root: Path | None = None,
 ) -> list[dict[str, float | str]]:
     """Run strictly local normalization and transcription; no upload is possible here."""
     if not isinstance(path, Path) or not path.is_file():
@@ -132,6 +142,7 @@ def transcribe_audio(
         raise AudioInspectionError(f"unsupported audio format: {path.suffix or 'no extension'}")
     if not isinstance(dependencies, AudioDependencies):
         raise AudioInspectionError("audio dependencies must be preflighted")
+    _must_be_outside_repository(path.resolve(), (repository_root or _repository_root()).resolve())
 
     with tempfile.TemporaryDirectory(prefix="toefl-transcription-") as temporary:
         temporary_path = Path(temporary)

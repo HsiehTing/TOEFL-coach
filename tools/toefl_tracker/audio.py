@@ -1,7 +1,7 @@
 import json
 import re
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from math import isfinite
 from pathlib import Path
 
@@ -27,11 +27,31 @@ def _finite_float(value: object) -> float:
     return parsed
 
 
-def inspect_audio(path: Path, runner: Callable = subprocess.run) -> dict:
+def _quality_artifact(metrics: Mapping[str, object]) -> dict:
+    # Import lazily because quality shares AudioInspectionError with this module.
+    from toefl_tracker.quality import quality_decision
+
+    decision = quality_decision(metrics)
+    return {
+        "policy_version": decision.policy_version,
+        "standard_basis": decision.standard_basis,
+        "usable": decision.usable,
+        "dimension_set": decision.dimension_set,
+    }
+
+
+def inspect_audio(
+    path: Path,
+    runner: Callable = subprocess.run,
+    *,
+    ffmpeg: str = "ffmpeg",
+    ffprobe: str = "ffprobe",
+    provenance: Mapping[str, object] | None = None,
+) -> dict:
     if not path.is_file():
         raise AudioInspectionError(f"audio file not found: {path}")
     probe = _run(runner, [
-        "ffprobe", "-v", "error", "-show_entries",
+        ffprobe, "-v", "error", "-show_entries",
         "format=duration:stream=codec_type,codec_name,sample_rate,channels",
         "-of", "json", str(path),
     ])
@@ -61,7 +81,7 @@ def inspect_audio(path: Path, runner: Callable = subprocess.run) -> dict:
         raise AudioInspectionError("invalid audio metadata") from error
 
     volume = _run(runner, [
-        "ffmpeg", "-nostdin", "-hide_banner", "-i", str(path),
+        ffmpeg, "-nostdin", "-hide_banner", "-i", str(path),
         "-af", "volumedetect", "-f", "null", "-",
     ])
     diagnostics = volume.stderr + "\n" + volume.stdout
@@ -74,7 +94,8 @@ def inspect_audio(path: Path, runner: Callable = subprocess.run) -> dict:
         peak = _finite_float(peak_match.group(1))
     except ValueError as error:
         raise AudioInspectionError("invalid volume metrics") from error
-    return {
+    result = {
+        "path": str(path.resolve()),
         "duration_seconds": duration,
         "codec": codec,
         "sample_rate_hz": sample_rate,
@@ -84,9 +105,15 @@ def inspect_audio(path: Path, runner: Callable = subprocess.run) -> dict:
         "clipping": peak >= -0.1,
         "decodable": True,
     }
+    result["quality"] = _quality_artifact(result)
+    if provenance is not None:
+        result["provenance"] = dict(provenance)
+    return result
 
 
-def inspect_segment_quality(path: Path, segments: list[dict], runner: Callable = subprocess.run) -> list[dict]:
+def inspect_segment_quality(
+    path: Path, segments: list[dict], runner: Callable = subprocess.run, *, ffmpeg: str = "ffmpeg"
+) -> list[dict]:
     """Measure only caller-supplied time ranges without retaining the source path."""
     if not path.is_file():
         raise AudioInspectionError(f"audio file not found: {path}")
@@ -102,7 +129,7 @@ def inspect_segment_quality(path: Path, segments: list[dict], runner: Callable =
         except (KeyError, TypeError, ValueError) as error:
             raise AudioInspectionError("invalid segment boundaries") from error
         volume = _run(runner, [
-            "ffmpeg", "-nostdin", "-hide_banner", "-ss", str(start), "-t", str(end - start),
+            ffmpeg, "-nostdin", "-hide_banner", "-ss", str(start), "-t", str(end - start),
             "-i", str(path), "-af", "volumedetect", "-f", "null", "-",
         ])
         diagnostics = volume.stderr + "\n" + volume.stdout

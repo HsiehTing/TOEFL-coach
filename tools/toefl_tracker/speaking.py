@@ -42,6 +42,8 @@ _INSPECTION_FIELDS = (
     "peak_dbfs",
     "clipping",
     "decodable",
+    "quality",
+    "provenance",
 )
 _PERSISTED_INSPECTION_FIELDS = tuple(
     field for field in _INSPECTION_FIELDS if field != "path"
@@ -256,11 +258,40 @@ def _validated_inspection(inspection: object) -> tuple[dict, str]:
         or type(inspection["decodable"]) is not bool
     ):
         raise ValidationError("speaking inspection field types are invalid")
+    quality = inspection["quality"]
+    if (
+        not isinstance(quality, Mapping)
+        or set(quality) != {"policy_version", "standard_basis", "usable", "dimension_set"}
+        or quality.get("policy_version") != 1
+        or quality.get("standard_basis") != "diagnostic_internal"
+        or type(quality.get("usable")) is not bool
+        or quality.get("dimension_set") not in {"all", "text_only", "none"}
+    ):
+        raise ValidationError("speaking inspection quality is invalid")
+    if quality["usable"] is not True:
+        raise ValidationError("audio quality is insufficient for formal speaking assessment")
+    provenance = inspection["provenance"]
+    executables = provenance.get("executables") if isinstance(provenance, Mapping) else None
+    if (
+        not isinstance(executables, Mapping)
+        or set(executables) != {"ffmpeg", "ffprobe", "whisper-cli"}
+        or any(not isinstance(version, str) or not version.strip() for version in executables.values())
+        or provenance.get("model_identifier") != "ggml-small.en.bin"
+    ):
+        raise ValidationError("speaking inspection provenance is invalid")
     persisted = {
         field: inspection[field]
         for field in _PERSISTED_INSPECTION_FIELDS
     }
     return persisted, source_path
+
+
+def validate_persisted_inspection(inspection: object) -> dict:
+    """Validate the persisted, path-free inspection artifact used by audit."""
+    if not isinstance(inspection, Mapping) or set(inspection) != set(_PERSISTED_INSPECTION_FIELDS):
+        raise ValidationError("speaking inspection fields are invalid")
+    persisted, _ = _validated_inspection({"path": "audit-source", **inspection})
+    return persisted
 
 
 def build_speaking_registration(

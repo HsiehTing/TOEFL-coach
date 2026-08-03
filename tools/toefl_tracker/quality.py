@@ -32,6 +32,22 @@ def _load_policy() -> dict:
             "text_only_peak_lt", "text_only_mean_lt",
         }:
             raise ValueError
+        if any(
+            type(value) not in {int, float} or not isfinite(float(value))
+            for value in thresholds.values()
+        ):
+            raise ValueError
+        clipping_peak = thresholds["clipping_peak_gte"]
+        inaudible_peak = thresholds["inaudible_peak_lte"]
+        inaudible_mean = thresholds["inaudible_mean_lte"]
+        text_only_peak = thresholds["text_only_peak_lt"]
+        text_only_mean = thresholds["text_only_mean_lt"]
+        if not (
+            all(-120.0 <= value <= 0.0 for value in thresholds.values())
+            and inaudible_peak < text_only_peak < clipping_peak
+            and inaudible_mean < text_only_mean
+        ):
+            raise ValueError
         return policy
     except (OSError, yaml.YAMLError, ValueError) as error:
         raise AudioInspectionError("invalid audio quality policy") from error

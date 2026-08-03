@@ -7,5 +7,10 @@ tracker/**/media/
 tracker/.register.lock
 *.m4a
 *.wav
+*.aac
+*.flac
+*.mp3
+*.mp4
+*.ogg
 tracker/.local/
 models/
