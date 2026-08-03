@@ -130,7 +130,12 @@ def inspection(path: str) -> dict:
         "provenance": {
             "executables": {"ffmpeg": "ffmpeg 8.1", "ffprobe": "ffprobe 8.1", "whisper-cli": "whisper 1.9"},
             "model_identifier": "ggml-small.en.bin",
+            "model_sha256": "0" * 64,
         },
+        "reliable_dimensions": [
+            "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
+            "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
+        ],
     }
 
 
@@ -528,6 +533,7 @@ def test_audio_inspection_artifact_is_accepted_by_speaking_gate(tmp_path: Path) 
     provenance = {
         "executables": {"ffmpeg": "ffmpeg 8.1", "ffprobe": "ffprobe 8.1", "whisper-cli": "whisper 1.9"},
         "model_identifier": "ggml-small.en.bin",
+        "model_sha256": "0" * 64,
     }
 
     def runner(command: list[str], **kwargs: object):
@@ -565,6 +571,72 @@ def test_audio_inspection_artifact_is_accepted_by_speaking_gate(tmp_path: Path) 
     persisted = json.loads((destination / "audio-inspection.json").read_text())
     assert persisted["quality"]["usable"] is True
     assert persisted["provenance"] == provenance
+
+
+def test_registration_rejects_private_provenance_and_quality_mutation(tmp_path: Path) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    private_provenance = inspection("/private/source/practice.m4a")
+    private_provenance["provenance"]["model_path"] = "/private/model/ggml-small.en.bin"
+
+    with pytest.raises(ValidationError, match="provenance"):
+        register_speaking_session(
+            tmp_path / "private-provenance",
+            MANIFEST,
+            registration_attempt(prompt, transcript),
+            prompt,
+            transcript,
+            FEEDBACK,
+            [],
+            segments(7),
+            private_provenance,
+        )
+
+    forged_quality = inspection("/private/source/practice.m4a")
+    forged_quality["mean_dbfs"] = -36.0
+
+    with pytest.raises(ValidationError, match="quality"):
+        register_speaking_session(
+            tmp_path / "forged-quality",
+            MANIFEST,
+            registration_attempt(prompt, transcript),
+            prompt,
+            transcript,
+            FEEDBACK,
+            [],
+            segments(7),
+            forged_quality,
+        )
+
+
+def test_text_only_quality_with_empty_reliability_fails_closed(tmp_path: Path) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    text_only = inspection("/private/source/practice.m4a")
+    text_only["mean_dbfs"] = -36.0
+    text_only["quality"] = {
+        "policy_version": 1,
+        "standard_basis": "diagnostic_internal",
+        "usable": True,
+        "dimension_set": "text_only",
+    }
+    text_only["reliable_dimensions"] = []
+
+    registration = build_speaking_registration(
+        tmp_path,
+        MANIFEST,
+        registration_attempt(prompt, transcript),
+        prompt,
+        transcript,
+        FEEDBACK,
+        [],
+        segments(7),
+        text_only,
+    )
+
+    assert registration.speaking_context.reliable_dimensions == {
+        "content", "grammar", "vocabulary", "reconstruction"
+    }
 
 
 def test_speaking_artifact_failure_rolls_back_attempt_and_ledger(
@@ -802,6 +874,7 @@ def test_persisted_inspection_contains_only_approved_fields(
         "decodable",
         "quality",
         "provenance",
+        "reliable_dimensions",
     }
 
 

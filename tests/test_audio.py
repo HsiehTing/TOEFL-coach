@@ -56,6 +56,7 @@ def test_inspection_uses_preflighted_executable_paths_and_emits_gate_artifact(tm
     provenance = {
         "executables": {"ffmpeg": "ffmpeg 7.0", "ffprobe": "ffprobe 7.0", "whisper-cli": "whisper 1.0"},
         "model_identifier": "ggml-small.en.bin",
+        "model_sha256": "0" * 64,
     }
 
     def resolved_runner(command: list[str], **kwargs: object) -> CompletedProcess[str]:
@@ -193,6 +194,7 @@ def test_inspect_cli_preflight_prints_safe_tool_and_model_provenance(
         ffprobe="/private/local/ffprobe",
         whisper_cli="/private/local/whisper-cli",
         model_path=model,
+        model_sha256="0" * 64,
         tool_versions={"ffmpeg": "ffmpeg 7.0", "ffprobe": "ffprobe 7.0", "whisper-cli": "whisper 1.0"},
     )
     monkeypatch.setattr("inspect_audio.preflight_audio_tools", lambda: dependencies)

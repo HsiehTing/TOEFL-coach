@@ -146,7 +146,12 @@ def inspection(attempt_id: str) -> dict:
         "provenance": {
             "executables": {"ffmpeg": "ffmpeg 8.1", "ffprobe": "ffprobe 8.1", "whisper-cli": "whisper 1.9"},
             "model_identifier": "ggml-small.en.bin",
+            "model_sha256": "0" * 64,
         },
+        "reliable_dimensions": [
+            "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
+            "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
+        ],
     }
 
 

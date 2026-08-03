@@ -9,6 +9,7 @@ from re import Match
 import yaml
 
 from toefl_tracker.event_validation import SpeakingEvidenceContext
+from toefl_tracker.audio import AudioInspectionError
 from toefl_tracker.canonical import write_aggregate_events
 from toefl_tracker.models import LEVELS, ValidatedPracticeRegistration, ValidationError
 from toefl_tracker.register import (
@@ -17,6 +18,7 @@ from toefl_tracker.register import (
     validate_practice_events,
 )
 from toefl_tracker.validation import validate_attempt
+from toefl_tracker.quality import quality_decision
 
 
 ITEM_COUNTS = {"listen_and_repeat": 7, "take_an_interview": 4}
@@ -47,8 +49,33 @@ _INSPECTION_FIELDS = (
 )
 _PERSISTED_INSPECTION_FIELDS = tuple(
     field for field in _INSPECTION_FIELDS if field != "path"
-)
+) + ("reliable_dimensions",)
 _DURATION_TOLERANCE_SECONDS = 1e-6
+_PROVENANCE_KEYS = {"executables", "model_identifier", "model_sha256"}
+_EXECUTABLE_NAMES = {"ffmpeg", "ffprobe", "whisper-cli"}
+_ALL_RELIABLE_DIMENSIONS = {
+    "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
+    "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
+}
+
+
+def _text_reliable_dimensions(task_type: str) -> set[str]:
+    dimensions = {"content", "grammar", "vocabulary"}
+    if task_type == "listen_and_repeat":
+        dimensions.add("reconstruction")
+    return dimensions
+
+
+def _normalized_reliable_dimensions(
+    source: object, task_type: str, dimension_set: str
+) -> set[str]:
+    text_dimensions = _text_reliable_dimensions(task_type)
+    if dimension_set == "text_only" or not isinstance(source, (list, tuple, set)) or not source:
+        return text_dimensions
+    if any(not isinstance(dimension, str) for dimension in source):
+        raise ValidationError("speaking reliable_dimensions are invalid")
+    allowed = _ALL_RELIABLE_DIMENSIONS if dimension_set == "all" else set()
+    return set(source) & allowed
 
 
 def _ordered_heading_matches(feedback: str) -> list[Match[str]]:
@@ -268,29 +295,60 @@ def _validated_inspection(inspection: object) -> tuple[dict, str]:
         or quality.get("dimension_set") not in {"all", "text_only", "none"}
     ):
         raise ValidationError("speaking inspection quality is invalid")
+    try:
+        expected_quality = quality_decision({
+            "mean_dbfs": inspection["mean_dbfs"],
+            "peak_dbfs": inspection["peak_dbfs"],
+            "decodable": inspection["decodable"],
+        })
+    except AudioInspectionError as error:
+        raise ValidationError("speaking inspection quality is invalid") from error
+    if quality != {
+        "policy_version": expected_quality.policy_version,
+        "standard_basis": expected_quality.standard_basis,
+        "usable": expected_quality.usable,
+        "dimension_set": expected_quality.dimension_set,
+    }:
+        raise ValidationError("speaking inspection quality does not match audio metrics")
     if quality["usable"] is not True:
         raise ValidationError("audio quality is insufficient for formal speaking assessment")
     provenance = inspection["provenance"]
     executables = provenance.get("executables") if isinstance(provenance, Mapping) else None
     if (
-        not isinstance(executables, Mapping)
-        or set(executables) != {"ffmpeg", "ffprobe", "whisper-cli"}
+        not isinstance(provenance, Mapping)
+        or set(provenance) != _PROVENANCE_KEYS
+        or not isinstance(executables, Mapping)
+        or set(executables) != _EXECUTABLE_NAMES
         or any(not isinstance(version, str) or not version.strip() for version in executables.values())
         or provenance.get("model_identifier") != "ggml-small.en.bin"
+        or not isinstance(provenance.get("model_sha256"), str)
+        or re.fullmatch(r"[0-9a-f]{64}", provenance["model_sha256"]) is None
     ):
         raise ValidationError("speaking inspection provenance is invalid")
     persisted = {
         field: inspection[field]
         for field in _PERSISTED_INSPECTION_FIELDS
+        if field != "reliable_dimensions"
+    }
+    persisted["provenance"] = {
+        "executables": dict(executables),
+        "model_identifier": provenance["model_identifier"],
+        "model_sha256": provenance["model_sha256"],
     }
     return persisted, source_path
 
 
-def validate_persisted_inspection(inspection: object) -> dict:
+def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
     """Validate the persisted, path-free inspection artifact used by audit."""
     if not isinstance(inspection, Mapping) or set(inspection) != set(_PERSISTED_INSPECTION_FIELDS):
         raise ValidationError("speaking inspection fields are invalid")
     persisted, _ = _validated_inspection({"path": "audit-source", **inspection})
+    reliable = _normalized_reliable_dimensions(
+        inspection["reliable_dimensions"], task_type, persisted["quality"]["dimension_set"]
+    )
+    if set(inspection["reliable_dimensions"]) != reliable:
+        raise ValidationError("speaking reliable_dimensions are invalid")
+    persisted["reliable_dimensions"] = sorted(reliable)
     return persisted
 
 
@@ -348,6 +406,12 @@ def build_speaking_registration(
         raise ValidationError(
             "attempt audio_quality does not match inspection"
         )
+    reliable_dimensions = _normalized_reliable_dimensions(
+        inspection.get("reliable_dimensions"),
+        bounded_attempt["task_type"],
+        persisted_inspection["quality"]["dimension_set"],
+    )
+    persisted_inspection["reliable_dimensions"] = sorted(reliable_dimensions)
     extra_files = {
         "audio-inspection.json": (
             json.dumps(
@@ -366,15 +430,6 @@ def build_speaking_registration(
         # Preserve a stable audit reference without committing a local path or URL.
         "source-reference.txt": "source:" + sha256(source_path.encode("utf-8")).hexdigest() + "\n",
     }
-    reliable_dimensions = inspection.get("reliable_dimensions")
-    if reliable_dimensions is None:
-        # Reliability policy arrives with the transcript-preparation task. Until
-        # then, the confirmed technical/mapping gate supports all dimensions.
-        reliable_dimensions = {
-            "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
-            "vocabulary", "reconstruction", "directness", "relevance",
-            "elaboration", "coherence",
-        }
     learner_segments = tuple(
         row for row in segment_rows if row.get("role") == "learner"
     )

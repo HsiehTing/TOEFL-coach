@@ -117,6 +117,24 @@ def test_malformed_speaking_artifacts_are_semantic_audit_findings(
     assert any("speaking segment item" in row for row in audit_workspace(populated_workspace))
 
 
+def test_audit_text_only_inspection_rejects_audio_dimension_event(
+    populated_workspace: Path,
+) -> None:
+    artifact = populated_workspace / "tracker/speaking/attempts/S-LR-20260105-001/audio-inspection.json"
+    inspection = json.loads(artifact.read_text(encoding="utf-8"))
+    inspection["mean_dbfs"] = -36.0
+    inspection["quality"] = {
+        "policy_version": 1,
+        "standard_basis": "diagnostic_internal",
+        "usable": True,
+        "dimension_set": "text_only",
+    }
+    inspection["reliable_dimensions"] = ["content", "grammar", "vocabulary", "reconstruction"]
+    artifact.write_text(json.dumps(inspection), encoding="utf-8")
+
+    assert any("reliable dimension" in row for row in audit_workspace(populated_workspace))
+
+
 def test_audit_continues_after_bad_utf8_and_cli_returns_nonzero(
     populated_workspace: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

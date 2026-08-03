@@ -87,16 +87,12 @@ def _audit_speaking_artifacts(
             raise ValidationError("speaking segments must be a list of mappings")
         if not isinstance(inspection, dict):
             raise ValidationError("speaking inspection must be a mapping")
-        inspection = validate_persisted_inspection(inspection)
+        inspection = validate_persisted_inspection(inspection, attempt["task_type"])
         validate_speaking_assessment(attempt, segments, events, feedback)
-        reliable = {
-            "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
-            "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
-        }
         return SpeakingEvidenceContext(
             learner_segments=tuple(row for row in segments if isinstance(row, dict) and row.get("role") == "learner"),
             duration_seconds=inspection["duration_seconds"],
-            reliable_dimensions=reliable,
+            reliable_dimensions=set(inspection["reliable_dimensions"]),
         )
     except _PARSE_ERRORS as error:
         problems.append(f"{directory}: {error}")

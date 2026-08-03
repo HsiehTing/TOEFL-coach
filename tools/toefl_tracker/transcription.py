@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+from hashlib import sha256
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from math import isfinite
@@ -21,6 +22,7 @@ class AudioDependencies:
     ffprobe: str
     whisper_cli: str
     model_path: Path
+    model_sha256: str
     tool_versions: Mapping[str, str]
 
     @property
@@ -29,6 +31,7 @@ class AudioDependencies:
         return {
             "executables": dict(self.tool_versions),
             "model_identifier": self.model_path.name,
+            "model_sha256": self.model_sha256,
         }
 
 
@@ -51,6 +54,14 @@ def _repository_root() -> Path:
 def _must_be_outside_repository(path: Path, repository_root: Path) -> None:
     if path.is_relative_to(repository_root):
         raise AudioInspectionError("audio and model files must be stored outside the repository")
+
+
+def _sha256_file(path: Path) -> str:
+    digest = sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def preflight_audio_tools(
@@ -90,6 +101,7 @@ def preflight_audio_tools(
         ffprobe=paths["ffprobe"],
         whisper_cli=paths["whisper-cli"],
         model_path=model,
+        model_sha256=_sha256_file(model),
         tool_versions={name: _tool_version(path, runner) for name, path in paths.items()},
     )
 
