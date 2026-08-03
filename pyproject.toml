@@ -11,3 +11,6 @@ dev = ["pytest>=8,<9"]
 pythonpath = ["tools"]
 testpaths = ["tests"]
 addopts = "-ra"
+
+[tool.toefl_tracker]
+audio_quality_policy = "standards/ets-2026/audio-quality-policy.yaml"

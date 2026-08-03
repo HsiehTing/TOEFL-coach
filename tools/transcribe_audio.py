@@ -2,14 +2,13 @@ import argparse
 import json
 from pathlib import Path
 
-from toefl_tracker.audio import AudioInspectionError, inspect_audio
-from toefl_tracker.transcription import preflight_audio_tools
+from toefl_tracker.audio import AudioInspectionError
+from toefl_tracker.transcription import preflight_audio_tools, transcribe_audio
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Run local-only TOEFL audio transcription.")
     parser.add_argument("audio", nargs="?", type=Path)
-    parser.add_argument("--output", type=Path)
     parser.add_argument("--preflight", action="store_true")
     args = parser.parse_args()
     if not args.preflight and args.audio is None:
@@ -19,16 +18,10 @@ def main() -> int:
         if args.preflight:
             print(json.dumps(dependencies.provenance, ensure_ascii=False, sort_keys=True))
             return 0
-        inspection = inspect_audio(args.audio)
-        inspection["provenance"] = dependencies.provenance
-        result = json.dumps(inspection, ensure_ascii=False, indent=2) + "\n"
+        print(json.dumps(transcribe_audio(args.audio, dependencies), ensure_ascii=False, indent=2))
+        return 0
     except AudioInspectionError as error:
         parser.error(str(error))
-    if args.output:
-        args.output.write_text(result, encoding="utf-8")
-    else:
-        print(result, end="")
-    return 0
 
 
 if __name__ == "__main__":
