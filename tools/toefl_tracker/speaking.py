@@ -54,7 +54,7 @@ _DURATION_TOLERANCE_SECONDS = 1e-6
 _PROVENANCE_KEYS = {"executables", "model_identifier", "model_sha256"}
 _EXECUTABLE_NAMES = {"ffmpeg", "ffprobe", "whisper-cli"}
 _ALL_RELIABLE_DIMENSIONS = {
-    "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
+    "content", "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
     "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
 }
 
@@ -319,7 +319,12 @@ def _validated_inspection(inspection: object) -> tuple[dict, str]:
         or set(provenance) != _PROVENANCE_KEYS
         or not isinstance(executables, Mapping)
         or set(executables) != _EXECUTABLE_NAMES
-        or any(not isinstance(version, str) or not version.strip() for version in executables.values())
+        or any(
+            not isinstance(version, str)
+            or not version.strip()
+            or any(character in version for character in ("/", "\\", "~"))
+            for version in executables.values()
+        )
         or provenance.get("model_identifier") != "ggml-small.en.bin"
         or not isinstance(provenance.get("model_sha256"), str)
         or re.fullmatch(r"[0-9a-f]{64}", provenance["model_sha256"]) is None
@@ -340,13 +345,18 @@ def _validated_inspection(inspection: object) -> tuple[dict, str]:
 
 def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
     """Validate the persisted, path-free inspection artifact used by audit."""
-    if not isinstance(inspection, Mapping) or set(inspection) != set(_PERSISTED_INSPECTION_FIELDS):
+    required_fields = set(_PERSISTED_INSPECTION_FIELDS) - {"reliable_dimensions"}
+    if (
+        not isinstance(inspection, Mapping)
+        or not required_fields <= set(inspection)
+        or set(inspection) - required_fields - {"reliable_dimensions"}
+    ):
         raise ValidationError("speaking inspection fields are invalid")
     persisted, _ = _validated_inspection({"path": "audit-source", **inspection})
     reliable = _normalized_reliable_dimensions(
-        inspection["reliable_dimensions"], task_type, persisted["quality"]["dimension_set"]
+        inspection.get("reliable_dimensions"), task_type, persisted["quality"]["dimension_set"]
     )
-    if set(inspection["reliable_dimensions"]) != reliable:
+    if inspection.get("reliable_dimensions") and set(inspection["reliable_dimensions"]) != reliable:
         raise ValidationError("speaking reliable_dimensions are invalid")
     persisted["reliable_dimensions"] = sorted(reliable)
     return persisted

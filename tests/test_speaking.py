@@ -15,6 +15,7 @@ from toefl_tracker.audio import inspect_audio
 from toefl_tracker.speaking import (
     build_speaking_registration,
     register_speaking_session,
+    validate_persisted_inspection,
     validate_speaking_assessment,
 )
 
@@ -592,6 +593,22 @@ def test_registration_rejects_private_provenance_and_quality_mutation(tmp_path: 
             private_provenance,
         )
 
+    private_executable = inspection("/private/source/practice.m4a")
+    private_executable["provenance"]["executables"]["ffmpeg"] = "/private/bin/ffmpeg"
+
+    with pytest.raises(ValidationError, match="provenance"):
+        register_speaking_session(
+            tmp_path / "private-executable",
+            MANIFEST,
+            registration_attempt(prompt, transcript),
+            prompt,
+            transcript,
+            FEEDBACK,
+            [],
+            segments(7),
+            private_executable,
+        )
+
     forged_quality = inspection("/private/source/practice.m4a")
     forged_quality["mean_dbfs"] = -36.0
 
@@ -637,6 +654,36 @@ def test_text_only_quality_with_empty_reliability_fails_closed(tmp_path: Path) -
     assert registration.speaking_context.reliable_dimensions == {
         "content", "grammar", "vocabulary", "reconstruction"
     }
+
+
+@pytest.mark.parametrize("reliable_dimensions", [None, []])
+def test_missing_or_empty_reliability_normalizes_identically_for_registration_and_audit(
+    tmp_path: Path, reliable_dimensions: list[str] | None
+) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    artifact = inspection("/private/source/practice.m4a")
+    if reliable_dimensions is None:
+        del artifact["reliable_dimensions"]
+    else:
+        artifact["reliable_dimensions"] = reliable_dimensions
+
+    registration = build_speaking_registration(
+        tmp_path,
+        MANIFEST,
+        registration_attempt(prompt, transcript),
+        prompt,
+        transcript,
+        FEEDBACK,
+        [],
+        segments(7),
+        artifact,
+    )
+    persisted = json.loads(registration.extra_files["audio-inspection.json"])
+    audited = validate_persisted_inspection(persisted, "listen_and_repeat")
+
+    assert audited == persisted
+    assert audited["reliable_dimensions"] == ["content", "grammar", "reconstruction", "vocabulary"]
 
 
 def test_speaking_artifact_failure_rolls_back_attempt_and_ledger(
