@@ -12,6 +12,7 @@ from toefl_tracker.event_validation import SpeakingEvidenceContext
 from toefl_tracker.audio import AudioInspectionError
 from toefl_tracker.canonical import write_aggregate_events
 from toefl_tracker.models import LEVELS, ValidatedPracticeRegistration, ValidationError
+from toefl_tracker.role_mapping import MAPPING_METHOD, MAPPING_VERSION, infer_toefl_role_map
 from toefl_tracker.register import (
     _registration_lock,
     publish_registration,
@@ -53,12 +54,6 @@ _PERSISTED_INSPECTION_FIELDS = tuple(
 _DURATION_TOLERANCE_SECONDS = 1e-6
 _PROVENANCE_KEYS = {"executables", "model_identifier", "model_sha256"}
 _EXECUTABLE_NAMES = {"ffmpeg", "ffprobe", "whisper-cli"}
-_ALL_RELIABLE_DIMENSIONS = {
-    "content", "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
-    "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
-}
-
-
 def _text_reliable_dimensions(task_type: str) -> set[str]:
     dimensions = {"content", "grammar", "vocabulary"}
     if task_type == "listen_and_repeat":
@@ -66,16 +61,32 @@ def _text_reliable_dimensions(task_type: str) -> set[str]:
     return dimensions
 
 
+def _all_reliable_dimensions(task_type: str) -> set[str]:
+    dimensions = {
+        "content", "intelligibility", "pronunciation", "prosody", "fluency",
+        "grammar", "vocabulary",
+    }
+    if task_type == "listen_and_repeat":
+        dimensions.add("reconstruction")
+    elif task_type == "take_an_interview":
+        dimensions.update({"directness", "relevance", "elaboration", "coherence"})
+    return dimensions
+
+
 def _normalized_reliable_dimensions(
     source: object, task_type: str, dimension_set: str
 ) -> set[str]:
     text_dimensions = _text_reliable_dimensions(task_type)
-    if dimension_set == "text_only" or not isinstance(source, (list, tuple, set)) or not source:
+    if dimension_set == "text_only":
         return text_dimensions
-    if any(not isinstance(dimension, str) for dimension in source):
-        raise ValidationError("speaking reliable_dimensions are invalid")
-    allowed = _ALL_RELIABLE_DIMENSIONS if dimension_set == "all" else set()
-    return set(source) & allowed
+    if dimension_set == "all":
+        if source is not None and (
+            not isinstance(source, (list, tuple, set))
+            or any(not isinstance(dimension, str) for dimension in source)
+        ):
+            raise ValidationError("speaking reliable_dimensions are invalid")
+        return _all_reliable_dimensions(task_type)
+    return set()
 
 
 def _ordered_heading_matches(feedback: str) -> list[Match[str]]:
@@ -356,10 +367,77 @@ def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
     reliable = _normalized_reliable_dimensions(
         inspection.get("reliable_dimensions"), task_type, persisted["quality"]["dimension_set"]
     )
-    if inspection.get("reliable_dimensions") and set(inspection["reliable_dimensions"]) != reliable:
+    if (
+        inspection.get("reliable_dimensions")
+        and persisted["quality"]["dimension_set"] != "all"
+        and set(inspection["reliable_dimensions"]) != reliable
+    ):
         raise ValidationError("speaking reliable_dimensions are invalid")
     persisted["reliable_dimensions"] = sorted(reliable)
     return persisted
+
+
+def validate_transcript_role_mapping(
+    task_type: str,
+    transcript_segments: object,
+    segments: Sequence[dict],
+) -> tuple[list[dict], dict[str, object]]:
+    """Confirm formal segment roles against source transcript structure.
+
+    ``transcript_segments`` may be the preparation artifact or an explicit raw
+    ASR-row list.  The temporary compatibility path derives raw rows from
+    richly annotated segments, but it never trusts their supplied roles.
+    """
+    if isinstance(segments, (str, bytes)) or not isinstance(segments, Sequence):
+        raise ValidationError("speaking segments must be a sequence of mappings")
+    given_rows = list(segments)
+    if any(not isinstance(row, Mapping) for row in given_rows):
+        raise ValidationError("speaking segments must be a sequence of mappings")
+    if transcript_segments and (
+        isinstance(transcript_segments, (str, bytes))
+        or not isinstance(transcript_segments, (Mapping, Sequence))
+        or (
+            not isinstance(transcript_segments, Mapping)
+            and any(not isinstance(row, Mapping) for row in transcript_segments)
+        )
+    ):
+        raise ValidationError("transcript_segments must be a mapping artifact or sequence of mappings")
+
+    prepared: Mapping | None = transcript_segments if isinstance(transcript_segments, Mapping) else None
+    if prepared is not None:
+        raw_rows = prepared.get("transcript_rows")
+    elif transcript_segments:
+        raw_rows = transcript_segments
+    else:
+        raw_rows = [
+            {key: row.get(key) for key in ("segment_id", "start", "end", "text")}
+            for row in given_rows
+        ]
+    try:
+        result = infer_toefl_role_map(task_type, raw_rows)
+    except ValidationError as error:
+        raise ValidationError(f"transcript role mapping rejected: {error}") from error
+    if result.requires_confirmation or len(result.rows) != len(given_rows):
+        raise ValidationError("incomplete confirmed TOEFL transcript role mapping")
+    expected_rows = [row.artifact() for row in result.rows]
+    expected_keys = ("segment_id", "item", "role", "start", "end", "text", "confidence", "role_reason")
+    for given, expected in zip(given_rows, expected_rows):
+        if any(given.get(key) != expected[key] for key in expected_keys):
+            raise ValidationError("speaking segments do not match transcript role mapping")
+    if prepared is not None:
+        if any(prepared.get(key) != value for key, value in {
+            "task_type": task_type,
+            "source_transcript_hash": result.source_transcript_hash,
+            "mapping_method": MAPPING_METHOD,
+            "mapping_version": MAPPING_VERSION,
+        }.items()):
+            raise ValidationError("transcript role mapping artifact metadata is invalid")
+    artifact = result.artifact()
+    artifact["transcript_rows"] = [
+        {key: row[key] for key in ("segment_id", "start", "end", "text")}
+        for row in expected_rows
+    ]
+    return expected_rows, artifact
 
 
 def build_speaking_registration(
@@ -375,10 +453,6 @@ def build_speaking_registration(
     transcript_segments: Sequence[dict] = (),
 ) -> ValidatedPracticeRegistration:
     validate_attempt(attempt, manifest)
-    if isinstance(transcript_segments, (str, bytes)) or not isinstance(
-        transcript_segments, Sequence
-    ) or any(not isinstance(row, Mapping) for row in transcript_segments):
-        raise ValidationError("transcript_segments must be a sequence of mappings")
     persisted_inspection, source_path = _validated_inspection(inspection)
     if not isinstance(attempt, Mapping):
         raise ValidationError("speaking attempt must be a mapping")
@@ -402,7 +476,9 @@ def build_speaking_registration(
     bounded_attempt = dict(attempt)
     bounded_attempt["duration_seconds"] = inspection_duration
     event_rows = tuple(events)
-    segment_rows = list(segments)
+    segment_rows, transcript_artifact = validate_transcript_role_mapping(
+        bounded_attempt["task_type"], transcript_segments, segments
+    )
     validate_speaking_assessment(
         bounded_attempt,
         segment_rows,
@@ -434,6 +510,11 @@ def build_speaking_registration(
         ),
         "segments.yaml": yaml.safe_dump(
             segment_rows,
+            allow_unicode=True,
+            sort_keys=False,
+        ),
+        "transcript-segments.yaml": yaml.safe_dump(
+            transcript_artifact,
             allow_unicode=True,
             sort_keys=False,
         ),

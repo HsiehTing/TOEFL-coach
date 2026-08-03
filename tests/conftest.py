@@ -92,20 +92,34 @@ def speaking_segments(task_type: str) -> list[dict]:
     count = 7 if task_type == "listen_and_repeat" else 4
     rows = []
     for item in range(1, count + 1):
+        if task_type == "take_an_interview":
+            prompt = f"What activity do you enjoy for interview item {item}?"
+            response = f"I enjoy reading for interview item {item} because it helps me learn and relax."
+            reason = "question_answer_structure"
+        else:
+            prompt = f"The campus library opens at eight for item {item}."
+            response = prompt
+            reason = "repeat_similarity"
         rows.extend([
             {
+                "segment_id": f"asr-{item * 2 - 1:03d}",
                 "item": item,
                 "role": "examiner",
                 "start": item * 10.0,
                 "end": item * 10.0 + 2.0,
+                "text": prompt,
                 "confidence": "high",
+                "role_reason": "question_answer_structure" if task_type == "take_an_interview" else "expected_item_order",
             },
             {
+                "segment_id": f"asr-{item * 2:03d}",
                 "item": item,
                 "role": "learner",
                 "start": item * 10.0 + 2.2,
                 "end": item * 10.0 + 7.0,
+                "text": response,
                 "confidence": "high",
+                "role_reason": reason,
             },
         ])
     return rows
@@ -149,7 +163,7 @@ def inspection(attempt_id: str) -> dict:
             "model_sha256": "0" * 64,
         },
         "reliable_dimensions": [
-            "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
+            "content", "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
             "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
         ],
     }

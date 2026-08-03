@@ -13,7 +13,11 @@ from toefl_tracker.io import canonical_source_hash, read_yaml
 from toefl_tracker.models import TASK_TYPES, ValidationError
 from toefl_tracker.register import persisted_attempt_relationship_problems
 from toefl_tracker.reports import rebuild_modality
-from toefl_tracker.speaking import validate_persisted_inspection, validate_speaking_assessment
+from toefl_tracker.speaking import (
+    validate_persisted_inspection,
+    validate_speaking_assessment,
+    validate_transcript_role_mapping,
+)
 from toefl_tracker.validation import validate_attempt, validate_error_event
 
 
@@ -68,20 +72,23 @@ def _audit_speaking_artifacts(
     directory: Path, attempt: dict, events: list[dict], problems: list[str]
 ) -> SpeakingEvidenceContext | None:
     segments_path = directory / "segments.yaml"
+    transcript_segments_path = directory / "transcript-segments.yaml"
     inspection_path = directory / "audio-inspection.json"
     reference_path = directory / "source-reference.txt"
     feedback_path = directory / "feedback-round-1.md"
-    if not all(path.exists() for path in (segments_path, inspection_path, reference_path)):
+    if not all(path.exists() for path in (segments_path, transcript_segments_path, inspection_path, reference_path)):
         problems.append(f"{attempt['attempt_id']}: missing speaking intake artifact")
         return None
     segments_text = _read_utf8(segments_path, problems)
+    transcript_segments_text = _read_utf8(transcript_segments_path, problems)
     inspection_text = _read_utf8(inspection_path, problems)
     _read_utf8(reference_path, problems)
     feedback = _read_utf8(feedback_path, problems)
-    if None in (segments_text, inspection_text, feedback):
+    if None in (segments_text, transcript_segments_text, inspection_text, feedback):
         return None
     try:
         segments = yaml.safe_load(segments_text)
+        transcript_segments = yaml.safe_load(transcript_segments_text)
         inspection = json.loads(inspection_text)
         if not isinstance(segments, list):
             raise ValidationError("speaking segments must be a list of mappings")
@@ -89,6 +96,9 @@ def _audit_speaking_artifacts(
             raise ValidationError("speaking inspection must be a mapping")
         inspection = validate_persisted_inspection(inspection, attempt["task_type"])
         validate_speaking_assessment(attempt, segments, events, feedback)
+        segments, _ = validate_transcript_role_mapping(
+            attempt["task_type"], transcript_segments, segments
+        )
         return SpeakingEvidenceContext(
             learner_segments=tuple(row for row in segments if isinstance(row, dict) and row.get("role") == "learner"),
             duration_seconds=inspection["duration_seconds"],

@@ -12,6 +12,7 @@ from register_speaking_session import main as register_speaking_main
 from toefl_tracker.io import canonical_source_hash
 from toefl_tracker.models import ValidationError
 from toefl_tracker.audio import inspect_audio
+from toefl_tracker.role_mapping import infer_toefl_role_map
 from toefl_tracker.speaking import (
     build_speaking_registration,
     register_speaking_session,
@@ -43,18 +44,24 @@ def segments(count: int, confidence: str = "high") -> list[dict]:
         rows.extend(
             [
                 {
+                    "segment_id": f"asr-{item * 2 - 1:03d}",
                     "item": item,
                     "role": "examiner",
                     "start": item * 10.0,
                     "end": item * 10.0 + 2.0,
+                    "text": f"The campus library opens at eight for item {item}.",
                     "confidence": confidence,
+                    "role_reason": "expected_item_order",
                 },
                 {
+                    "segment_id": f"asr-{item * 2:03d}",
                     "item": item,
                     "role": "learner",
                     "start": item * 10.0 + 2.2,
                     "end": item * 10.0 + 7.0,
+                    "text": f"The campus library opens at eight for item {item}.",
                     "confidence": confidence,
+                    "role_reason": "repeat_similarity",
                 },
             ]
         )
@@ -134,7 +141,7 @@ def inspection(path: str) -> dict:
             "model_sha256": "0" * 64,
         },
         "reliable_dimensions": [
-            "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
+            "content", "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
             "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
         ],
     }
@@ -518,6 +525,9 @@ def test_registration_persists_artifacts_without_copying_raw_audio(
     assert "path" not in inspection_data
     assert str(source) not in (path / "audio-inspection.json").read_text()
     assert (path / "segments.yaml").exists()
+    transcript_artifact = yaml.safe_load((path / "transcript-segments.yaml").read_text())
+    assert transcript_artifact["mapping_method"] == "toefl_transcript_structure"
+    assert transcript_artifact["source_transcript_hash"].startswith("sha256:")
     assert (path / "source-reference.txt").read_text() == (
         f"source:{sha256(str(source).encode('utf-8')).hexdigest()}\n"
     )
@@ -683,7 +693,10 @@ def test_missing_or_empty_reliability_normalizes_identically_for_registration_an
     audited = validate_persisted_inspection(persisted, "listen_and_repeat")
 
     assert audited == persisted
-    assert audited["reliable_dimensions"] == ["content", "grammar", "reconstruction", "vocabulary"]
+    assert audited["reliable_dimensions"] == [
+        "content", "fluency", "grammar", "intelligibility", "pronunciation",
+        "prosody", "reconstruction", "vocabulary",
+    ]
 
 
 def test_speaking_artifact_failure_rolls_back_attempt_and_ledger(
@@ -791,6 +804,102 @@ def test_builder_rejects_non_mapping_transcript_segments(tmp_path: Path) -> None
             inspection("/private/source/practice.m4a"),
             ["not a mapping"],
         )
+
+
+def test_registration_rejects_examiner_text_mapped_as_learner(tmp_path: Path) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    forged_segments = segments(7)
+    forged_segments[1]["text"] = "This is an unrelated learner answer."
+
+    with pytest.raises(ValidationError, match="role mapping"):
+        build_speaking_registration(
+            tmp_path,
+            MANIFEST,
+            registration_attempt(prompt, transcript),
+            prompt,
+            transcript,
+            FEEDBACK,
+            [],
+            forged_segments,
+            inspection("/private/source/practice.m4a"),
+        )
+
+
+def test_registration_rejects_incomplete_toefl_item_count(tmp_path: Path) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+
+    with pytest.raises(ValidationError, match="incomplete confirmed TOEFL transcript role mapping"):
+        build_speaking_registration(
+            tmp_path,
+            MANIFEST,
+            registration_attempt(prompt, transcript),
+            prompt,
+            transcript,
+            FEEDBACK,
+            [],
+            segments(6),
+            inspection("/private/source/practice.m4a"),
+        )
+
+
+def test_registration_rejects_counted_dimension_not_reliable(tmp_path: Path) -> None:
+    import shutil
+
+    shutil.copytree(ROOT / "standards", tmp_path / "standards")
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    attempt = registration_attempt(prompt, transcript)
+    attempt["opportunities"] = {"SPK-PRONUNCIATION": 1}
+    event = counted_event()
+    event.update({"code": "SPK-PRONUNCIATION", "task_specific": False})
+    artifact = inspection("/private/source/practice.m4a")
+    artifact["mean_dbfs"] = -36.0
+    artifact["quality"] = {
+        "policy_version": 1,
+        "standard_basis": "diagnostic_internal",
+        "usable": True,
+        "dimension_set": "text_only",
+    }
+    artifact["reliable_dimensions"] = ["content", "grammar", "vocabulary", "reconstruction"]
+
+    with pytest.raises(ValidationError, match="reliable dimension"):
+        build_speaking_registration(
+            tmp_path,
+            MANIFEST,
+            attempt,
+            prompt,
+            transcript,
+            FEEDBACK,
+            [event],
+            segments(7),
+            artifact,
+        )
+
+
+def test_all_quality_maps_to_every_route_relevant_dimension(tmp_path: Path) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    artifact = inspection("/private/source/practice.m4a")
+    artifact["reliable_dimensions"] = []
+
+    registration = build_speaking_registration(
+        tmp_path,
+        MANIFEST,
+        registration_attempt(prompt, transcript),
+        prompt,
+        transcript,
+        FEEDBACK,
+        [],
+        segments(7),
+        artifact,
+    )
+
+    assert registration.speaking_context.reliable_dimensions == {
+        "content", "grammar", "vocabulary", "intelligibility", "pronunciation",
+        "prosody", "fluency", "reconstruction",
+    }
 
 
 def test_null_attempt_duration_uses_inspection_for_segment_bounds(
@@ -948,6 +1057,7 @@ def test_cli_registers_valid_speaking_session(
         "events": inputs / "events.jsonl",
         "segments": inputs / "segments.yaml",
         "inspection": inputs / "inspection.json",
+        "transcript-segments": inputs / "transcript-segments.yaml",
     }
     paths["attempt"].write_text(yaml.safe_dump(attempt, sort_keys=False))
     paths["prompt"].write_text(prompt)
@@ -955,6 +1065,13 @@ def test_cli_registers_valid_speaking_session(
     paths["feedback"].write_text(FEEDBACK)
     paths["events"].write_text("")
     paths["segments"].write_text(yaml.safe_dump(segments(7), sort_keys=False))
+    raw_rows = [
+        {key: row[key] for key in ("segment_id", "start", "end", "text")}
+        for row in segments(7)
+    ]
+    mapping = infer_toefl_role_map("listen_and_repeat", raw_rows).artifact()
+    mapping["transcript_rows"] = raw_rows
+    paths["transcript-segments"].write_text(yaml.safe_dump(mapping, sort_keys=False))
     paths["inspection"].write_text(
         json.dumps(inspection("/private/source/practice.m4a"))
     )

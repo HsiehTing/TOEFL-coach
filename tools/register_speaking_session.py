@@ -18,7 +18,12 @@ def main() -> int:
     parser.add_argument("--events", type=Path, required=True)
     parser.add_argument("--segments", type=Path, required=True)
     parser.add_argument("--inspection", type=Path, required=True)
-    parser.add_argument("--transcript-segments", type=Path)
+    parser.add_argument(
+        "--transcript-segments",
+        type=Path,
+        required=True,
+        help="Transcript-first role-mapping artifact from prepare_speaking_session.py",
+    )
     args = parser.parse_args()
     prompt = args.prompt.read_text()
     transcript = args.transcript.read_text()
@@ -30,11 +35,7 @@ def main() -> int:
         if line.strip()
     ]
     segments = yaml.safe_load(args.segments.read_text())
-    transcript_segments = (
-        yaml.safe_load(args.transcript_segments.read_text())
-        if args.transcript_segments is not None
-        else []
-    )
+    transcript_segments = yaml.safe_load(args.transcript_segments.read_text())
     inspection = json.loads(args.inspection.read_text())
     destination = register_speaking_session(
         args.root,
