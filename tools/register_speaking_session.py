@@ -11,6 +11,11 @@ from toefl_tracker.speaking import register_speaking_session
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path.cwd())
+    parser.add_argument(
+        "--audio",
+        type=Path,
+        help="Private source audio path; required when inspection.json is path-free",
+    )
     parser.add_argument("--attempt", type=Path, required=True)
     parser.add_argument("--prompt", type=Path, required=True)
     parser.add_argument("--transcript", type=Path, required=True)
@@ -25,25 +30,29 @@ def main() -> int:
         help="Transcript-first role-mapping artifact from prepare_speaking_session.py",
     )
     args = parser.parse_args()
-    prompt = args.prompt.read_text()
-    transcript = args.transcript.read_text()
+    prompt = args.prompt.read_text(encoding="utf-8")
+    transcript = args.transcript.read_text(encoding="utf-8")
     attempt = read_yaml(args.attempt)
     attempt["source_hash"] = canonical_source_hash(prompt, transcript)
     events = [
         json.loads(line)
-        for line in args.events.read_text().splitlines()
+        for line in args.events.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
-    segments = yaml.safe_load(args.segments.read_text())
-    transcript_segments = yaml.safe_load(args.transcript_segments.read_text())
-    inspection = json.loads(args.inspection.read_text())
+    segments = yaml.safe_load(args.segments.read_text(encoding="utf-8"))
+    transcript_segments = yaml.safe_load(args.transcript_segments.read_text(encoding="utf-8"))
+    inspection = json.loads(args.inspection.read_text(encoding="utf-8"))
+    if args.audio is not None:
+        inspection["path"] = str(args.audio.resolve())
+    elif "path" not in inspection:
+        parser.error("--audio is required when inspection.json is path-free")
     destination = register_speaking_session(
         args.root,
         read_yaml(args.root / "standards/ets-2026/manifest.yaml"),
         attempt,
         prompt,
         transcript,
-        args.feedback.read_text(),
+        args.feedback.read_text(encoding="utf-8"),
         events,
         segments,
         inspection,

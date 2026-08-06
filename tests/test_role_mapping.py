@@ -53,6 +53,28 @@ def test_missing_interview_answer_marks_only_affected_item_ambiguous() -> None:
     assert all(row.item != 2 for row in result.rows)
 
 
+def test_one_repeat_similarity_failure_preserves_other_mapped_items() -> None:
+    rows = _rows("listen-repeat-transcript.json")
+    rows[3]["text"] = "An unrelated sentence that is not a repetition."
+
+    result = infer_toefl_role_map("listen_and_repeat", rows)
+
+    assert result.requires_confirmation is True
+    assert {row.item for row in result.ambiguous_rows} == {2}
+    assert {row.item for row in result.rows} == {1, 3, 4, 5, 6, 7}
+
+
+def test_interview_examiner_instruction_is_not_a_learner_answer() -> None:
+    rows = _rows("interview-transcript.json")
+    for index in (1, 3, 5, 7):
+        rows[index]["text"] = "Please answer this question with enough detail now."
+
+    result = infer_toefl_role_map("take_an_interview", rows)
+
+    assert result.requires_confirmation is True
+    assert {row.item for row in result.ambiguous_rows} == {1, 2, 3, 4}
+
+
 @pytest.mark.parametrize(
     "task_type, rows, message",
     [
@@ -113,6 +135,19 @@ def test_prepare_cli_writes_review_artifacts_without_registering(
         "prepare_speaking_session.transcribe_audio",
         lambda *args, **kwargs: _rows("listen-repeat-transcript.json"),
     )
+    monkeypatch.setattr(
+        "prepare_speaking_session.inspect_segment_quality",
+        lambda *args, **kwargs: [
+            {
+                "start": row["start"],
+                "end": row["end"],
+                "mean_dbfs": -30.0,
+                "peak_dbfs": -5.0,
+                "clipping": False,
+            }
+            for row in _rows("listen-repeat-transcript.json")[1::2]
+        ],
+    )
     monkeypatch.setattr(sys, "argv", [
         "prepare_speaking_session.py", "--audio", str(source), "--task-type",
         "listen_and_repeat", "--output-dir", str(output),
@@ -124,6 +159,6 @@ def test_prepare_cli_writes_review_artifacts_without_registering(
     }
     assert not list(output.glob("*.m4a"))
     artifact = json.loads((output / "audio-inspection.json").read_text())
-    assert artifact["path"] == str(source)
+    assert "path" not in artifact
     mapping = yaml.safe_load((output / "transcript-segments.yaml").read_text())
     assert mapping["requires_confirmation"] is False

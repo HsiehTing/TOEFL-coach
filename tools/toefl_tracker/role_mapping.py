@@ -151,6 +151,38 @@ def _question(text: str) -> bool:
     )) or text.rstrip().endswith("?")
 
 
+def _examiner_instruction(text: str) -> bool:
+    """Reject examiner directions that merely look like an answer turn."""
+    return bool(re.match(
+        r"^(?:please\s+)?(?:answer|respond|describe|explain|give|tell)\b",
+        text.strip(),
+        flags=re.IGNORECASE,
+    )) or bool(re.search(
+        r"\b(?:answer|respond)\s+(?:this|the)\s+question\b|\bwith\s+(?:enough|more)\s+detail\b",
+        text,
+        flags=re.IGNORECASE,
+    ))
+
+
+def _answer_discourse_evidence(question: str, answer: str) -> bool:
+    """Require a plausible response turn, not just a non-question sentence."""
+    if _examiner_instruction(answer):
+        return False
+    answer_tokens = _tokens(answer)
+    question_tokens = _tokens(question)
+    if len(answer_tokens) < 4:
+        return False
+    # A response should either contain ordinary first-person/discourse material
+    # or be materially developed relative to the prompt.
+    discourse_markers = {
+        "i", "me", "my", "mine", "we", "our", "because", "since",
+        "although", "however", "also", "so", "if", "when", "while",
+    }
+    return bool(answer_tokens & discourse_markers) or len(answer_tokens) >= max(
+        8, int(len(question_tokens) * 0.8)
+    )
+
+
 def _ambiguous(task_type: str, rows: Sequence[_TranscriptRow], reason: str, items: Sequence[int] | None = None) -> RoleMapResult:
     expected = ITEM_COUNTS.get(task_type, 0)
     affected = tuple(items if items is not None else range(1, expected + 1))
@@ -181,10 +213,12 @@ def _listen_and_repeat(rows: Sequence[_TranscriptRow]) -> RoleMapResult:
     if len(rows) != ITEM_COUNTS["listen_and_repeat"] * 2:
         return _ambiguous("listen_and_repeat", rows, "incomplete TOEFL transcript mapping")
     mapped: list[RoleMapRow] = []
+    ambiguous: list[AmbiguousRoleRow] = []
     for item in range(1, 8):
         prompt, response = rows[(item - 1) * 2:item * 2]
         if _question(prompt.text) or _question(response.text) or _similarity(prompt.text, response.text) < 0.5:
-            return _ambiguous("listen_and_repeat", rows, "repeat similarity cannot confirm TOEFL item", (item,))
+            ambiguous.append(AmbiguousRoleRow(item, "repeat similarity cannot confirm TOEFL item"))
+            continue
         mapped.extend((
             _mapped(item, "examiner", prompt, "expected_item_order"),
             _mapped(item, "learner", response, "repeat_similarity"),
@@ -192,9 +226,12 @@ def _listen_and_repeat(rows: Sequence[_TranscriptRow]) -> RoleMapResult:
     return RoleMapResult(
         task_type="listen_and_repeat",
         rows=tuple(mapped),
-        ambiguous_rows=(),
-        requires_confirmation=False,
-        reason="complete TOEFL Listen and Repeat structure",
+        ambiguous_rows=tuple(ambiguous),
+        requires_confirmation=bool(ambiguous),
+        reason=(
+            "repeat similarity cannot confirm TOEFL item"
+            if ambiguous else "complete TOEFL Listen and Repeat structure"
+        ),
         source_transcript_hash=_source_hash(rows),
     )
 
@@ -217,13 +254,13 @@ def _interview(rows: Sequence[_TranscriptRow]) -> RoleMapResult:
         if _question(answer.text):
             ambiguous.append(AmbiguousRoleRow(item, "missing learner answer"))
             continue
-        if len(_tokens(answer.text)) < 4:
-            ambiguous.append(AmbiguousRoleRow(item, "learner answer is too short to confirm"))
+        if not _answer_discourse_evidence(question.text, answer.text):
+            ambiguous.append(AmbiguousRoleRow(item, "learner answer lacks response discourse evidence"))
             position += 1
             continue
         mapped.extend((
             _mapped(item, "examiner", question, "question_answer_structure"),
-            _mapped(item, "learner", answer, "question_answer_structure"),
+            _mapped(item, "learner", answer, "answer_discourse_evidence"),
         ))
         position += 1
     if position != len(rows):

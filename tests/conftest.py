@@ -95,7 +95,7 @@ def speaking_segments(task_type: str) -> list[dict]:
         if task_type == "take_an_interview":
             prompt = f"What activity do you enjoy for interview item {item}?"
             response = f"I enjoy reading for interview item {item} because it helps me learn and relax."
-            reason = "question_answer_structure"
+            reason = "answer_discourse_evidence"
         else:
             prompt = f"The campus library opens at eight for item {item}."
             response = prompt
@@ -141,6 +141,29 @@ Re-record the affected item.
 
 
 def inspection(attempt_id: str) -> dict:
+    segment_quality = [
+        {
+            "segment_id": f"asr-{item * 2:03d}",
+            "start": item * 10.0 + 2.2,
+            "end": item * 10.0 + 7.0,
+            "mean_dbfs": -30.0,
+            "peak_dbfs": -5.4,
+            "clipping": False,
+            "decodable": True,
+            "quality": {
+                "policy_version": 1,
+                "standard_basis": "diagnostic_internal",
+                "usable": True,
+                "dimension_set": "all",
+            },
+            "reliable_dimensions": [
+                "content", "intelligibility", "pronunciation", "prosody", "fluency",
+                "grammar", "vocabulary", "reconstruction", "directness", "relevance",
+                "elaboration", "coherence",
+            ],
+        }
+        for item in range(1, 8)
+    ]
     return {
         "path": f"/private/source/{attempt_id}.m4a",
         "duration_seconds": 120.0,
@@ -166,6 +189,7 @@ def inspection(attempt_id: str) -> dict:
             "content", "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
             "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
         ],
+        "segment_quality": segment_quality,
     }
 
 

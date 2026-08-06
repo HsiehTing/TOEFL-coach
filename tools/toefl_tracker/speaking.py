@@ -9,7 +9,7 @@ from re import Match
 import yaml
 
 from toefl_tracker.event_validation import SpeakingEvidenceContext
-from toefl_tracker.audio import AudioInspectionError
+from toefl_tracker.audio import AudioInspectionError, inspect_segment_quality
 from toefl_tracker.canonical import write_aggregate_events
 from toefl_tracker.models import LEVELS, ValidatedPracticeRegistration, ValidationError
 from toefl_tracker.role_mapping import MAPPING_METHOD, MAPPING_VERSION, infer_toefl_role_map
@@ -51,6 +51,7 @@ _INSPECTION_FIELDS = (
 _PERSISTED_INSPECTION_FIELDS = tuple(
     field for field in _INSPECTION_FIELDS if field != "path"
 ) + ("reliable_dimensions",)
+_SEGMENT_QUALITY_FIELD = "segment_quality"
 _DURATION_TOLERANCE_SECONDS = 1e-6
 _PROVENANCE_KEYS = {"executables", "model_identifier", "model_sha256"}
 _EXECUTABLE_NAMES = {"ffmpeg", "ffprobe", "whisper-cli"}
@@ -351,7 +352,109 @@ def _validated_inspection(inspection: object) -> tuple[dict, str]:
         "model_identifier": provenance["model_identifier"],
         "model_sha256": provenance["model_sha256"],
     }
+    if _SEGMENT_QUALITY_FIELD in inspection:
+        persisted[_SEGMENT_QUALITY_FIELD] = _validate_segment_quality_artifact(
+            inspection[_SEGMENT_QUALITY_FIELD]
+        )
     return persisted, source_path
+
+
+def _validate_segment_quality_artifact(value: object) -> list[dict]:
+    if not isinstance(value, list):
+        raise ValidationError("learner segment quality is invalid")
+    validated: list[dict] = []
+    for row in value:
+        if not isinstance(row, Mapping):
+            raise ValidationError("learner segment quality is invalid")
+        required = {"segment_id", "start", "end", "mean_dbfs", "peak_dbfs", "clipping", "decodable", "quality", "reliable_dimensions"}
+        if set(row) != required:
+            raise ValidationError("learner segment quality fields are invalid")
+        if (
+            not isinstance(row["segment_id"], str)
+            or not row["segment_id"].strip()
+            or type(row["start"]) not in {int, float}
+            or type(row["end"]) not in {int, float}
+            or not isfinite(row["start"])
+            or not isfinite(row["end"])
+            or row["start"] < 0
+            or row["end"] <= row["start"]
+            or type(row["mean_dbfs"]) not in {int, float}
+            or type(row["peak_dbfs"]) not in {int, float}
+            or not isfinite(row["mean_dbfs"])
+            or not isfinite(row["peak_dbfs"])
+            or type(row["clipping"]) is not bool
+            or type(row["decodable"]) is not bool
+            or not isinstance(row["reliable_dimensions"], list)
+            or any(not isinstance(item, str) for item in row["reliable_dimensions"])
+        ):
+            raise ValidationError("learner segment quality fields are invalid")
+        quality = row["quality"]
+        if (
+            not isinstance(quality, Mapping)
+            or set(quality) != {"policy_version", "standard_basis", "usable", "dimension_set"}
+            or quality.get("policy_version") != 1
+            or quality.get("standard_basis") != "diagnostic_internal"
+            or type(quality.get("usable")) is not bool
+            or quality.get("dimension_set") not in {"all", "text_only", "none"}
+        ):
+            raise ValidationError("learner segment quality is invalid")
+        try:
+            expected = quality_decision({
+                "mean_dbfs": row["mean_dbfs"],
+                "peak_dbfs": row["peak_dbfs"],
+                "decodable": row["decodable"],
+            })
+        except AudioInspectionError as error:
+            raise ValidationError("learner segment quality is invalid") from error
+        expected_quality = {
+            "policy_version": expected.policy_version,
+            "standard_basis": expected.standard_basis,
+            "usable": expected.usable,
+            "dimension_set": expected.dimension_set,
+        }
+        if dict(quality) != expected_quality:
+            raise ValidationError("learner segment quality does not match audio metrics")
+        validated.append(dict(row))
+    return validated
+
+
+def _learner_quality(
+    inspection: Mapping,
+    task_type: str,
+    learner_segments: Sequence[Mapping],
+) -> tuple[list[dict], set[str]]:
+    """Require quality measured on each learner segment, not whole-file averages."""
+    artifact = inspection.get(_SEGMENT_QUALITY_FIELD)
+    if artifact is None:
+        raise ValidationError("learner segment quality is missing")
+    rows = _validate_segment_quality_artifact(artifact)
+    by_id = {row["segment_id"]: row for row in rows}
+    reliable: set[str] | None = None
+    for segment in learner_segments:
+        quality = by_id.get(segment.get("segment_id"))
+        if quality is None or (
+            quality["start"] != segment["start"] or quality["end"] != segment["end"]
+        ):
+            raise ValidationError("learner segment quality does not match mapping")
+        if quality["quality"]["usable"] is not True:
+            raise ValidationError("learner segment audio quality is insufficient")
+        dimensions = _normalized_reliable_dimensions(
+            quality["reliable_dimensions"], task_type, quality["quality"]["dimension_set"]
+        )
+        provided_dimensions = set(quality["reliable_dimensions"])
+        if quality["quality"]["dimension_set"] == "text_only" and provided_dimensions != dimensions:
+            raise ValidationError("learner segment reliable dimensions are invalid")
+        if quality["quality"]["dimension_set"] == "all" and not dimensions <= provided_dimensions:
+            raise ValidationError("learner segment reliable dimensions are invalid")
+        reliable = dimensions if reliable is None else reliable & dimensions
+    if reliable is None:
+        raise ValidationError("learner segments are missing")
+    reliable &= _normalized_reliable_dimensions(
+        inspection.get("reliable_dimensions"),
+        task_type,
+        inspection["quality"]["dimension_set"],
+    )
+    return rows, reliable
 
 
 def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
@@ -360,7 +463,7 @@ def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
     if (
         not isinstance(inspection, Mapping)
         or not required_fields <= set(inspection)
-        or set(inspection) - required_fields - {"reliable_dimensions"}
+        or set(inspection) - required_fields - {"reliable_dimensions", _SEGMENT_QUALITY_FIELD}
     ):
         raise ValidationError("speaking inspection fields are invalid")
     persisted, _ = _validated_inspection({"path": "audit-source", **inspection})
@@ -374,6 +477,10 @@ def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
     ):
         raise ValidationError("speaking reliable_dimensions are invalid")
     persisted["reliable_dimensions"] = sorted(reliable)
+    if _SEGMENT_QUALITY_FIELD in inspection:
+        persisted[_SEGMENT_QUALITY_FIELD] = _validate_segment_quality_artifact(
+            inspection[_SEGMENT_QUALITY_FIELD]
+        )
     return persisted
 
 
@@ -417,9 +524,41 @@ def validate_transcript_role_mapping(
         result = infer_toefl_role_map(task_type, raw_rows)
     except ValidationError as error:
         raise ValidationError(f"transcript role mapping rejected: {error}") from error
-    if result.requires_confirmation or len(result.rows) != len(given_rows):
-        raise ValidationError("incomplete confirmed TOEFL transcript role mapping")
-    expected_rows = [row.artifact() for row in result.rows]
+    expected_count = ITEM_COUNTS[task_type]
+    expected_pairs = [
+        (item, role)
+        for item in range(1, expected_count + 1)
+        for role in ("examiner", "learner")
+    ]
+    if result.requires_confirmation:
+        # A mapper may identify the complete transcript structure while marking
+        # only a few rows uncertain.  Let an explicit user confirmation finish
+        # those rows; never let confirmation invent a missing or reordered turn.
+        if len(given_rows) != len(expected_pairs) or len(raw_rows) != len(expected_pairs):
+            raise ValidationError("incomplete confirmed TOEFL transcript role mapping")
+        ambiguous_items = {row.item for row in result.ambiguous_rows}
+        confirmed_rows: list[dict] = []
+        for given, source, (item, role) in zip(given_rows, raw_rows, expected_pairs):
+            _validate_segment(given, expected_count)
+            if (
+                given.get("segment_id") != source.get("segment_id")
+                or given.get("start") != source.get("start")
+                or given.get("end") != source.get("end")
+                or given.get("text") != source.get("text")
+                or given.get("item") != item
+                or given.get("role") != role
+            ):
+                raise ValidationError("speaking segments do not match transcript role mapping")
+            if item in ambiguous_items and given.get("confirmed_by_user") is not True:
+                raise ValidationError("transcript role mapping requires user confirmation")
+            row = dict(given)
+            row.setdefault("role_reason", "user_confirmed_transcript_structure")
+            confirmed_rows.append(row)
+        expected_rows = confirmed_rows
+    else:
+        if len(result.rows) != len(given_rows):
+            raise ValidationError("incomplete confirmed TOEFL transcript role mapping")
+        expected_rows = [row.artifact() for row in result.rows]
     expected_keys = ("segment_id", "item", "role", "start", "end", "text", "confidence", "role_reason")
     for given, expected in zip(given_rows, expected_rows):
         if any(given.get(key) != expected[key] for key in expected_keys):
@@ -433,6 +572,7 @@ def validate_transcript_role_mapping(
         }.items()):
             raise ValidationError("transcript role mapping artifact metadata is invalid")
     artifact = result.artifact()
+    artifact["rows"] = expected_rows
     artifact["transcript_rows"] = [
         {key: row[key] for key in ("segment_id", "start", "end", "text")}
         for row in expected_rows
@@ -479,6 +619,15 @@ def build_speaking_registration(
     segment_rows, transcript_artifact = validate_transcript_role_mapping(
         bounded_attempt["task_type"], transcript_segments, segments
     )
+    learner_segments = tuple(
+        row for row in segment_rows if row.get("role") == "learner"
+    )
+    segment_quality_rows, reliable_dimensions = _learner_quality(
+        inspection,
+        bounded_attempt["task_type"],
+        learner_segments,
+    )
+    persisted_inspection["segment_quality"] = segment_quality_rows
     validate_speaking_assessment(
         bounded_attempt,
         segment_rows,
@@ -492,11 +641,6 @@ def build_speaking_registration(
         raise ValidationError(
             "attempt audio_quality does not match inspection"
         )
-    reliable_dimensions = _normalized_reliable_dimensions(
-        inspection.get("reliable_dimensions"),
-        bounded_attempt["task_type"],
-        persisted_inspection["quality"]["dimension_set"],
-    )
     persisted_inspection["reliable_dimensions"] = sorted(reliable_dimensions)
     extra_files = {
         "audio-inspection.json": (
@@ -521,9 +665,6 @@ def build_speaking_registration(
         # Preserve a stable audit reference without committing a local path or URL.
         "source-reference.txt": "source:" + sha256(source_path.encode("utf-8")).hexdigest() + "\n",
     }
-    learner_segments = tuple(
-        row for row in segment_rows if row.get("role") == "learner"
-    )
     speaking_context = SpeakingEvidenceContext(
         learner_segments=learner_segments,
         duration_seconds=persisted_inspection["duration_seconds"],

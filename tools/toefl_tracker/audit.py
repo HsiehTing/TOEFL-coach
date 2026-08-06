@@ -14,6 +14,7 @@ from toefl_tracker.models import TASK_TYPES, ValidationError
 from toefl_tracker.register import persisted_attempt_relationship_problems
 from toefl_tracker.reports import rebuild_modality
 from toefl_tracker.speaking import (
+    _learner_quality,
     validate_persisted_inspection,
     validate_speaking_assessment,
     validate_transcript_role_mapping,
@@ -99,8 +100,16 @@ def _audit_speaking_artifacts(
         segments, _ = validate_transcript_role_mapping(
             attempt["task_type"], transcript_segments, segments
         )
+        learner_segments = tuple(
+            row for row in segments if isinstance(row, dict) and row.get("role") == "learner"
+        )
+        _, reliable_dimensions = _learner_quality(
+            inspection, attempt["task_type"], learner_segments
+        )
+        if set(inspection["reliable_dimensions"]) != reliable_dimensions:
+            raise ValidationError("persisted learner segment reliability does not match inspection")
         return SpeakingEvidenceContext(
-            learner_segments=tuple(row for row in segments if isinstance(row, dict) and row.get("role") == "learner"),
+            learner_segments=learner_segments,
             duration_seconds=inspection["duration_seconds"],
             reliable_dimensions=set(inspection["reliable_dimensions"]),
         )

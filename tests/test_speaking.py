@@ -119,6 +119,29 @@ def registration_attempt(
 
 
 def inspection(path: str) -> dict:
+    segment_quality = [
+        {
+            "segment_id": f"asr-{item * 2:03d}",
+            "start": item * 10.0 + 2.2,
+            "end": item * 10.0 + 7.0,
+            "mean_dbfs": -30.0,
+            "peak_dbfs": -5.4,
+            "clipping": False,
+            "decodable": True,
+            "quality": {
+                "policy_version": 1,
+                "standard_basis": "diagnostic_internal",
+                "usable": True,
+                "dimension_set": "all",
+            },
+            "reliable_dimensions": [
+                "content", "intelligibility", "pronunciation", "prosody", "fluency",
+                "grammar", "vocabulary", "reconstruction", "directness", "relevance",
+                "elaboration", "coherence",
+            ],
+        }
+        for item in range(1, 8)
+    ]
     return {
         "path": path,
         "duration_seconds": 120.0,
@@ -144,7 +167,36 @@ def inspection(path: str) -> dict:
             "content", "intelligibility", "pronunciation", "prosody", "fluency", "grammar",
             "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
         ],
+        "segment_quality": segment_quality,
     }
+
+
+def add_segment_quality(artifact: dict, rows: list[dict]) -> dict:
+    artifact["segment_quality"] = [
+        {
+            "segment_id": row["segment_id"],
+            "start": row["start"],
+            "end": row["end"],
+            "mean_dbfs": -30.0,
+            "peak_dbfs": -5.4,
+            "clipping": False,
+            "decodable": True,
+            "quality": {
+                "policy_version": 1,
+                "standard_basis": "diagnostic_internal",
+                "usable": True,
+                "dimension_set": "all",
+            },
+            "reliable_dimensions": [
+                "content", "intelligibility", "pronunciation", "prosody", "fluency",
+                "grammar", "vocabulary", "reconstruction", "directness", "relevance",
+                "elaboration", "coherence",
+            ],
+        }
+        for row in rows
+        if row["role"] == "learner"
+    ]
+    return artifact
 
 
 def counted_event(attempt_id: str = "S-LR-20260731-001") -> dict:
@@ -210,6 +262,55 @@ def test_ambiguous_mapping_can_be_explicitly_confirmed() -> None:
         [],
         FEEDBACK,
     )
+
+
+def test_formal_registration_accepts_confirmed_interview_ambiguity(tmp_path: Path) -> None:
+    raw_rows = json.loads(
+        (ROOT / "tests/fixtures/audio/interview-transcript.json").read_text(encoding="utf-8")
+    )
+    raw_rows[3]["text"] = "Yes, I do."
+    mapping = infer_toefl_role_map("take_an_interview", raw_rows).artifact()
+    mapping["transcript_rows"] = [
+        {"segment_id": f"asr-{index + 1:03d}", **row}
+        for index, row in enumerate(raw_rows)
+    ]
+    mapped_rows = []
+    for index, row in enumerate(raw_rows):
+        item = index // 2 + 1
+        role = "examiner" if index % 2 == 0 else "learner"
+        mapped_rows.append({
+            "segment_id": f"asr-{index + 1:03d}",
+            "item": item,
+            "role": role,
+            "start": row["start"],
+            "end": row["end"],
+            "text": row["text"],
+            "confidence": "medium" if item == 2 else "high",
+            "role_reason": "user_confirmed_transcript_structure" if item == 2 else "question_answer_structure",
+            **({"confirmed_by_user": True} if item == 2 else {}),
+        })
+    attempt = registration_attempt("Interview prompt", "Interview transcript")
+    attempt.update({
+        "attempt_id": "S-INT-20260731-001",
+        "task_type": "take_an_interview",
+    })
+    artifact = add_segment_quality(inspection("/private/source/interview.m4a"), mapped_rows)
+
+    path = register_speaking_session(
+        tmp_path,
+        MANIFEST,
+        attempt,
+        "Interview prompt",
+        "Interview transcript",
+        FEEDBACK,
+        [],
+        mapped_rows,
+        artifact,
+        mapping,
+    )
+
+    persisted = yaml.safe_load((path / "segments.yaml").read_text(encoding="utf-8"))
+    assert persisted[3]["confirmed_by_user"] is True
 
 
 @pytest.mark.parametrize("attempt", [None, [], "session"])
@@ -567,6 +668,7 @@ def test_audio_inspection_artifact_is_accepted_by_speaking_gate(tmp_path: Path) 
         ffprobe="/resolved/ffprobe",
         provenance=provenance,
     )
+    artifact = add_segment_quality(artifact, segments(7))
     destination = register_speaking_session(
         tmp_path / "workspace",
         MANIFEST,
@@ -648,6 +750,15 @@ def test_text_only_quality_with_empty_reliability_fails_closed(tmp_path: Path) -
         "dimension_set": "text_only",
     }
     text_only["reliable_dimensions"] = []
+    for segment in text_only["segment_quality"]:
+        segment["mean_dbfs"] = -36.0
+        segment["quality"] = {
+            "policy_version": 1,
+            "standard_basis": "diagnostic_internal",
+            "usable": True,
+            "dimension_set": "text_only",
+        }
+        segment["reliable_dimensions"] = ["content", "grammar", "reconstruction", "vocabulary"]
 
     registration = build_speaking_registration(
         tmp_path,
@@ -878,6 +989,33 @@ def test_registration_rejects_counted_dimension_not_reliable(tmp_path: Path) -> 
         )
 
 
+def test_learner_segment_quality_cannot_be_masked_by_whole_file_metrics(tmp_path: Path) -> None:
+    artifact = inspection("/private/source/practice.m4a")
+    learner_quality = artifact["segment_quality"][3]
+    learner_quality["mean_dbfs"] = -46.0
+    learner_quality["peak_dbfs"] = -10.0
+    learner_quality["quality"] = {
+        "policy_version": 1,
+        "standard_basis": "diagnostic_internal",
+        "usable": False,
+        "dimension_set": "none",
+    }
+    learner_quality["reliable_dimensions"] = []
+
+    with pytest.raises(ValidationError, match="learner segment audio quality"):
+        build_speaking_registration(
+            tmp_path,
+            MANIFEST,
+            registration_attempt("Seven source sentences", "Seven learner repetitions"),
+            "Seven source sentences",
+            "Seven learner repetitions",
+            FEEDBACK,
+            [],
+            segments(7),
+            artifact,
+        )
+
+
 def test_all_quality_maps_to_every_route_relevant_dimension(tmp_path: Path) -> None:
     prompt = "Seven source sentences"
     transcript = "Seven learner repetitions"
@@ -1031,6 +1169,7 @@ def test_persisted_inspection_contains_only_approved_fields(
         "quality",
         "provenance",
         "reliable_dimensions",
+        "segment_quality",
     }
 
 
