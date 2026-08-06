@@ -17,6 +17,8 @@ Evaluate against the recorded ETS version, preserve evidence, and make the learn
 4. For a revision, require and preserve the parent attempt ID.
 5. Record timing and assistance as unknown when not supplied; never infer them.
 
+After feedback is accepted, register the immutable attempt through `tools/register_writing_attempt.py`; do not write tracker rows by hand.
+
 ## Route
 
 - Email: read `references/email-feedback.md`.
@@ -48,4 +50,4 @@ For a recurrence or progress request, classify each counted code from ordered `f
 
 ## Persist
 
-Write immutable attempt and event inputs, run `tools/register_attempt.py`, rebuild reports, then run `tools/validate_tracker.py`. Report the attempt ID and any common or task-specific three-practice report that was generated.
+Write immutable attempt and event inputs, run `tools/register_writing_attempt.py`, rebuild reports, then run `tools/validate_tracker.py`. Report the attempt ID and any common or task-specific three-practice report that was generated.

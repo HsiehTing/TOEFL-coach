@@ -55,6 +55,11 @@ def test_skill_routes_references_and_enforces_iteration() -> None:
     assert "tools/validate_tracker.py" in text
 
 
+def test_writing_skill_uses_dedicated_registration_gate() -> None:
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    assert "tools/register_writing_attempt.py" in text
+
+
 def test_task_contracts_have_distinct_required_fields() -> None:
     email = (SKILL / "references/email-feedback.md").read_text()
     discussion = (SKILL / "references/discussion-feedback.md").read_text()

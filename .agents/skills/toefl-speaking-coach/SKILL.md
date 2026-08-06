@@ -13,10 +13,12 @@ Separate audio quality from English performance, and complete speaker mapping be
 
 1. Read `standards/ets-2026/manifest.yaml`, `score-policy.md`, and `references/audio-intake.md`.
 2. Run `tools/inspect_audio.py` on the source file.
-3. Segment alternating examiner and learner speech; retain timestamps and confidence.
-4. Present only ambiguous mappings for confirmation.
-5. 配對完成前不得正式評估。
-6. State which dimensions remain reliable when audio quality is limited.
+3. Run `tools/prepare_speaking_session.py` to create a local transcript and TOEFL-structure role map.
+4. Segment alternating examiner and learner speech; retain timestamps and confidence.
+5. Present only ambiguous mappings for confirmation; clear rows do not need confirmation.
+6. 配對完成前不得正式評估。
+7. Keep raw audio external to the tracker. A partial or incomplete map is diagnostic only and cannot be registered as a formal session.
+8. State which dimensions remain reliable when audio quality is limited.
 
 ## Route
 

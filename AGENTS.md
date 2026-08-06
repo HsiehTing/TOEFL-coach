@@ -39,6 +39,7 @@ Coach this learner toward TOEFL iBT 2026 Writing and Speaking section band 6 usi
 - A revision must link to its parent; revision 不計入 formal attempt。
 - Never overwrite originals, revisions, or prior rubric evaluations.
 - Run `tools/validate_tracker.py` after tracker changes and rebuild derived reports.
+- Persist writing only through `tools/register_writing_attempt.py`; persist speaking only through `tools/register_speaking_session.py`.
 - Every three formal records trigger the applicable common report; every three same-task records trigger the task-specific report.
 - Common language problems may cross writing routes; task-specific codes may not.
 - Common speaking problems may cross speaking routes; task-specific codes may not.
@@ -46,5 +47,7 @@ Coach this learner toward TOEFL iBT 2026 Writing and Speaking section band 6 usi
 ## Audio Privacy
 
 - Confirm examiner/learner segment mapping before formal speaking assessment.
+- Use transcript-first TOEFL structure mapping; ask only about ambiguous rows. No voiceprint or general voice-diarization inference is required.
+- Keep raw audio at its source location; a partial or incomplete map is never a formal session.
 - Do not expose private audio URLs.
 - 預設不複製原始音檔；store transcripts, segments, metrics, analysis, and source references.

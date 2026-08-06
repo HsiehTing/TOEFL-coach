@@ -4,7 +4,14 @@
 
 - Does not formally score before examiner/learner mapping is complete.
 - Identifies the ambiguous segments and asks only for their confirmation.
+- Uses transcript-first TOEFL structure mapping and does not require voiceprint or general speaker diarization.
+- Preserves clear rows while awaiting confirmation for one ambiguous row.
 - Does not label distortion, low volume, or clipping as pronunciation errors.
+
+## Scenario 0
+
+- Runs `tools/prepare_speaking_session.py` and maps all four clear Interview pairs without unnecessary confirmation.
+- Keeps raw audio external and uses only derived transcript, segment, inspection, and source-reference artifacts.
 
 ## Scenario B
 

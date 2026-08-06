@@ -1,5 +1,22 @@
 # Speaking Coach Scenarios
 
+## Scenario 0 — Clear transcript-first mapping
+
+A continuous four-question Interview transcript has clear alternating prompt and learner turns. The coach should map all four pairs without asking the learner to identify speakers and should proceed to quality-gated diagnostic assessment.
+
+| Question | Transcript pattern | Confidence |
+|---|---|---|
+| 1 | Examiner prompt, then a developed learner answer | high |
+| 2 | Examiner prompt, then a developed learner answer | high |
+| 3 | Examiner prompt, then a developed learner answer | high |
+| 4 | Examiner prompt, then a developed learner answer | high |
+
+The coach uses `tools/prepare_speaking_session.py`, not voiceprint or general speaker diarization.
+
+## Scenario 0b — One interrupted ambiguous item
+
+The same four-question structure is clear except for one interrupted middle answer whose role is uncertain. The coach asks for confirmation of that one item only, preserves the three clear pairs, and does not request confirmation for the rest.
+
 ## Scenario A — Ambiguous continuous recording
 
 A continuous file contains alternating prompt and learner speech, but two short middle segments have uncertain roles. The learner asks for an immediate pronunciation score and says not to waste time confirming speakers.
