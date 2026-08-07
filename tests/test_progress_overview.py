@@ -48,6 +48,24 @@ def test_overview_is_rebuildable_without_mutating_events(tmp_path: Path) -> None
     assert (tmp_path / "tracker/writing/progress-overview.yaml").exists()
 
 
+def test_overview_renders_actionable_dashboard_details(tmp_path: Path) -> None:
+    write_attempt(tmp_path, "W-EMAIL-1", "email", "formal_original")
+    write_attempt(tmp_path, "W-AD-2", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-EMAIL-3", "email", "formal_original")
+    write_events(tmp_path, [
+        report_event("W-EMAIL-1", "E-1", "EMAIL-ACTION", task_specific=True),
+        report_event("W-AD-2", "E-2", "GRAM-CLAUSE", task_specific=False),
+    ])
+
+    path = write_progress_overview(tmp_path)
+    text = path.read_text(encoding="utf-8")
+
+    assert "Errors / 100 words" in text
+    assert "## Route coverage" in text
+    assert "## Revision chains" in text
+    assert "## Data quality" in text
+
+
 def test_overview_uses_declared_legacy_lineage_order_for_recent_records(tmp_path: Path) -> None:
     for attempt_id, task_type in [
         ("W-EMAIL-1", "email"),

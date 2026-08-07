@@ -63,6 +63,12 @@ def build_progress_overview(root: Path) -> dict:
     recent_ids = {row["attempt_id"] for row in recent}
     counted = [event for event in events if event.get("level") in _COUNTED and event.get("attempt_id") in recent_ids]
     counts = Counter(event["code"] for event in counted)
+    errors_by_attempt = Counter(event["attempt_id"] for event in counted)
+    severe_by_attempt = Counter(
+        event["attempt_id"]
+        for event in counted
+        if event.get("severity") == "meaning_changing"
+    )
     focus_codes = [code for code, _ in counts.most_common(2)] if len(formals) >= 3 else []
     compatibility = load_legacy_compatibility(root, "writing")
     revision_summaries = [
@@ -80,6 +86,15 @@ def build_progress_overview(root: Path) -> dict:
             {
                 "attempt_id": row["attempt_id"], "task_type": row["task_type"], "simulated_task_score": row.get("task_score", {}).get("value"),
                 "word_count": row.get("word_count"), "timed": row.get("timed"),
+                "counted_errors": errors_by_attempt[row["attempt_id"]],
+                "errors_per_100_words": (
+                    round(errors_by_attempt[row["attempt_id"]] * 100 / row["word_count"], 2)
+                    if row.get("word_count") else None
+                ),
+                "meaning_changing_per_100_words": (
+                    round(severe_by_attempt[row["attempt_id"]] * 100 / row["word_count"], 2)
+                    if row.get("word_count") else None
+                ),
             }
             for row in recent
         ],
@@ -90,6 +105,17 @@ def build_progress_overview(root: Path) -> dict:
             {"code": code, "reason": f"{counts[code]} counted events in the latest three formal records."}
             for code in focus_codes
         ],
+        "data_quality": {
+            "timing_unknown_attempt_ids": [
+                row["attempt_id"] for row in formals if row.get("timed") is None
+            ],
+            "assistance_unknown_attempt_ids": [
+                row["attempt_id"]
+                for row in formals
+                if not isinstance(row.get("assistance"), dict)
+                or any(value is None for value in row["assistance"].values())
+            ],
+        },
     }
 
 
@@ -100,12 +126,45 @@ def write_progress_overview(root: Path) -> Path:
     lines.append("## Recent formal records")
     if not overview["recent_formals"]:
         lines.append("- No formal records")
+    lines.append("| Attempt | Route | Simulated task score | Errors / 100 words | Meaning-changing / 100 words | Timing |")
+    lines.append("| --- | --- | ---: | ---: | ---: | --- |")
     for row in overview["recent_formals"]:
-        lines.append(f"- `{row['attempt_id']}` | `{row['task_type']}` | simulated task score: {row['simulated_task_score']} | timed: {row['timed']}")
+        lines.append(
+            f"| `{row['attempt_id']}` | `{row['task_type']}` | {row['simulated_task_score']} | "
+            f"{row['errors_per_100_words'] if row['errors_per_100_words'] is not None else 'unknown'} | "
+            f"{row['meaning_changing_per_100_words'] if row['meaning_changing_per_100_words'] is not None else 'unknown'} | "
+            f"{row['timed'] if row['timed'] is not None else 'unknown'} |"
+        )
+    lines.extend(["", "## Route coverage"])
+    for route, summary in overview["routes"].items():
+        lines.append(
+            f"- `{route}`: {summary['formal_record_count']} formal records; "
+            f"{sum(row['events'] for row in summary['atomic_codes'].values())} counted events"
+        )
     lines.extend(["", "## Next two focuses"])
     lines.extend([f"- `{row['code']}`: {row['reason']}" for row in overview["next_focuses"]] or ["- Need three formal records before trend focuses."])
     lines.extend(["", "## Mastery"])
     lines.extend([f"- `{code}`: {summary['status']}" for code, summary in overview["mastery"].items()] or ["- No drill/mastery signals yet"])
+    lines.extend(["", "## Revision chains"])
+    for summary in overview["revision_chains"]:
+        if summary["revision_ids"]:
+            lines.append(
+                f"- `{summary['root_attempt_id']}`: {summary['round_count']} rounds; "
+                f"latest revision `{summary['latest_revision_id']}`; "
+                f"first full resolution: round {summary['first_full_resolution_round'] or 'not reached'}"
+            )
+    if not any(summary["revision_ids"] for summary in overview["revision_chains"]):
+        lines.append("- No revision chains")
+    lines.extend(["", "## Data quality"])
+    quality = overview["data_quality"]
+    lines.append(
+        "- Timing unknown: " + ", ".join(f"`{value}`" for value in quality["timing_unknown_attempt_ids"])
+        if quality["timing_unknown_attempt_ids"] else "- Timing recorded for all formal records"
+    )
+    lines.append(
+        "- Assistance partly unknown: " + ", ".join(f"`{value}`" for value in quality["assistance_unknown_attempt_ids"])
+        if quality["assistance_unknown_attempt_ids"] else "- Assistance recorded for all formal records"
+    )
     atomic_write_text(path, "\n".join(lines) + "\n")
     atomic_write_text(root / "tracker/writing/progress-overview.yaml", yaml.safe_dump(overview, allow_unicode=True, sort_keys=False))
     return path
