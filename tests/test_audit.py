@@ -352,7 +352,7 @@ def test_audit_accumulates_each_invalid_revision_relationship(
     problems = audit_workspace(populated_workspace)
 
     assert any("writing: W-REV-MISSING: revision parent does not exist" in row for row in problems)
-    assert any("writing: W-REV-MISMATCH: revision parent must be matching formal original" in row for row in problems)
+    assert any("writing: W-REV-MISMATCH: revision parent must be matching formal original or revision" in row for row in problems)
 
 
 def test_audit_keeps_actual_lineage_predecessor_after_bad_supersedes_link(

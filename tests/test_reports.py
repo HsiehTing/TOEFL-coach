@@ -16,7 +16,11 @@ def write_attempt(
         "modality": "writing",
         "task_type": task_type,
         "record_type": record_type,
-        "submitted_at": f"2026-07-{10 + int(attempt_id[-1]):02d}T10:00:00+08:00",
+        "submitted_at": (
+            f"2026-07-{20 + int(attempt_id[-1]):02d}T10:00:00+08:00"
+            if record_type == "revision"
+            else f"2026-07-{10 + int(attempt_id[-1]):02d}T10:00:00+08:00"
+        ),
         "timed": True,
         "rubric_version": (
             "ets-writing-email-2025-applicable-2026"
@@ -105,7 +109,9 @@ def test_third_formal_writing_creates_common_and_task_reports(
     report = (
         tmp_path / "tracker/writing/reports/writing-common-0003.md"
     ).read_text()
-    assert "## Revision resolution\n50.0%" in report
+    assert "## Revision chains" in report
+    assert "W-AD-2-R1" in report
+    assert "## Revision resolution\nLatest-round full resolution:" in report
     assert "## Next two focuses" in report
 
 

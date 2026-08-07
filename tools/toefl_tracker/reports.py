@@ -7,6 +7,7 @@ from pathlib import Path
 
 from toefl_tracker.canonical import load_canonical_events, write_aggregate_events
 from toefl_tracker.io import atomic_write_text, read_yaml
+from toefl_tracker.lineage import lineage_summary
 from toefl_tracker.models import TASK_TYPES
 from toefl_tracker.status import classify_code
 from toefl_tracker.taxonomy import TaxonomyEntry, load_taxonomy
@@ -116,11 +117,50 @@ def _focuses(formals: list[dict], events: list[dict], rows: list[tuple[str, str,
     return [code for code, _, _ in ranked[:2]]
 
 
-def _revision_resolution(revisions: list[dict], formal_ids: set[str]) -> str:
-    comparable = [row for row in revisions if row.get("parent_attempt_id") in formal_ids]
-    assigned = sum(row["revision_outcomes"]["assigned"] for row in comparable)
-    resolved = sum(row["revision_outcomes"]["resolved"] for row in comparable)
-    return f"{resolved / assigned:.1%}" if assigned else "No comparable revisions"
+def _revision_summaries(formals: list[dict], revisions: list[dict]) -> list[dict]:
+    attempts = [*formals, *revisions]
+    return [lineage_summary(formal["attempt_id"], attempts) for formal in formals]
+
+
+def _revision_chain_lines(summaries: list[dict]) -> str:
+    if not any(summary["revision_ids"] for summary in summaries):
+        return "- No comparable revision chains"
+    lines: list[str] = []
+    for summary in summaries:
+        if not summary["revision_ids"]:
+            continue
+        latest = summary["latest_outcome"] or {}
+        latest_rate = (
+            f"{latest['resolved'] / latest['assigned']:.1%}"
+            if latest.get("assigned")
+            else "unknown"
+        )
+        first_round = summary["revision_ids"][0]
+        lines.append(
+            f"- `{summary['root_attempt_id']}`: {summary['round_count']} rounds; "
+            f"scores { ' → '.join(str(value) for value in summary['score_trajectory']) }; "
+            f"first revision `{first_round}`; latest `{summary['latest_revision_id']}`"
+        )
+        lines.append(
+            f"  - Latest-round resolution: {latest_rate}; "
+            f"first full resolution round: {summary['first_full_resolution_round'] or 'not reached'}; "
+            f"new errors across chain: {summary['total_new_errors']}"
+        )
+    return "\n".join(lines)
+
+
+def _revision_resolution(summaries: list[dict]) -> str:
+    comparable = [summary for summary in summaries if summary["revision_ids"]]
+    if not comparable:
+        return "No comparable revision chains"
+    fully_resolved = sum(
+        summary["latest_outcome"] is not None
+        and summary["latest_outcome"].get("resolved") == summary["latest_outcome"].get("assigned")
+        and summary["latest_outcome"].get("partly_resolved") == 0
+        and summary["latest_outcome"].get("unresolved") == 0
+        for summary in comparable
+    )
+    return f"Latest-round full resolution: {fully_resolved}/{len(comparable)} chains"
 
 
 def _report_markdown(
@@ -154,6 +194,7 @@ def _report_markdown(
     recurring, rows = _recurring_lines(formals, events)
     focuses = _focuses(formals, events, rows)
     focus_lines = "\n".join(f"{number}. `{code}`" for number, code in enumerate(focuses, start=1))
+    revision_summaries = _revision_summaries(formals, revisions)
     formal_ids = {formal["attempt_id"] for formal in formals}
     rubrics = {
         row["rubric_version"]
@@ -173,7 +214,8 @@ def _report_markdown(
         + "\n".join(timeline)
         + f"\n\n## Severe-event trend\n{severe_trend}\n\n"
         f"## Recurring patterns\n{recurring}\n\n"
-        f"## Revision resolution\n{_revision_resolution(revisions, {row['attempt_id'] for row in formals})}\n\n"
+        f"## Revision chains\n{_revision_chain_lines(revision_summaries)}\n\n"
+        f"## Revision resolution\n{_revision_resolution(revision_summaries)}\n\n"
         f"## Version boundary\n{boundary_text}\n\n"
         f"## Next two focuses\n{focus_lines}\n"
     )

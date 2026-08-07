@@ -60,8 +60,9 @@ def test_revision_uses_revision_filename_and_parent_link(tmp_path: Path) -> None
     revision = {
         **valid_attempt(),
         "attempt_id": "W-AD-20260731-001-R1",
-        "record_type": "revision",
-        "parent_attempt_id": original["attempt_id"],
+            "record_type": "revision",
+            "parent_attempt_id": original["attempt_id"],
+            "submitted_at": "2026-08-01T10:00:00+08:00",
         "revision_outcomes": {
             "assigned": 2,
             "resolved": 1,
@@ -78,6 +79,41 @@ def test_revision_uses_revision_filename_and_parent_link(tmp_path: Path) -> None
     )
 
     assert (path / "response-revision.md").read_text() == "revised response\n"
+
+
+def test_nested_revision_can_link_to_previous_revision(tmp_path: Path) -> None:
+    original = valid_attempt()
+    register_attempt(tmp_path, MANIFEST, original, "prompt", "response", "feedback", [])
+    revision_one = {
+        **valid_attempt(),
+        "attempt_id": "W-AD-20260731-001-R1",
+        "record_type": "revision",
+        "parent_attempt_id": original["attempt_id"],
+        "submitted_at": "2026-08-01T10:00:00+08:00",
+        "revision_outcomes": {
+            "assigned": 1,
+            "resolved": 1,
+            "partly_resolved": 0,
+            "unresolved": 0,
+            "new_errors": 0,
+            "resolution_rate": 1.0,
+        },
+        "source_hash": canonical_source_hash("prompt", "revision one"),
+    }
+    register_attempt(tmp_path, MANIFEST, revision_one, "prompt", "revision one", "feedback", [])
+    revision_two = {
+        **revision_one,
+        "attempt_id": "W-AD-20260731-001-R2",
+        "parent_attempt_id": revision_one["attempt_id"],
+        "submitted_at": "2026-08-02T10:00:00+08:00",
+        "source_hash": canonical_source_hash("prompt", "revision two"),
+    }
+
+    path = register_attempt(
+        tmp_path, MANIFEST, revision_two, "prompt", "revision two", "feedback", []
+    )
+
+    assert (path / "response-revision.md").read_text() == "revision two\n"
     assert not (path / "response-original.md").exists()
 
 

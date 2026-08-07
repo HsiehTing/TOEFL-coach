@@ -271,12 +271,29 @@ def persisted_attempt_relationship_problems(
         if parent is None:
             problems.append((attempt_id, "revision parent does not exist"))
             continue
+        expected_parent_types = (
+            {"formal_original"}
+            if attempt.get("record_type") == "re_evaluation"
+            else {"formal_original", "revision"}
+        )
         if (
-            parent.get("record_type") != "formal_original"
+            parent.get("record_type") not in expected_parent_types
             or parent.get("modality") != attempt.get("modality")
             or parent.get("task_type") != attempt.get("task_type")
         ):
-            problems.append((attempt_id, "revision parent must be matching formal original"))
+            problems.append((
+                attempt_id,
+                "re-evaluation parent must be matching formal original"
+                if attempt.get("record_type") == "re_evaluation"
+                else "revision parent must be matching formal original or revision",
+            ))
+            continue
+        if attempt.get("record_type") == "revision":
+            try:
+                if _normalized_lineage_timestamp(parent.get("submitted_at"), "revision parent submitted_at") >= _normalized_lineage_timestamp(attempt.get("submitted_at"), "revision submitted_at"):
+                    problems.append((attempt_id, "revision must be submitted after its parent"))
+            except ValidationError as error:
+                problems.append((attempt_id, str(error)))
             continue
         if attempt.get("record_type") == "re_evaluation":
             try:
