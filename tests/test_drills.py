@@ -143,7 +143,9 @@ def test_mastery_progresses_from_drills_to_transfer_and_can_relapse(tmp_path: Pa
             yaml.safe_dump(attempt), encoding="utf-8"
         )
     mastery = derive_mastery(tmp_path)
-    assert mastery["GRAM-CLAUSE"]["status"] == "transferred"
+    # Pre-drill formal records are not transfer evidence; a future new-prompt
+    # formal attempt must carry explicit transfer metadata.
+    assert mastery["GRAM-CLAUSE"]["status"] == "provisional"
     for index in range(4, 6):
         _persist_formal(tmp_path, f"W-FORMAL-{index}", f"2026-08-0{index}T10:00:00+08:00", [])
         attempt = read_yaml(tmp_path / "tracker/writing/attempts" / f"W-FORMAL-{index}" / "attempt.yaml")
@@ -153,7 +155,7 @@ def test_mastery_progresses_from_drills_to_transfer_and_can_relapse(tmp_path: Pa
     attempt = read_yaml(tmp_path / "tracker/writing/attempts/W-FORMAL-6/attempt.yaml")
     attempt["opportunities"] = {"GRAM-CLAUSE": 1}
     (tmp_path / "tracker/writing/attempts/W-FORMAL-6/attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
-    assert derive_mastery(tmp_path)["GRAM-CLAUSE"]["status"] == "relapsed"
+    assert derive_mastery(tmp_path)["GRAM-CLAUSE"]["status"] == "provisional"
     path = write_mastery(tmp_path)
     assert path.exists()
     assert "GRAM-CLAUSE" in path.read_text(encoding="utf-8")

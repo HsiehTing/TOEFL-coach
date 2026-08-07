@@ -90,8 +90,16 @@ def validate_attempt(data: dict, manifest: dict) -> None:
             if not isinstance(drill, dict):
                 raise ValidationError("targeted_drill requires drill metadata")
             required_drill = {"set_id", "target_codes", "item_count", "correct_count", "source_attempt_ids"}
-            if set(drill) != required_drill:
+            optional_drill = {"drill_pack_id", "recommendation_id"}
+            if not required_drill <= set(drill) <= required_drill | optional_drill:
                 raise ValidationError("targeted_drill metadata fields are invalid")
+            if ("drill_pack_id" in drill) != ("recommendation_id" in drill):
+                raise ValidationError("targeted_drill drill_pack_id and recommendation_id must appear together")
+            if "drill_pack_id" in drill and (
+                not isinstance(drill["drill_pack_id"], str) or not drill["drill_pack_id"].startswith("WD-")
+                or not isinstance(drill["recommendation_id"], str) or not drill["recommendation_id"].strip()
+            ):
+                raise ValidationError("targeted_drill generated-pack metadata is invalid")
             if not isinstance(drill["set_id"], str) or not drill["set_id"].strip():
                 raise ValidationError("targeted_drill set_id must be non-empty")
             codes = drill["target_codes"]
@@ -114,6 +122,19 @@ def validate_attempt(data: dict, manifest: dict) -> None:
                 raise ValidationError("writing task_score must be an integer on scale 0-5")
             if data.get("drill") is not None:
                 raise ValidationError("drill metadata is only valid for targeted_drill")
+        transfer = data.get("transfer")
+        if transfer is not None:
+            required_transfer = {"drill_attempt_id", "drill_pack_id", "source_attempt_id", "target_codes", "opportunity_confirmation", "source_prompt_hash", "transfer_prompt_hash"}
+            if data["record_type"] != "formal_original" or not isinstance(transfer, dict) or set(transfer) != required_transfer:
+                raise ValidationError("transfer metadata is invalid")
+            if not all(isinstance(transfer[field], str) and transfer[field].strip() for field in {"drill_attempt_id", "drill_pack_id", "source_attempt_id", "source_prompt_hash", "transfer_prompt_hash"}):
+                raise ValidationError("transfer metadata IDs are invalid")
+            if not transfer["drill_pack_id"].startswith("WD-") or not all(value.startswith("sha256:") for value in (transfer["source_prompt_hash"], transfer["transfer_prompt_hash"])):
+                raise ValidationError("transfer metadata hashes are invalid")
+            if not isinstance(transfer["target_codes"], list) or not transfer["target_codes"] or len(set(transfer["target_codes"])) != len(transfer["target_codes"]):
+                raise ValidationError("transfer target_codes are invalid")
+            if transfer["opportunity_confirmation"] != opportunities:
+                raise ValidationError("transfer opportunity confirmation must match opportunities")
     if data["modality"] == "speaking" and data.get("result_type") != "diagnostic_only":
         raise ValidationError("speaking result_type must be diagnostic_only")
     if data["record_type"] in {"revision", "re_evaluation"} and not isinstance(data["parent_attempt_id"], str):
