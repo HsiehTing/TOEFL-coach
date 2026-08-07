@@ -1,0 +1,14 @@
+version: 1
+families:
+  SENTENCE-CONTROL:
+    members: [GRAM-CLAUSE, GRAM-AGREEMENT, GRAM-ARTICLE, GRAM-NEGATION]
+    task_types: [email, academic_discussion]
+  LEXICAL-NATURALNESS:
+    members: [LEX-COLLOCATION, LEX-WORDFORM]
+    task_types: [email, academic_discussion]
+  IDEA-DEVELOPMENT:
+    members: [DISCUSSION-ELABORATION, DISCUSSION-SUPPORT]
+    task_types: [academic_discussion]
+  EMAIL-ACTION-CLARITY:
+    members: [EMAIL-ACTION, EMAIL-MISSING-POINT, EMAIL-ORGANIZATION]
+    task_types: [email]

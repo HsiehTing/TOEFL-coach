@@ -6,6 +6,7 @@ from io import StringIO
 from pathlib import Path
 
 from toefl_tracker.canonical import load_canonical_events, write_aggregate_events
+from toefl_tracker.families import aggregate_family_hits, load_skill_families
 from toefl_tracker.io import atomic_write_text, read_yaml
 from toefl_tracker.lineage import lineage_summary
 from toefl_tracker.models import TASK_TYPES
@@ -163,6 +164,19 @@ def _revision_resolution(summaries: list[dict]) -> str:
     return f"Latest-round full resolution: {fully_resolved}/{len(comparable)} chains"
 
 
+def _family_lines(family_summaries: dict[str, dict] | None) -> str:
+    if not family_summaries:
+        return "- No skill-family evidence"
+    lines: list[str] = []
+    for name, summary in family_summaries.items():
+        if summary["event_count"]:
+            lines.append(
+                f"- `{name}`: {summary['event_count']} events in "
+                f"{summary['formal_record_count']} formal records"
+            )
+    return "\n".join(lines) or "- No skill-family evidence"
+
+
 def _report_markdown(
     title: str,
     boundary: int,
@@ -170,6 +184,7 @@ def _report_markdown(
     revisions: list[dict],
     reevaluations: dict[str, list[dict]],
     events: list[dict],
+    family_summaries: dict[str, dict] | None = None,
 ) -> str:
     counted = [event for event in events if event["level"] in _COUNTED_LEVELS]
     severe_trend = " → ".join(
@@ -216,6 +231,7 @@ def _report_markdown(
         f"## Recurring patterns\n{recurring}\n\n"
         f"## Revision chains\n{_revision_chain_lines(revision_summaries)}\n\n"
         f"## Revision resolution\n{_revision_resolution(revision_summaries)}\n\n"
+        f"## Skill families\n{_family_lines(family_summaries)}\n\n"
         f"## Version boundary\n{boundary_text}\n\n"
         f"## Next two focuses\n{focus_lines}\n"
     )
@@ -252,6 +268,8 @@ def rebuild_modality(root: Path, modality: str) -> list[Path]:
     write_aggregate_events(root, modality)
     events = load_canonical_events(root, modality)
     entries = load_taxonomy(root) if events else {}
+    family_path = root / "standards/ets-2026/writing-skill-families.yaml"
+    families = load_skill_families(root) if modality == "writing" and family_path.exists() else None
     formal_events = _events_for_attempts(events, formals)
     atomic_write_text(base / "dashboard.csv", _dashboard(formals, formal_events))
 
@@ -269,7 +287,12 @@ def rebuild_modality(root: Path, modality: str) -> list[Path]:
         window = formals[:boundary]
         path = _report_path(base, modality, None, boundary)
         window_events = _visible_events(_events_for_attempts(events, window), entries, None)
-        atomic_write_text(path, _report_markdown(f"{modality.title()} Common Report", boundary, window, revisions, reevaluations, window_events))
+        family_summaries = (
+            aggregate_family_hits(families, window, window_events)
+            if families is not None
+            else None
+        )
+        atomic_write_text(path, _report_markdown(f"{modality.title()} Common Report", boundary, window, revisions, reevaluations, window_events, family_summaries))
         reports.append(path)
     for task_type in sorted({row["task_type"] for row in formals}):
         task_formals = [row for row in formals if row["task_type"] == task_type]
@@ -277,7 +300,12 @@ def rebuild_modality(root: Path, modality: str) -> list[Path]:
             window = task_formals[:boundary]
             path = _report_path(base, modality, task_type, boundary)
             window_events = _visible_events(_events_for_attempts(events, window), entries, task_type)
-            atomic_write_text(path, _report_markdown(f"{modality.title()} {task_type.replace('_', ' ').title()} Report", boundary, window, revisions, reevaluations, window_events))
+            family_summaries = (
+                aggregate_family_hits(families, window, window_events, task_type=task_type)
+                if families is not None
+                else None
+            )
+            atomic_write_text(path, _report_markdown(f"{modality.title()} {task_type.replace('_', ' ').title()} Report", boundary, window, revisions, reevaluations, window_events, family_summaries))
             reports.append(path)
     _remove_stale_generated_reports(base, modality, set(reports))
     return reports

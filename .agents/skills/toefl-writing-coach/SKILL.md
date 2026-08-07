@@ -47,6 +47,7 @@ Compare only against the assigned priorities. Report resolved, partly resolved, 
 ## Recurrence and progress output
 
 For a recurrence or progress request, classify each counted code from ordered `formal_original` records with the deterministic tracker status rules. Explicitly output the resulting `historical_status`; revisions and targeted drills do not change it.
+For Discussion, also read `standards/ets-2026/writing-skill-families.yaml` when available and show derived family signals without replacing atomic codes. After two unresolved revision rounds, recommend a bounded targeted drill and a new-prompt transfer check.
 
 ## Persist
 

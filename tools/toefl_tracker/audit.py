@@ -10,6 +10,7 @@ import yaml
 
 from toefl_tracker.event_validation import SpeakingEvidenceContext, validate_event_context
 from toefl_tracker.io import canonical_source_hash, read_yaml
+from toefl_tracker.lineage import root_formal_attempt
 from toefl_tracker.models import TASK_TYPES, ValidationError
 from toefl_tracker.register import persisted_attempt_relationship_problems
 from toefl_tracker.reports import rebuild_modality
@@ -265,6 +266,19 @@ def audit_workspace(root: Path) -> list[str]:
             for attempt_id, reason in relationship_problems:
                 problems.append(f"{modality}: {attempt_id}: {reason}")
             invalid_data = True
+
+        # Validate the complete revision graph separately from the registration
+        # checks.  Registration protects parent existence/type/order, while
+        # lineage traversal also catches cycles and guarantees reports cannot
+        # silently omit a nested revision.
+        for attempt in attempts.values():
+            if attempt.get("record_type") not in {"formal_original", "revision"}:
+                continue
+            try:
+                root_formal_attempt(attempt["attempt_id"], attempts.values())
+            except _PARSE_ERRORS as error:
+                problems.append(f"{modality}: {attempt['attempt_id']}: {error}")
+                invalid_data = True
 
         history_attempts: list[dict] = []
         history_events: list[dict] = []

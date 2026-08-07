@@ -355,6 +355,48 @@ def test_audit_accumulates_each_invalid_revision_relationship(
     assert any("writing: W-REV-MISMATCH: revision parent must be matching formal original or revision" in row for row in problems)
 
 
+def test_audit_reports_revision_cycle_without_rebuilding_reports(
+    populated_workspace: Path,
+) -> None:
+    original = read_yaml(
+        populated_workspace / "tracker/writing/attempts/W-AD-20260101-001/attempt.yaml"
+    )
+    prompt = "Cycle prompt"
+    for attempt_id, parent_id, submitted_at in [
+        ("W-REV-CYCLE-1", "W-REV-CYCLE-2", "2026-02-01T10:00:00+08:00"),
+        ("W-REV-CYCLE-2", "W-REV-CYCLE-1", "2026-02-01T10:10:00+08:00"),
+    ]:
+        response = f"Response {attempt_id}"
+        attempt = {
+            **original,
+            "attempt_id": attempt_id,
+            "record_type": "revision",
+            "parent_attempt_id": parent_id,
+            "submitted_at": submitted_at,
+            "source_hash": canonical_source_hash(prompt, response),
+            "revision_outcomes": {
+                "assigned": 1,
+                "resolved": 1,
+                "partly_resolved": 0,
+                "unresolved": 0,
+                "new_errors": 0,
+                "resolution_rate": 1.0,
+            },
+        }
+        directory = populated_workspace / "tracker/writing/attempts" / attempt_id
+        directory.mkdir()
+        (directory / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+        (directory / "prompt.md").write_text(prompt, encoding="utf-8")
+        (directory / "response-revision.md").write_text(response, encoding="utf-8")
+        (directory / "feedback-round-1.md").write_text("feedback\n", encoding="utf-8")
+        (directory / "events.jsonl").write_text("", encoding="utf-8")
+
+    problems = audit_workspace(populated_workspace)
+
+    assert any("cycle in revision lineage" in row for row in problems)
+    assert not any("cannot rebuild derived artifacts" in row for row in problems)
+
+
 def test_audit_keeps_actual_lineage_predecessor_after_bad_supersedes_link(
     populated_workspace: Path,
 ) -> None:
