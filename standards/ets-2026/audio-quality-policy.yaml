@@ -1,0 +1,15 @@
+policy_version: 1
+standard_basis: diagnostic_internal
+description: >-
+  Local recording-quality safeguards for coaching evidence. These thresholds are
+  diagnostic internal controls, not ETS scoring standards.
+thresholds_dbfs:
+  clipping_peak_gte: -0.1
+  inaudible_peak_lte: -35.0
+  inaudible_mean_lte: -45.0
+  text_only_peak_lt: -20.0
+  text_only_mean_lt: -35.0
+dimension_sets:
+  all: all route-relevant dimensions
+  text_only: content, grammar, vocabulary, and Listen and Repeat reconstruction
+  none: no dimensions are reliable enough for formal evidence

@@ -19,3 +19,11 @@ State which rubric features are consistently successful, generally successful, p
 ## Revision assignment
 
 Require the learner to correct any altered thesis first, then independently develop one reason with a concrete explanation or example. Do not supply a full replacement post before revision.
+
+## Skill-family drill
+
+When `DISCUSSION-ELABORATION` and `DISCUSSION-SUPPORT` recur across formal originals, report the derived family `IDEA-DEVELOPMENT` while preserving both atomic codes and exact excerpts. Assign a bounded causal-chain drill:
+
+`claim → mechanism → concrete outcome/example → link back to the position`
+
+The learner must produce the chain in their own words. 第一輪不提供完整範文；the drill is not a formal task score and must be followed by a new-prompt transfer check.

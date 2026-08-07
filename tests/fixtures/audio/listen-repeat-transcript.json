@@ -1,0 +1,16 @@
+[
+  {"start": 0.0, "end": 2.0, "text": "The university library opens at eight every morning."},
+  {"start": 2.2, "end": 4.4, "text": "The university library opens at eight every morning."},
+  {"start": 5.0, "end": 7.0, "text": "Please submit your assignment before Friday afternoon."},
+  {"start": 7.2, "end": 9.4, "text": "Please submit your assignment before Friday afternoon."},
+  {"start": 10.0, "end": 12.0, "text": "Students can reserve study rooms online."},
+  {"start": 12.2, "end": 14.4, "text": "Students can reserve study rooms online."},
+  {"start": 15.0, "end": 17.0, "text": "The science lecture begins in room two hundred."},
+  {"start": 17.2, "end": 19.4, "text": "The science lecture begins in room two hundred."},
+  {"start": 20.0, "end": 22.0, "text": "Your advisor will answer questions after class."},
+  {"start": 22.2, "end": 24.4, "text": "Your advisor will answer questions after class."},
+  {"start": 25.0, "end": 27.0, "text": "The campus bus stops beside the student center."},
+  {"start": 27.2, "end": 29.4, "text": "The campus bus stops beside the student center."},
+  {"start": 30.0, "end": 32.0, "text": "Remember to bring your identification card tomorrow."},
+  {"start": 32.2, "end": 34.4, "text": "Remember to bring your identification card tomorrow."}
+]

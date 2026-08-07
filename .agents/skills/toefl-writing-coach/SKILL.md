@@ -17,6 +17,8 @@ Evaluate against the recorded ETS version, preserve evidence, and make the learn
 4. For a revision, require and preserve the parent attempt ID.
 5. Record timing and assistance as unknown when not supplied; never infer them.
 
+After feedback is accepted, register the immutable attempt through `tools/register_writing_attempt.py`; do not write tracker rows by hand.
+
 ## Route
 
 - Email: read `references/email-feedback.md`.
@@ -45,7 +47,10 @@ Compare only against the assigned priorities. Report resolved, partly resolved, 
 ## Recurrence and progress output
 
 For a recurrence or progress request, classify each counted code from ordered `formal_original` records with the deterministic tracker status rules. Explicitly output the resulting `historical_status`; revisions and targeted drills do not change it.
+For Discussion, also read `standards/ets-2026/writing-skill-families.yaml` when available and show derived family signals without replacing atomic codes. After two unresolved revision rounds, recommend a bounded targeted drill and a new-prompt transfer check.
+Targeted drills use `record_type: targeted_drill`: they are non-scored practice records, never formal attempts, and must include bounded `drill` metadata (`set_id`, target codes, item/correct counts, and source attempt IDs). After registration, read `tracker/writing/mastery.md`; treat its state as derived coaching evidence, not a replacement for each event's `historical_status`.
+When `tracker/writing/training-plan.md` contains a recommendation, follow its route, target codes, bounded item count, and new-prompt transfer check; do not skip directly to another revision.
 
 ## Persist
 
-Write immutable attempt and event inputs, run `tools/register_attempt.py`, rebuild reports, then run `tools/validate_tracker.py`. Report the attempt ID and any common or task-specific three-practice report that was generated.
+Write immutable attempt and event inputs, run `tools/register_writing_attempt.py`, rebuild reports, then run `tools/validate_tracker.py`. Report the attempt ID and any common or task-specific three-practice report that was generated.

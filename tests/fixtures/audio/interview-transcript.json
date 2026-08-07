@@ -1,0 +1,10 @@
+[
+  {"start": 0.0, "end": 2.0, "text": "What is one activity you enjoy after classes?"},
+  {"start": 2.2, "end": 7.0, "text": "After classes, I enjoy playing badminton with my friends because it helps me relax."},
+  {"start": 8.0, "end": 10.0, "text": "Why do you prefer studying in a library?"},
+  {"start": 10.2, "end": 16.0, "text": "I prefer studying in a library because it is quiet, and I can focus without interruptions."},
+  {"start": 17.0, "end": 19.0, "text": "Describe a teacher who influenced you."},
+  {"start": 19.2, "end": 25.5, "text": "My biology teacher influenced me by explaining difficult ideas clearly and encouraging me to ask questions."},
+  {"start": 26.5, "end": 28.5, "text": "How do you usually spend a free weekend?"},
+  {"start": 28.7, "end": 35.0, "text": "On a free weekend, I usually visit my family, cook dinner, and prepare for the following week."}
+]

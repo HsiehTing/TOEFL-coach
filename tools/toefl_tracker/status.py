@@ -1,40 +1,53 @@
 from collections import Counter
+from collections.abc import Mapping, Sequence
 
 
 SEVERITY = {"minor": 1, "clarity_reducing": 2, "meaning_changing": 3}
 
 
-def classify_code(code: str, attempts: list[dict], events: list[dict]) -> str | None:
+def classify_code(code: str, attempts: Sequence[dict], events: Sequence[dict]) -> str | None:
+    if not isinstance(code, str) or code == "UNCLASSIFIED":
+        return None
     comparable = [
         attempt for attempt in attempts
-        if attempt["record_type"] == "formal_original"
-        and attempt.get("opportunities", {}).get(code, 0) > 0
+        if isinstance(attempt, Mapping)
+        and attempt.get("record_type") == "formal_original"
+        and isinstance(attempt.get("attempt_id"), str)
+        and isinstance(attempt.get("opportunities"), Mapping)
+        and type(attempt["opportunities"].get(code)) is int
+        and attempt["opportunities"][code] > 0
     ]
     if not comparable:
         return None
 
     counted_events = [
         event for event in events
-        if event["code"] == code and event["level"] in {"must_fix", "should_fix"}
+        if isinstance(event, Mapping)
+        and event.get("code") == code
+        and isinstance(event.get("attempt_id"), str)
+        and isinstance(event.get("level"), str)
+        and event.get("level") in {"must_fix", "should_fix"}
+        and isinstance(event.get("severity"), str)
+        and event.get("severity") in SEVERITY
     ]
     counts = Counter(event["attempt_id"] for event in counted_events)
     severity_by_attempt = {
-        attempt["attempt_id"]: max(
+        attempt.get("attempt_id"): max(
             (
                 SEVERITY[event["severity"]]
                 for event in counted_events
-                if event["attempt_id"] == attempt["attempt_id"]
+                if event.get("attempt_id") == attempt.get("attempt_id")
             ),
             default=0,
         )
         for attempt in comparable
     }
-    series = [counts[attempt["attempt_id"]] for attempt in comparable]
+    series = [counts[attempt.get("attempt_id")] for attempt in comparable]
     rates = [
-        counts[attempt["attempt_id"]] / attempt["opportunities"][code]
+        counts[attempt.get("attempt_id")] / attempt["opportunities"][code]
         for attempt in comparable
     ]
-    severities = [severity_by_attempt[attempt["attempt_id"]] for attempt in comparable]
+    severities = [severity_by_attempt[attempt.get("attempt_id")] for attempt in comparable]
     occurred_indices = [index for index, value in enumerate(series) if value > 0]
     if not occurred_indices:
         return None
@@ -57,7 +70,7 @@ def classify_code(code: str, attempts: list[dict], events: list[dict]) -> str | 
         or max(severities[-2:]) < max(severities[-4:-2])
     ):
         return "improving"
-    if len(series) >= 5 and sum(value > 0 for value in series[-5:]) >= 3:
+    if len(series) >= 3 and sum(value > 0 for value in series[-5:]) >= 3:
         return "persistent"
     affected = sum(value > 0 for value in series)
     return "new" if affected == 1 else "recurring"

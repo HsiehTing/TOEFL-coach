@@ -1,0 +1,39 @@
+taxonomy_version: 1
+codes:
+  GRAM-ARTICLE: {taxonomy_version: 1, modality: writing, scope: common, task_types: [email, academic_discussion], dimension: grammar}
+  GRAM-NEGATION: {taxonomy_version: 1, modality: writing, scope: common, task_types: [email, academic_discussion], dimension: grammar}
+  GRAM-CLAUSE: {taxonomy_version: 1, modality: writing, scope: common, task_types: [email, academic_discussion], dimension: grammar}
+  GRAM-AGREEMENT: {taxonomy_version: 1, modality: writing, scope: common, task_types: [email, academic_discussion], dimension: grammar}
+  LEX-WORDFORM: {taxonomy_version: 1, modality: writing, scope: common, task_types: [email, academic_discussion], dimension: lexis}
+  LEX-COLLOCATION: {taxonomy_version: 1, modality: writing, scope: common, task_types: [email, academic_discussion], dimension: lexis}
+  MECH-SPELLING: {taxonomy_version: 1, modality: writing, scope: common, task_types: [email, academic_discussion], dimension: mechanics}
+  MECH-PUNCTUATION: {taxonomy_version: 1, modality: writing, scope: common, task_types: [email, academic_discussion], dimension: mechanics}
+  EMAIL-PURPOSE: {taxonomy_version: 1, modality: writing, scope: route, task_types: [email], dimension: task_completion}
+  EMAIL-MISSING-POINT: {taxonomy_version: 1, modality: writing, scope: route, task_types: [email], dimension: task_completion}
+  EMAIL-REGISTER: {taxonomy_version: 1, modality: writing, scope: route, task_types: [email], dimension: register}
+  EMAIL-POLITENESS: {taxonomy_version: 1, modality: writing, scope: route, task_types: [email], dimension: politeness}
+  EMAIL-ORGANIZATION: {taxonomy_version: 1, modality: writing, scope: route, task_types: [email], dimension: organization}
+  EMAIL-ACTION: {taxonomy_version: 1, modality: writing, scope: route, task_types: [email], dimension: task_completion}
+  DISCUSSION-ALIGNMENT: {taxonomy_version: 1, modality: writing, scope: route, task_types: [academic_discussion], dimension: task_completion}
+  DISCUSSION-POSITION: {taxonomy_version: 1, modality: writing, scope: route, task_types: [academic_discussion], dimension: task_completion}
+  DISCUSSION-BORROWING: {taxonomy_version: 1, modality: writing, scope: route, task_types: [academic_discussion], dimension: contribution}
+  DISCUSSION-CONTRIBUTION: {taxonomy_version: 1, modality: writing, scope: route, task_types: [academic_discussion], dimension: contribution}
+  DISCUSSION-ELABORATION: {taxonomy_version: 1, modality: writing, scope: route, task_types: [academic_discussion], dimension: elaboration}
+  DISCUSSION-SUPPORT: {taxonomy_version: 1, modality: writing, scope: route, task_types: [academic_discussion], dimension: support}
+  SPK-INTELLIGIBILITY: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: intelligibility}
+  SPK-PRONUNCIATION: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: pronunciation}
+  SPK-STRESS: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: prosody}
+  SPK-RHYTHM: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: prosody}
+  SPK-INTONATION: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: prosody}
+  SPK-FLUENCY: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: fluency}
+  SPK-GRAMMAR: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: grammar}
+  SPK-VOCABULARY: {taxonomy_version: 1, modality: speaking, scope: common, task_types: [listen_and_repeat, take_an_interview], dimension: vocabulary}
+  LR-OMISSION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: reconstruction}
+  LR-ADDITION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: reconstruction}
+  LR-SUBSTITUTION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: reconstruction}
+  LR-WORD-ORDER: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [listen_and_repeat], dimension: reconstruction}
+  INTERVIEW-DIRECTNESS: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [take_an_interview], dimension: directness}
+  INTERVIEW-RELEVANCE: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [take_an_interview], dimension: relevance}
+  INTERVIEW-ELABORATION: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [take_an_interview], dimension: elaboration}
+  INTERVIEW-COHERENCE: {taxonomy_version: 1, modality: speaking, scope: route, task_types: [take_an_interview], dimension: coherence}
+  UNCLASSIFIED: {taxonomy_version: 1, modality: all, scope: common, task_types: [email, academic_discussion, listen_and_repeat, take_an_interview], dimension: taxonomy_review, taxonomy_review_required: true}
