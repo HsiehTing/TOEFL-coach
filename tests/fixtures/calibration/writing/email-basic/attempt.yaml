@@ -1,0 +1,5 @@
+modality: writing
+task_type: email
+record_type: formal_original
+rubric_version: ets-writing-email-2025-applicable-2026
+task_score: {scale: 0-5, value: 4, confidence: medium}

@@ -1,0 +1,13 @@
+version: 1
+cases:
+  - case_id: CAL-EMAIL-001
+    fixture: email-basic
+    task_type: email
+    score_range: {minimum: 4, maximum: 4}
+    required_codes: [EMAIL-ACTION, GRAM-CLAUSE]
+  - case_id: CAL-DISCUSSION-001
+    fixture: ../../writing/history-discussion
+    attempt_file: attempt-input.yaml
+    task_type: academic_discussion
+    score_range: {minimum: 3, maximum: 3}
+    required_codes: [DISCUSSION-ALIGNMENT, GRAM-NEGATION]
