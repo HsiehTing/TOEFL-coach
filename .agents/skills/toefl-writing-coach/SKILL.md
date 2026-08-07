@@ -50,6 +50,7 @@ For a recurrence or progress request, classify each counted code from ordered `f
 For Discussion, also read `standards/ets-2026/writing-skill-families.yaml` when available and show derived family signals without replacing atomic codes. After two unresolved revision rounds, recommend a bounded targeted drill and a new-prompt transfer check.
 Targeted drills use `record_type: targeted_drill`: they are non-scored practice records, never formal attempts, and must include bounded `drill` metadata (`set_id`, target codes, item/correct counts, and source attempt IDs). After registration, read `tracker/writing/mastery.md`; treat its state as derived coaching evidence, not a replacement for each event's `historical_status`.
 When `tracker/writing/training-plan.md` contains a recommendation, follow its route, target codes, bounded item count, and new-prompt transfer check; do not skip directly to another revision.
+Generate the learner drill with `tools/generate_writing_drill.py`; show `drill.md` first and keep `answer-key.md` separate until the learner has attempted it. Register a transfer only through `tools/register_writing_transfer.py`, with a new prompt and explicit confirmed opportunities for every target code.
 
 ## Persist
 

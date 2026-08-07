@@ -67,8 +67,12 @@ def derive_mastery(root: Path, task_type: str | None = None) -> dict[str, dict]:
         item_count = sum(row["drill"]["item_count"] for row in drill_rows)
         correct_count = sum(row["drill"]["correct_count"] for row in drill_rows)
         accuracy = correct_count / item_count if item_count else 0.0
-        opportunities = [1 if row.get("opportunities", {}).get(code, 0) > 0 else 0 for row in formals]
-        errors = [1 if code in events_by_attempt.get(row["attempt_id"], set()) else 0 for row in formals]
+        transfer_formals = [
+            row for row in formals
+            if isinstance(row.get("transfer"), dict) and code in row["transfer"].get("target_codes", [])
+        ]
+        opportunities = [1 if row.get("opportunities", {}).get(code, 0) > 0 else 0 for row in transfer_formals]
+        errors = [1 if code in events_by_attempt.get(row["attempt_id"], set()) else 0 for row in transfer_formals]
         formal_opportunities = sum(opportunities)
         formal_errors = sum(error for opportunity, error in zip(opportunities, errors) if opportunity)
         status = _status(len(drill_rows), accuracy, formal_opportunities, formal_errors, opportunities, errors)
@@ -78,7 +82,7 @@ def derive_mastery(root: Path, task_type: str | None = None) -> dict[str, dict]:
             "drill_accuracy": round(accuracy, 4),
             "formal_opportunities": formal_opportunities,
             "formal_errors": formal_errors,
-            "evidence_attempt_ids": list(dict.fromkeys(data["evidence"])),
+            "evidence_attempt_ids": list(dict.fromkeys([*data["evidence"], *(row["attempt_id"] for row in transfer_formals)])),
         }
     return result
 
@@ -92,8 +96,8 @@ def write_mastery(root: Path, task_type: str | None = None) -> Path:
     for code, summary in data.items():
         lines.append(
             f"- `{code}`: {summary['status']} | drills {summary['drill_sets']} | "
-            f"accuracy {summary['drill_accuracy']:.1%} | formal opportunities {summary['formal_opportunities']} | "
-            f"formal errors {summary['formal_errors']}"
+            f"accuracy {summary['drill_accuracy']:.1%} | transfer opportunities {summary['formal_opportunities']} | "
+            f"transfer errors {summary['formal_errors']}"
         )
         lines.append(f"  - Evidence: {', '.join(summary['evidence_attempt_ids'])}")
     atomic_write_text(path, "\n".join(lines) + "\n")

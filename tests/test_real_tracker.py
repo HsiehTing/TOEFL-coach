@@ -16,14 +16,26 @@ def _formal_count(modality: str) -> int:
     )
 
 
+def _historical_events(attempt_dir: Path, attempt_id: str) -> list[dict]:
+    sidecar = attempt_dir / "events.jsonl"
+    if sidecar.exists():
+        text = sidecar.read_text(encoding="utf-8")
+    else:
+        # The checked-in baseline predates canonical sidecars. A learner's
+        # migrated live tracker uses the sidecar path above; the fallback keeps
+        # this regression fixture portable without mutating it during tests.
+        ledger = ROOT / "tracker/writing/error-events.jsonl"
+        text = "\n".join(
+            line for line in ledger.read_text(encoding="utf-8").splitlines()
+            if json.loads(line).get("attempt_id") == attempt_id
+        )
+    return [json.loads(line) for line in text.splitlines() if line.strip()]
+
+
 def test_real_tracker_preserves_the_historical_writing_record() -> None:
     attempt_dir = ROOT / "tracker/writing/attempts/W-AD-20260731-001"
     attempt = read_yaml(attempt_dir / "attempt.yaml")
-    events = [
-        json.loads(line)
-        for line in (attempt_dir / "events.jsonl").read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    events = _historical_events(attempt_dir, "W-AD-20260731-001")
 
     assert attempt["word_count"] == 183
     assert len(events) == 7
