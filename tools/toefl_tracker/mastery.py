@@ -23,7 +23,14 @@ def _attempts(root: Path) -> list[dict]:
 def _status(drill_count: int, accuracy: float, formal_opportunities: int, formal_errors: int, recent_opportunities: list[int], recent_errors: list[int]) -> str:
     if drill_count == 0 and formal_errors == 0:
         return "identified" if formal_opportunities else "identified"
-    if formal_errors and recent_opportunities and recent_opportunities[-1] > 0 and recent_errors[-1] > 0 and drill_count >= 2:
+    prior_opportunities = recent_opportunities[:-1]
+    prior_errors = recent_errors[:-1]
+    was_controlled = (
+        len(prior_opportunities) >= 5
+        and all(value > 0 for value in prior_opportunities[-2:])
+        and all(value == 0 for value in prior_errors[-2:])
+    )
+    if recent_opportunities and recent_opportunities[-1] > 0 and recent_errors[-1] > 0 and was_controlled:
         return "relapsed"
     if drill_count < 1:
         return "identified"

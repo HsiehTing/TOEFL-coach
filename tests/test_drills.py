@@ -144,17 +144,15 @@ def test_mastery_progresses_from_drills_to_transfer_and_can_relapse(tmp_path: Pa
         )
     mastery = derive_mastery(tmp_path)
     assert mastery["GRAM-CLAUSE"]["status"] == "transferred"
-    _persist_formal(
-        tmp_path,
-        "W-FORMAL-4",
-        "2026-08-04T10:00:00+08:00",
-        [_event("W-FORMAL-4")],
-    )
-    attempt = read_yaml(tmp_path / "tracker/writing/attempts/W-FORMAL-4/attempt.yaml")
+    for index in range(4, 6):
+        _persist_formal(tmp_path, f"W-FORMAL-{index}", f"2026-08-0{index}T10:00:00+08:00", [])
+        attempt = read_yaml(tmp_path / "tracker/writing/attempts" / f"W-FORMAL-{index}" / "attempt.yaml")
+        attempt["opportunities"] = {"GRAM-CLAUSE": 1}
+        (tmp_path / "tracker/writing/attempts" / f"W-FORMAL-{index}" / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    _persist_formal(tmp_path, "W-FORMAL-6", "2026-08-06T10:00:00+08:00", [_event("W-FORMAL-6")])
+    attempt = read_yaml(tmp_path / "tracker/writing/attempts/W-FORMAL-6/attempt.yaml")
     attempt["opportunities"] = {"GRAM-CLAUSE": 1}
-    (tmp_path / "tracker/writing/attempts/W-FORMAL-4/attempt.yaml").write_text(
-        yaml.safe_dump(attempt), encoding="utf-8"
-    )
+    (tmp_path / "tracker/writing/attempts/W-FORMAL-6/attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
     assert derive_mastery(tmp_path)["GRAM-CLAUSE"]["status"] == "relapsed"
     path = write_mastery(tmp_path)
     assert path.exists()
