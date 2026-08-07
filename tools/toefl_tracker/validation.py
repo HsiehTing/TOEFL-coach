@@ -83,11 +83,37 @@ def validate_attempt(data: dict, manifest: dict) -> None:
     if set(data["assistance"]) != {"spellcheck", "translation", "other"}:
         raise ValidationError("assistance fields are invalid")
     if data["modality"] == "writing":
-        score = data.get("task_score", {})
         if type(data.get("word_count")) is not int or data["word_count"] < 0:
             raise ValidationError("writing word_count must be non-negative")
-        if score.get("scale") != "0-5" or type(score.get("value")) is not int or not 0 <= score["value"] <= 5:
-            raise ValidationError("writing task_score must be an integer on scale 0-5")
+        if data["record_type"] == "targeted_drill":
+            drill = data.get("drill")
+            if not isinstance(drill, dict):
+                raise ValidationError("targeted_drill requires drill metadata")
+            required_drill = {"set_id", "target_codes", "item_count", "correct_count", "source_attempt_ids"}
+            if set(drill) != required_drill:
+                raise ValidationError("targeted_drill metadata fields are invalid")
+            if not isinstance(drill["set_id"], str) or not drill["set_id"].strip():
+                raise ValidationError("targeted_drill set_id must be non-empty")
+            codes = drill["target_codes"]
+            if not isinstance(codes, list) or not codes or any(
+                not isinstance(code, str) or not code.strip() for code in codes
+            ) or len(set(codes)) != len(codes):
+                raise ValidationError("targeted_drill target_codes must be unique strings")
+            if type(drill["item_count"]) is not int or drill["item_count"] <= 0:
+                raise ValidationError("targeted_drill item_count must be positive")
+            if type(drill["correct_count"]) is not int or not 0 <= drill["correct_count"] <= drill["item_count"]:
+                raise ValidationError("targeted_drill correct_count must be within item_count")
+            source_attempt_ids = drill["source_attempt_ids"]
+            if not isinstance(source_attempt_ids, list) or any(
+                not isinstance(value, str) or not value.strip() for value in source_attempt_ids
+            ):
+                raise ValidationError("targeted_drill source_attempt_ids must be strings")
+        else:
+            score = data.get("task_score", {})
+            if score.get("scale") != "0-5" or type(score.get("value")) is not int or not 0 <= score["value"] <= 5:
+                raise ValidationError("writing task_score must be an integer on scale 0-5")
+            if data.get("drill") is not None:
+                raise ValidationError("drill metadata is only valid for targeted_drill")
     if data["modality"] == "speaking" and data.get("result_type") != "diagnostic_only":
         raise ValidationError("speaking result_type must be diagnostic_only")
     if data["record_type"] in {"revision", "re_evaluation"} and not isinstance(data["parent_attempt_id"], str):

@@ -48,6 +48,7 @@ Compare only against the assigned priorities. Report resolved, partly resolved, 
 
 For a recurrence or progress request, classify each counted code from ordered `formal_original` records with the deterministic tracker status rules. Explicitly output the resulting `historical_status`; revisions and targeted drills do not change it.
 For Discussion, also read `standards/ets-2026/writing-skill-families.yaml` when available and show derived family signals without replacing atomic codes. After two unresolved revision rounds, recommend a bounded targeted drill and a new-prompt transfer check.
+Targeted drills use `record_type: targeted_drill`: they are non-scored practice records, never formal attempts, and must include bounded `drill` metadata (`set_id`, target codes, item/correct counts, and source attempt IDs). After registration, read `tracker/writing/mastery.md`; treat its state as derived coaching evidence, not a replacement for each event's `historical_status`.
 
 ## Persist
 

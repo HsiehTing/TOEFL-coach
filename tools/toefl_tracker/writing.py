@@ -58,6 +58,13 @@ def validate_writing_assessment(
     if expected is None or attempt.get("rubric_version") != expected:
         raise ValidationError("writing task and rubric do not match")
 
+    if attempt.get("record_type") == "targeted_drill":
+        if not isinstance(feedback, str) or not feedback.strip():
+            raise ValidationError("targeted drill feedback is missing")
+        if not isinstance(events, list):
+            raise ValidationError("writing events must be a list of mappings")
+        return
+
     score = attempt.get("task_score")
     if not isinstance(score, Mapping):
         raise ValidationError("writing task score must be an integer from 0 to 5")
