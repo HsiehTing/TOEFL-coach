@@ -3,6 +3,7 @@ from pathlib import Path
 import yaml
 
 from toefl_tracker.legacy_migration import (
+    apply_approved_legacy_review,
     build_legacy_migration_plan,
     has_approved_excerpt_exception,
     has_approved_status_exception,
@@ -91,3 +92,34 @@ def test_compatibility_exceptions_require_exact_event_evidence(tmp_path: Path) -
     assert not has_approved_excerpt_exception(
         metadata, {"event_id": "E-2", "source_excerpt": "different text"}
     )
+
+
+def test_apply_review_adds_only_exact_approved_exceptions(tmp_path: Path) -> None:
+    review = {
+        "version": 1,
+        "modality": "writing",
+        "source_records_modified": False,
+        "historical_status_mismatches": [{
+            "event_id": "E-STATUS",
+            "stored_status": "new",
+            "recomputed_status": "recurring",
+        }],
+        "excerpt_mismatches": [{
+            "event_id": "E-EXCERPT",
+            "source_excerpt": "legacy paraphrase",
+        }],
+    }
+
+    path = apply_approved_legacy_review(
+        tmp_path, review, reason="Learner approved the reviewed legacy evidence."
+    )
+    metadata = load_legacy_compatibility(tmp_path, "writing")
+
+    assert path == tmp_path / "tracker/writing/legacy-compat.yaml"
+    assert has_approved_status_exception(
+        metadata, {"event_id": "E-STATUS", "historical_status": "new"}, "recurring"
+    )
+    assert has_approved_excerpt_exception(
+        metadata, {"event_id": "E-EXCERPT", "source_excerpt": "legacy paraphrase"}
+    )
+    assert metadata["source_records_modified"] is False

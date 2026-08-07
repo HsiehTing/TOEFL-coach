@@ -183,3 +183,81 @@ def has_approved_excerpt_exception(metadata: dict | None, event: dict) -> bool:
         and item["source_excerpt"] == event.get("source_excerpt")
         for item in metadata["approved_exceptions"]["source_excerpt"]
     )
+
+
+def _empty_compatibility_metadata(modality: str) -> dict:
+    return {
+        "version": 1,
+        "modality": modality,
+        "source_records_modified": False,
+        "synthetic_lineage_order": [],
+        "timestamp_conflict_attempt_ids": [],
+        "manual_review": {},
+        "approved_exceptions": {"historical_status": [], "source_excerpt": []},
+    }
+
+
+def apply_approved_legacy_review(root: Path, review: dict, *, reason: str) -> Path:
+    """Append an explicitly approved review to metadata, never to source records."""
+    modality = review.get("modality")
+    if (
+        review.get("version") != 1
+        or modality not in {"writing", "speaking"}
+        or review.get("source_records_modified") is not False
+        or not isinstance(reason, str)
+        or not reason.strip()
+    ):
+        raise ValidationError("approved legacy review is invalid")
+    status_rows = review.get("historical_status_mismatches")
+    excerpt_rows = review.get("excerpt_mismatches")
+    if not isinstance(status_rows, list) or not isinstance(excerpt_rows, list):
+        raise ValidationError("approved legacy review findings are invalid")
+
+    path = root / "tracker" / modality / "legacy-compat.yaml"
+    metadata = load_legacy_compatibility(root, modality) if path.exists() else _empty_compatibility_metadata(modality)
+    metadata = {**metadata, "approved_exceptions": {
+        key: list(value)
+        for key, value in metadata["approved_exceptions"].items()
+    }}
+    status_by_id = {row["event_id"]: row for row in metadata["approved_exceptions"]["historical_status"]}
+    for row in status_rows:
+        if (
+            not isinstance(row, dict)
+            or not isinstance(row.get("event_id"), str)
+            or row.get("stored_status") not in STATUSES
+            or (row.get("recomputed_status") is not None and row.get("recomputed_status") not in STATUSES)
+        ):
+            raise ValidationError("approved legacy status finding is invalid")
+        exception = {
+            "event_id": row["event_id"],
+            "stored_status": row["stored_status"],
+            "recomputed_status": row["recomputed_status"],
+            "reason": reason,
+        }
+        if row["event_id"] in status_by_id and status_by_id[row["event_id"]] != exception:
+            raise ValidationError("conflicting approved legacy status exception")
+        status_by_id[row["event_id"]] = exception
+    excerpt_by_id = {row["event_id"]: row for row in metadata["approved_exceptions"]["source_excerpt"]}
+    for row in excerpt_rows:
+        if (
+            not isinstance(row, dict)
+            or not isinstance(row.get("event_id"), str)
+            or not row["event_id"].strip()
+            or not isinstance(row.get("source_excerpt"), str)
+            or not row["source_excerpt"].strip()
+        ):
+            raise ValidationError("approved legacy excerpt finding is invalid")
+        exception = {
+            "event_id": row["event_id"],
+            "source_excerpt": row["source_excerpt"],
+            "reason": reason,
+        }
+        if row["event_id"] in excerpt_by_id and excerpt_by_id[row["event_id"]] != exception:
+            raise ValidationError("conflicting approved legacy excerpt exception")
+        excerpt_by_id[row["event_id"]] = exception
+    metadata["approved_exceptions"] = {
+        "historical_status": [status_by_id[key] for key in sorted(status_by_id)],
+        "source_excerpt": [excerpt_by_id[key] for key in sorted(excerpt_by_id)],
+    }
+    atomic_write_text(path, yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False))
+    return path

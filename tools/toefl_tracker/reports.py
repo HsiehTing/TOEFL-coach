@@ -8,6 +8,7 @@ from pathlib import Path
 from toefl_tracker.canonical import load_canonical_events, write_aggregate_events
 from toefl_tracker.families import aggregate_family_hits, load_skill_families
 from toefl_tracker.io import atomic_write_text, read_yaml
+from toefl_tracker.legacy_migration import load_legacy_compatibility, synthetic_sort_key
 from toefl_tracker.lineage import lineage_summary
 from toefl_tracker.models import TASK_TYPES
 from toefl_tracker.status import classify_code
@@ -20,7 +21,8 @@ _COUNTED_LEVELS = {"must_fix", "should_fix"}
 def _load_attempts(root: Path, modality: str) -> list[dict]:
     base = root / "tracker" / modality / "attempts"
     rows = [read_yaml(path) for path in base.glob("*/attempt.yaml")] if base.exists() else []
-    return sorted(rows, key=lambda row: (row["submitted_at"], row["attempt_id"]))
+    compatibility = load_legacy_compatibility(root, modality)
+    return sorted(rows, key=lambda row: synthetic_sort_key(compatibility, row))
 
 
 def _events_for_attempts(events: list[dict], attempts: list[dict]) -> list[dict]:

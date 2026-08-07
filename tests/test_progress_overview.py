@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import yaml
+
 from test_reports import report_event, write_attempt, write_events
 from toefl_tracker.progress import build_progress_overview, write_progress_overview
 
@@ -44,3 +46,32 @@ def test_overview_is_rebuildable_without_mutating_events(tmp_path: Path) -> None
     assert "not a toefl writing section band" in path.read_text(encoding="utf-8").lower()
     assert (tmp_path / "tracker/writing/attempts/W-EMAIL-1/events.jsonl").read_text(encoding="utf-8") == before
     assert (tmp_path / "tracker/writing/progress-overview.yaml").exists()
+
+
+def test_overview_uses_declared_legacy_lineage_order_for_recent_records(tmp_path: Path) -> None:
+    for attempt_id, task_type in [
+        ("W-EMAIL-1", "email"),
+        ("W-EMAIL-2", "email"),
+        ("W-AD-3", "academic_discussion"),
+    ]:
+        write_attempt(tmp_path, attempt_id, task_type, "formal_original")
+    for attempt_id in ("W-EMAIL-1", "W-EMAIL-2", "W-AD-3"):
+        path = tmp_path / f"tracker/writing/attempts/{attempt_id}/attempt.yaml"
+        attempt = yaml.safe_load(path.read_text(encoding="utf-8"))
+        attempt["submitted_at"] = "2026-01-01T10:00:00+08:00"
+        path.write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    metadata = {
+        "version": 1,
+        "modality": "writing",
+        "source_records_modified": False,
+        "synthetic_lineage_order": ["W-AD-3", "W-EMAIL-2", "W-EMAIL-1"],
+    }
+    compat = tmp_path / "tracker/writing/legacy-compat.yaml"
+    compat.parent.mkdir(parents=True, exist_ok=True)
+    compat.write_text(yaml.safe_dump(metadata), encoding="utf-8")
+
+    overview = build_progress_overview(tmp_path)
+
+    assert [row["attempt_id"] for row in overview["recent_formals"]] == [
+        "W-AD-3", "W-EMAIL-2", "W-EMAIL-1"
+    ]
