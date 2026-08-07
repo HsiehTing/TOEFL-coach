@@ -32,7 +32,7 @@ def _source_attempt(root: Path, *, task_type: str, code: str) -> tuple[dict, dic
         "reason": "Fixture evidence.",
         "level": "should_fix",
         "severity": "clarity_reducing",
-        "task_specific": code.startswith("DISCUSSION-"),
+        "task_specific": code.startswith(("DISCUSSION-", "EMAIL-")),
         "opportunity_present": True,
         "historical_status": "new",
     }
@@ -86,6 +86,27 @@ def test_discussion_idea_pack_requires_causal_chain_fields(tmp_path: Path) -> No
         item["response_fields"] == ["claim", "mechanism", "concrete_outcome", "link_back"]
         for item in pack["items"]
     )
+
+
+@pytest.mark.parametrize(
+    ("task_type", "code", "expected_kind"),
+    [
+        ("email", "GRAM-ARTICLE", "article_choice"),
+        ("academic_discussion", "GRAM-AGREEMENT", "agreement_control"),
+        ("email", "LEX-WORDFORM", "word_form"),
+        ("academic_discussion", "LEX-COLLOCATION", "collocation"),
+        ("email", "EMAIL-ACTION", "email_action"),
+    ],
+)
+def test_recurring_learner_weaknesses_have_route_safe_drills(
+    tmp_path: Path, task_type: str, code: str, expected_kind: str
+) -> None:
+    source, _ = _source_attempt(tmp_path, task_type=task_type, code=code)
+    pack = build_drill_pack(tmp_path, _recommendation(source, code), seed=2)
+
+    assert {item["kind"] for item in pack["items"]} == {expected_kind}
+    assert all(item["evidence"]["code"] == code for item in pack["items"])
+    assert "suggested_revision" not in pack["learner_markdown"]
 
 
 @pytest.mark.parametrize(

@@ -14,7 +14,10 @@ from toefl_tracker.taxonomy import load_taxonomy
 
 
 _CAUSAL_CODES = {"DISCUSSION-ELABORATION", "DISCUSSION-SUPPORT"}
-_SUPPORTED_CODES = {"GRAM-CLAUSE", *_CAUSAL_CODES}
+_SUPPORTED_CODES = {
+    "GRAM-CLAUSE", "GRAM-ARTICLE", "GRAM-AGREEMENT", "LEX-WORDFORM",
+    "LEX-COLLOCATION", "EMAIL-ACTION", *_CAUSAL_CODES,
+}
 
 
 def _canonical_hash(value: dict[str, Any]) -> str:
@@ -128,6 +131,28 @@ def _causal_item(number: int, evidence: dict) -> dict:
     }
 
 
+def _focused_item(number: int, evidence: dict, *, kind: str, prompt: str, guidance: str) -> dict:
+    return {
+        "item_id": f"I{number:02d}", "kind": kind, "prompt": prompt,
+        "response_fields": ["response"],
+        "evidence": {"attempt_id": evidence["attempt_id"], "event_id": evidence["event_id"], "code": evidence["code"]},
+        "answer_guidance": guidance,
+    }
+
+
+def _specialized_item(number: int, evidence: dict) -> dict:
+    code = evidence["code"]
+    templates = {
+        "GRAM-ARTICLE": ("article_choice", "Write a fresh sentence and choose each article based on the following noun sound, not merely its spelling.", "Each article matches the intended countability and following sound."),
+        "GRAM-AGREEMENT": ("agreement_control", "Write a fresh sentence whose subject and verb clearly agree, including one longer noun phrase.", "The finite verb agrees with the real grammatical subject."),
+        "LEX-WORDFORM": ("word_form", "Choose and use the correct word form in a fresh sentence; explain the role it plays in the sentence.", "The chosen form matches the required part of speech and meaning."),
+        "LEX-COLLOCATION": ("collocation", "Write a fresh sentence using a natural verb–noun or adjective–noun combination for this route.", "The word combination is idiomatic in the intended context."),
+        "EMAIL-ACTION": ("email_action", "Write one professional email sentence that states the requested action, who should take it, and any essential deadline.", "The recipient can identify the requested action and timing immediately."),
+    }
+    kind, prompt, guidance = templates[code]
+    return _focused_item(number, evidence, kind=kind, prompt=prompt, guidance=guidance)
+
+
 def _learner_markdown(pack: dict) -> str:
     lines = [f"# Writing Targeted Drill `{pack['drill_id']}`", "", f"Route: `{pack['task_type']}`", "", "Write your own answers. The answer key is intentionally separate.", ""]
     for item in pack["items"]:
@@ -168,8 +193,10 @@ def build_drill_pack(root: Path, recommendation: dict, *, seed: int = 0) -> dict
         row = next(evidence_cycle)
         if row["code"] == "GRAM-CLAUSE":
             items.append(_clause_item(number, task_type, row))
-        else:
+        elif row["code"] in _CAUSAL_CODES:
             items.append(_causal_item(number, row))
+        else:
+            items.append(_specialized_item(number, row))
     pack = {
         **identity,
         "drill_id": drill_id,
