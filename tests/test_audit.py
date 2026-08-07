@@ -166,6 +166,69 @@ def test_audit_continues_after_bad_utf8_and_cli_returns_nonzero(
     assert validate_tracker_main() == 1
 
 
+def test_audit_allows_only_exactly_declared_legacy_event_exceptions(
+    populated_workspace: Path,
+) -> None:
+    attempt_id = "W-AD-20260101-001"
+    sidecar = populated_workspace / f"tracker/writing/attempts/{attempt_id}/events.jsonl"
+    event = {
+        "event_id": "LEGACY-E-1",
+        "attempt_id": attempt_id,
+        "taxonomy_version": 1,
+        "code": "GRAM-ARTICLE",
+        "source_excerpt": f"Fixture response {attempt_id}",
+        "audio_timestamp": None,
+        "suggested_revision": "Use the appropriate article.",
+        "reason": "Imported fixture.",
+        "level": "should_fix",
+        "severity": "clarity_reducing",
+        "task_specific": False,
+        "opportunity_present": True,
+        "historical_status": "recurring",
+    }
+    excerpt_event = {
+        **event,
+        "event_id": "LEGACY-E-2",
+        "source_excerpt": "legacy paraphrase",
+        "historical_status": "new",
+    }
+    sidecar.write_text(
+        json.dumps(event) + "\n" + json.dumps(excerpt_event) + "\n", encoding="utf-8"
+    )
+    rebuild_modality(populated_workspace, "writing")
+
+    before = audit_workspace(populated_workspace)
+    assert any("writing excerpt is not present" in row for row in before)
+    assert any("historical_status does not match" in row for row in before)
+
+    metadata = {
+        "version": 1,
+        "modality": "writing",
+        "source_records_modified": False,
+        "synthetic_lineage_order": [],
+        "approved_exceptions": {
+            "historical_status": [{
+                "event_id": "LEGACY-E-1",
+                "stored_status": "recurring",
+                "recomputed_status": "new",
+                "reason": "Imported before current status policy.",
+            }],
+            "source_excerpt": [{
+                "event_id": "LEGACY-E-2",
+                "source_excerpt": "legacy paraphrase",
+                "reason": "Imported feedback used a paraphrase.",
+            }],
+        },
+    }
+    path = populated_workspace / "tracker/writing/legacy-compat.yaml"
+    path.write_text(yaml.safe_dump(metadata), encoding="utf-8")
+
+    after = audit_workspace(populated_workspace)
+
+    assert not any("writing excerpt is not present" in row for row in after)
+    assert not any("historical_status does not match" in row for row in after)
+
+
 def _persist_reevaluation(
     workspace: Path, attempt_id: str, evaluated_at: str, supersedes: str
 ) -> Path:

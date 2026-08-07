@@ -8,9 +8,15 @@ from pathlib import Path
 
 import yaml
 
-from toefl_tracker.event_validation import SpeakingEvidenceContext, validate_event_context
+from toefl_tracker.event_validation import (
+    SpeakingEvidenceContext,
+    expected_historical_status,
+    validate_event_context,
+)
 from toefl_tracker.io import canonical_source_hash, read_yaml
 from toefl_tracker.legacy_migration import (
+    has_approved_excerpt_exception,
+    has_approved_status_exception,
     load_legacy_compatibility,
     synthetic_precedes,
     synthetic_sort_key,
@@ -301,9 +307,19 @@ def audit_workspace(root: Path) -> list[str]:
             if attempt["record_type"] != "re_evaluation" and attempt_id in responses:
                 for event in sidecars.get(attempt_id, []):
                     try:
+                        expected_status = expected_historical_status(
+                            event.get("code", ""), attempt, sidecars[attempt_id],
+                            history_attempts, history_events,
+                        )
                         validate_event_context(
                             root, attempt, responses[attempt_id], event, sidecars[attempt_id],
                             history_attempts, history_events, speaking_contexts.get(attempt_id),
+                            allow_legacy_excerpt_exception=has_approved_excerpt_exception(
+                                compatibility, event
+                            ),
+                            allow_legacy_status_exception=has_approved_status_exception(
+                                compatibility, event, expected_status
+                            ),
                         )
                     except _PARSE_ERRORS as error:
                         problems.append(f"{directories[attempt_id] / 'events.jsonl'}: {error}")

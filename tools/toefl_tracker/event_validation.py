@@ -155,6 +155,9 @@ def validate_event_context(
     historical_attempts: Sequence[dict],
     historical_events: Sequence[dict],
     speaking_context: SpeakingEvidenceContext | None = None,
+    *,
+    allow_legacy_excerpt_exception: bool = False,
+    allow_legacy_status_exception: bool = False,
 ) -> None:
     if not isinstance(attempt, dict):
         raise ValidationError("attempt must be a mapping")
@@ -198,7 +201,7 @@ def validate_event_context(
             not isinstance(excerpt, str)
             or not excerpt.strip()
             or not normalized_contains(response, excerpt)
-        ):
+        ) and not allow_legacy_excerpt_exception:
             raise ValidationError("writing excerpt is not present in immutable response")
     elif attempt.get("modality") == "speaking":
         _validate_speaking_evidence(event, entry, speaking_context)
@@ -206,5 +209,5 @@ def validate_event_context(
     expected = expected_historical_status(
         code, attempt, current, previous_attempts, previous_events
     )
-    if event.get("historical_status") != expected:
+    if event.get("historical_status") != expected and not allow_legacy_status_exception:
         raise ValidationError("historical_status does not match recomputed status")

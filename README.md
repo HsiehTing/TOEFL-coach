@@ -160,6 +160,9 @@ python3 -m pytest
 # 檢查 tracker 的資料完整性
 python3 tools/validate_tracker.py
 
+# 審核舊資料（只讀；預設不寫入 tracker）
+python3 tools/review_legacy_tracker.py --modality writing
+
 # 重建全部衍生報告
 python3 tools/rebuild_reports.py
 
@@ -177,6 +180,8 @@ python3 tools/register_speaking_session.py --help
 ```
 
 一般練習不需要手動執行 registration CLI；Codex 教練流程會建立資料、重建報告並執行驗證。這些指令主要供維護、除錯或資料稽核使用。
+
+如果 `review_legacy_tracker.py` 找到舊資料的狀態或摘錄不一致，請先逐筆查看輸出。只有在 `legacy-compat.yaml` 明確記錄 event ID、前後值與原因的人工核准例外，完整性檢查才會接受該筆舊資料；原始作答與事件不會被改寫。
 
 ## 資料放在哪裡
 

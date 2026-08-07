@@ -4,6 +4,8 @@ import yaml
 
 from toefl_tracker.legacy_migration import (
     build_legacy_migration_plan,
+    has_approved_excerpt_exception,
+    has_approved_status_exception,
     load_legacy_compatibility,
     synthetic_precedes,
     synthetic_sort_key,
@@ -40,3 +42,52 @@ def test_plan_preserves_source_records_and_proposes_only_metadata(tmp_path: Path
     assert metadata["source_records_modified"] is False
     assert synthetic_precedes(metadata, "W-1-R1", "W-1-R2")
     assert synthetic_sort_key(metadata, {"attempt_id": "W-1-R2"}) < synthetic_sort_key(metadata, {"attempt_id": "W-OTHER", "submitted_at": "2020"})
+
+
+def test_compatibility_exceptions_require_exact_event_evidence(tmp_path: Path) -> None:
+    path = tmp_path / "tracker/writing/legacy-compat.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "modality": "writing",
+                "source_records_modified": False,
+                "synthetic_lineage_order": [],
+                "approved_exceptions": {
+                    "historical_status": [
+                        {
+                            "event_id": "E-1",
+                            "stored_status": "new",
+                            "recomputed_status": "recurring",
+                            "reason": "Imported before current status policy.",
+                        }
+                    ],
+                    "source_excerpt": [
+                        {
+                            "event_id": "E-2",
+                            "source_excerpt": "legacy paraphrase",
+                            "reason": "Imported feedback used a paraphrase.",
+                        }
+                    ],
+                },
+            },
+            allow_unicode=True,
+        ),
+        encoding="utf-8",
+    )
+
+    metadata = load_legacy_compatibility(tmp_path, "writing")
+
+    assert has_approved_status_exception(
+        metadata, {"event_id": "E-1", "historical_status": "new"}, "recurring"
+    )
+    assert not has_approved_status_exception(
+        metadata, {"event_id": "E-1", "historical_status": "new"}, "persistent"
+    )
+    assert has_approved_excerpt_exception(
+        metadata, {"event_id": "E-2", "source_excerpt": "legacy paraphrase"}
+    )
+    assert not has_approved_excerpt_exception(
+        metadata, {"event_id": "E-2", "source_excerpt": "different text"}
+    )
