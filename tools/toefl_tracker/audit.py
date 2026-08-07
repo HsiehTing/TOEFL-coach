@@ -10,6 +10,11 @@ import yaml
 
 from toefl_tracker.event_validation import SpeakingEvidenceContext, validate_event_context
 from toefl_tracker.io import canonical_source_hash, read_yaml
+from toefl_tracker.legacy_migration import (
+    load_legacy_compatibility,
+    synthetic_precedes,
+    synthetic_sort_key,
+)
 from toefl_tracker.lineage import root_formal_attempt
 from toefl_tracker.models import TASK_TYPES, ValidationError
 from toefl_tracker.register import persisted_attempt_relationship_problems
@@ -185,6 +190,7 @@ def audit_workspace(root: Path) -> list[str]:
         sidecars: dict[str, list[dict]] = {}
         speaking_contexts: dict[str, SpeakingEvidenceContext] = {}
         invalid_data = False
+        compatibility = load_legacy_compatibility(root, modality)
         attempts_root = base / "attempts"
         directories_on_disk = sorted(
             path for path in attempts_root.glob("*")
@@ -264,6 +270,14 @@ def audit_workspace(root: Path) -> list[str]:
         )
         if relationship_problems:
             for attempt_id, reason in relationship_problems:
+                attempt = attempts.get(attempt_id, {})
+                if (
+                    reason == "revision must be submitted after its parent"
+                    and synthetic_precedes(
+                        compatibility, attempt.get("parent_attempt_id", ""), attempt_id
+                    )
+                ):
+                    continue
                 problems.append(f"{modality}: {attempt_id}: {reason}")
             invalid_data = True
 
@@ -282,7 +296,7 @@ def audit_workspace(root: Path) -> list[str]:
 
         history_attempts: list[dict] = []
         history_events: list[dict] = []
-        for attempt in sorted(attempts.values(), key=lambda row: (row["submitted_at"], row["attempt_id"])):
+        for attempt in sorted(attempts.values(), key=lambda row: synthetic_sort_key(compatibility, row)):
             attempt_id = attempt["attempt_id"]
             if attempt["record_type"] != "re_evaluation" and attempt_id in responses:
                 for event in sidecars.get(attempt_id, []):
