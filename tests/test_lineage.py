@@ -92,6 +92,21 @@ def test_lineage_rejects_invalid_parent_graph(rows: list[dict], message: str) ->
         root_formal_attempt(rows[-1]["attempt_id"], rows)
 
 
+def test_lineage_accepts_explicit_legacy_order_but_not_unapproved_timestamp_reversal() -> None:
+    rows = [
+        _attempt("F-1", "formal_original", "2026-08-02T10:00:00+08:00"),
+        _attempt("F-1-R1", "revision", "2026-08-01T10:00:00+08:00", "F-1"),
+    ]
+
+    with pytest.raises(ValidationError, match="parent submitted after revision"):
+        root_formal_attempt("F-1-R1", rows)
+
+    compatibility = {"synthetic_lineage_order": ["F-1", "F-1-R1"]}
+    assert root_formal_attempt(
+        "F-1-R1", rows, compatibility=compatibility
+    )["attempt_id"] == "F-1"
+
+
 def test_report_contract_requires_chain_section(tmp_path) -> None:
     from test_reports import write_attempt
     from toefl_tracker.reports import rebuild_modality

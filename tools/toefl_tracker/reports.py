@@ -120,9 +120,13 @@ def _focuses(formals: list[dict], events: list[dict], rows: list[tuple[str, str,
     return [code for code, _, _ in ranked[:2]]
 
 
-def _revision_summaries(formals: list[dict], revisions: list[dict]) -> list[dict]:
-    attempts = [*formals, *revisions]
-    return [lineage_summary(formal["attempt_id"], attempts) for formal in formals]
+def _revision_summaries(
+    formals: list[dict], lineage_attempts: list[dict], compatibility: dict | None
+) -> list[dict]:
+    return [
+        lineage_summary(formal["attempt_id"], lineage_attempts, compatibility=compatibility)
+        for formal in formals
+    ]
 
 
 def _revision_chain_lines(summaries: list[dict]) -> str:
@@ -187,6 +191,9 @@ def _report_markdown(
     reevaluations: dict[str, list[dict]],
     events: list[dict],
     family_summaries: dict[str, dict] | None = None,
+    *,
+    lineage_attempts: list[dict] | None = None,
+    compatibility: dict | None = None,
 ) -> str:
     counted = [event for event in events if event["level"] in _COUNTED_LEVELS]
     severe_trend = " → ".join(
@@ -211,7 +218,9 @@ def _report_markdown(
     recurring, rows = _recurring_lines(formals, events)
     focuses = _focuses(formals, events, rows)
     focus_lines = "\n".join(f"{number}. `{code}`" for number, code in enumerate(focuses, start=1))
-    revision_summaries = _revision_summaries(formals, revisions)
+    revision_summaries = _revision_summaries(
+        formals, lineage_attempts or [*formals, *revisions], compatibility
+    )
     formal_ids = {formal["attempt_id"] for formal in formals}
     rubrics = {
         row["rubric_version"]
@@ -258,6 +267,7 @@ def _remove_stale_generated_reports(base: Path, modality: str, expected: set[Pat
 def rebuild_modality(root: Path, modality: str) -> list[Path]:
     base = root / "tracker" / modality
     attempts = _load_attempts(root, modality)
+    compatibility = load_legacy_compatibility(root, modality)
     formals = [row for row in attempts if row["record_type"] == "formal_original"]
     revisions = [row for row in attempts if row["record_type"] == "revision"]
     reevaluations: dict[str, list[dict]] = defaultdict(list)
@@ -294,7 +304,11 @@ def rebuild_modality(root: Path, modality: str) -> list[Path]:
             if families is not None
             else None
         )
-        atomic_write_text(path, _report_markdown(f"{modality.title()} Common Report", boundary, window, revisions, reevaluations, window_events, family_summaries))
+        atomic_write_text(path, _report_markdown(
+            f"{modality.title()} Common Report", boundary, window, revisions,
+            reevaluations, window_events, family_summaries,
+            lineage_attempts=[*formals, *revisions], compatibility=compatibility,
+        ))
         reports.append(path)
     for task_type in sorted({row["task_type"] for row in formals}):
         task_formals = [row for row in formals if row["task_type"] == task_type]
@@ -307,7 +321,12 @@ def rebuild_modality(root: Path, modality: str) -> list[Path]:
                 if families is not None
                 else None
             )
-            atomic_write_text(path, _report_markdown(f"{modality.title()} {task_type.replace('_', ' ').title()} Report", boundary, window, revisions, reevaluations, window_events, family_summaries))
+            atomic_write_text(path, _report_markdown(
+                f"{modality.title()} {task_type.replace('_', ' ').title()} Report",
+                boundary, window, revisions, reevaluations, window_events,
+                family_summaries, lineage_attempts=[*formals, *revisions],
+                compatibility=compatibility,
+            ))
             reports.append(path)
     _remove_stale_generated_reports(base, modality, set(reports))
     return reports

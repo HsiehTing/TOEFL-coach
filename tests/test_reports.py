@@ -115,6 +115,28 @@ def test_third_formal_writing_creates_common_and_task_reports(
     assert "## Next two focuses" in report
 
 
+def test_early_milestone_report_can_resolve_a_revision_whose_root_is_outside_window(
+    tmp_path: Path,
+) -> None:
+    for attempt_id in ("W-AD-1", "W-AD-2", "W-AD-3", "W-AD-4"):
+        write_attempt(tmp_path, attempt_id, "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-4-R1", "academic_discussion", "revision")
+    revision = tmp_path / "tracker/writing/attempts/W-AD-4-R1/attempt.yaml"
+    revision.write_text(
+        revision.read_text(encoding="utf-8").replace(
+            "parent_attempt_id: W-AD-2", "parent_attempt_id: W-AD-4"
+        ),
+        encoding="utf-8",
+    )
+
+    rebuild_modality(tmp_path, "writing")
+
+    report = (tmp_path / "tracker/writing/reports/writing-common-0003.md").read_text(
+        encoding="utf-8"
+    )
+    assert "W-AD-4-R1" not in report
+
+
 def test_rebuild_restores_every_crossed_three_attempt_boundary(
     tmp_path: Path,
 ) -> None:

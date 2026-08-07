@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime
 
+from toefl_tracker.legacy_migration import synthetic_precedes, synthetic_sort_key
 from toefl_tracker.models import ValidationError
 
 
@@ -28,7 +29,9 @@ def _submitted_at(attempt: dict) -> datetime:
         ) from error
 
 
-def root_formal_attempt(attempt_id: str, attempts: Iterable[dict]) -> dict:
+def root_formal_attempt(
+    attempt_id: str, attempts: Iterable[dict], *, compatibility: dict | None = None
+) -> dict:
     """Return the formal original at the root of an attempt's revision chain.
 
     The function validates the traversed graph so reports cannot silently omit
@@ -70,16 +73,21 @@ def root_formal_attempt(attempt_id: str, attempts: Iterable[dict]) -> dict:
             or parent.get("task_type") != current.get("task_type")
         ):
             raise ValidationError(f"cross-route parent for revision: {current_id}")
-        if _submitted_at(parent) > _submitted_at(current):
+        if (
+            _submitted_at(parent) > _submitted_at(current)
+            and not synthetic_precedes(compatibility, parent_id, current_id)
+        ):
             raise ValidationError(f"parent submitted after revision: {current_id}")
         current = parent
 
 
-def revision_chain(root_id: str, attempts: Iterable[dict]) -> list[dict]:
+def revision_chain(
+    root_id: str, attempts: Iterable[dict], *, compatibility: dict | None = None
+) -> list[dict]:
     """Return every revision descending from a formal original in time order."""
 
     rows = list(attempts)
-    root = root_formal_attempt(root_id, rows)
+    root = root_formal_attempt(root_id, rows, compatibility=compatibility)
     if root["attempt_id"] != root_id:
         raise ValidationError(f"lineage root is not a formal original: {root_id}")
 
@@ -87,9 +95,11 @@ def revision_chain(root_id: str, attempts: Iterable[dict]) -> list[dict]:
     for attempt in rows:
         if attempt.get("record_type") != "revision":
             continue
-        if root_formal_attempt(attempt["attempt_id"], rows)["attempt_id"] == root_id:
+        if root_formal_attempt(
+            attempt["attempt_id"], rows, compatibility=compatibility
+        )["attempt_id"] == root_id:
             descendants.append(attempt)
-    descendants.sort(key=lambda row: (_submitted_at(row), row["attempt_id"]))
+    descendants.sort(key=lambda row: synthetic_sort_key(compatibility, row))
     return descendants
 
 
@@ -108,12 +118,14 @@ def _full_resolution(outcomes: dict | None) -> bool:
     )
 
 
-def lineage_summary(root_id: str, attempts: Iterable[dict]) -> dict:
+def lineage_summary(
+    root_id: str, attempts: Iterable[dict], *, compatibility: dict | None = None
+) -> dict:
     """Build a stable, report-ready summary for one formal original."""
 
     rows = list(attempts)
-    root = root_formal_attempt(root_id, rows)
-    revisions = revision_chain(root_id, rows)
+    root = root_formal_attempt(root_id, rows, compatibility=compatibility)
+    revisions = revision_chain(root_id, rows, compatibility=compatibility)
     full_round = next(
         (number for number, row in enumerate(revisions, start=1) if _full_resolution(row.get("revision_outcomes"))),
         None,

@@ -64,7 +64,13 @@ def build_progress_overview(root: Path) -> dict:
     counted = [event for event in events if event.get("level") in _COUNTED and event.get("attempt_id") in recent_ids]
     counts = Counter(event["code"] for event in counted)
     focus_codes = [code for code, _ in counts.most_common(2)] if len(formals) >= 3 else []
-    revision_summaries = [lineage_summary(row["attempt_id"], [*formals, *revisions]) for row in formals]
+    compatibility = load_legacy_compatibility(root, "writing")
+    revision_summaries = [
+        lineage_summary(
+            row["attempt_id"], [*formals, *revisions], compatibility=compatibility
+        )
+        for row in formals
+    ]
     result_label = "diagnostic_only_progress_view" if len(formals) >= 3 else "diagnostic_only_early_view"
     return {
         "version": 1,
