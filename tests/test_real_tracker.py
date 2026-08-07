@@ -28,5 +28,7 @@ def test_real_tracker_preserves_the_historical_writing_record() -> None:
     assert attempt["word_count"] == 183
     assert len(events) == 7
     assert {row["attempt_id"] for row in events} == {"W-AD-20260731-001"}
-    assert _formal_count("writing") == 1
+    # The learner's live tracker grows over time; this regression test protects
+    # the historical baseline record without freezing the overall formal count.
+    assert _formal_count("writing") >= 1
     assert _formal_count("speaking") == 0
