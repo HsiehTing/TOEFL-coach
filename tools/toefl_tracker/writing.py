@@ -20,6 +20,7 @@ from toefl_tracker.training_plan import write_training_plan
 from toefl_tracker.progress import write_progress_overview
 from toefl_tracker.practice_queue import write_practice_queue
 from toefl_tracker.reports import rebuild_modality
+from toefl_tracker.revision_learning import write_revision_learning
 
 
 RUBRICS = {
@@ -84,6 +85,19 @@ def validate_writing_assessment(
         raise ValidationError("first-round feedback is missing required headings")
 
     heading_matches = _ordered_heading_matches(feedback)
+    if attempt.get("record_type") != "re_evaluation":
+        result_block = feedback[heading_matches[0].end():heading_matches[1].start()]
+        if (
+            "simulated" not in result_block.lower()
+            or re.search(rf"(?<!\d){re.escape(str(value))}\s*/\s*5\b", result_block) is None
+        ):
+            raise ValidationError("first-round feedback result must state the matching simulated task score")
+    for heading, start, end in (
+        ("why this level", heading_matches[1].end(), heading_matches[2].start()),
+        ("why not the next level", heading_matches[2].end(), heading_matches[3].start()),
+    ):
+        if not feedback[start:end].strip():
+            raise ValidationError(f"first-round feedback {heading} is empty")
     priority_block = feedback[
         heading_matches[-2].end():heading_matches[-1].start()
     ]
@@ -177,4 +191,5 @@ def register_writing_attempt(
         write_training_plan(root)
         write_progress_overview(root)
         write_practice_queue(root)
+        write_revision_learning(root)
     return destination

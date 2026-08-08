@@ -7,6 +7,7 @@ from toefl_tracker.canonical import load_canonical_events
 from toefl_tracker.io import atomic_write_text, read_yaml
 from toefl_tracker.legacy_migration import load_legacy_compatibility, synthetic_sort_key
 from toefl_tracker.lineage import lineage_summary
+from toefl_tracker.weaknesses import rank_writing_weaknesses
 
 
 _COUNTED = {"must_fix", "should_fix"}
@@ -35,6 +36,10 @@ def build_training_plan(root: Path) -> dict:
     formals = [row for row in attempts if row.get("record_type") == "formal_original"]
     revisions = [row for row in attempts if row.get("record_type") == "revision"]
     events = [row for row in load_canonical_events(root, "writing") if row.get("level") in _COUNTED]
+    global_priority = {
+        signal["code"]: index
+        for index, signal in enumerate(rank_writing_weaknesses(root))
+    }
     recommendations: list[dict] = []
     for formal in formals:
         summary = lineage_summary(
@@ -44,7 +49,10 @@ def build_training_plan(root: Path) -> dict:
             continue
         chain_ids = {formal["attempt_id"], *summary["revision_ids"]}
         counts = Counter(event["code"] for event in events if event["attempt_id"] in chain_ids)
-        target_codes = sorted(counts)
+        target_codes = sorted(
+            counts,
+            key=lambda code: (global_priority.get(code, len(global_priority)), -counts[code], code),
+        )[:2]
         if not target_codes:
             continue
         task_type = formal["task_type"]

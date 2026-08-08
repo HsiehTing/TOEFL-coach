@@ -108,3 +108,27 @@ def test_plan_uses_explicit_legacy_order_for_timestamp_reversed_revision(
     plan = build_training_plan(tmp_path)
 
     assert plan["recommendations"] == []
+
+
+def test_plan_caps_active_targets_and_uses_formal_weakness_priority(tmp_path: Path) -> None:
+    write_attempt(tmp_path, "W-AD-1", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-1-R1", "academic_discussion", "revision")
+    write_attempt(tmp_path, "W-AD-1-R2", "academic_discussion", "revision")
+    root = tmp_path / "tracker/writing/attempts"
+    for attempt_id, parent_id in [("W-AD-1-R1", "W-AD-1"), ("W-AD-1-R2", "W-AD-1-R1")]:
+        path = root / attempt_id / "attempt.yaml"
+        attempt = yaml.safe_load(path.read_text(encoding="utf-8"))
+        attempt["parent_attempt_id"] = parent_id
+        path.write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    for attempt_id, codes in [
+        ("W-AD-1", ["GRAM-CLAUSE", "LEX-COLLOCATION", "LEX-WORDFORM"]),
+        ("W-AD-1-R1", ["GRAM-CLAUSE"]),
+        ("W-AD-1-R2", ["GRAM-CLAUSE"]),
+    ]:
+        (root / attempt_id / "events.jsonl").write_text(
+            canonical_jsonl([_event(attempt_id, code) for code in codes]), encoding="utf-8"
+        )
+
+    plan = build_training_plan(tmp_path)
+
+    assert plan["recommendations"][0]["target_codes"] == ["GRAM-CLAUSE", "LEX-COLLOCATION"]

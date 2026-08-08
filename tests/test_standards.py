@@ -14,7 +14,7 @@ def test_manifest_identifies_the_2026_test_and_official_sources() -> None:
     assert data["schema_version"] == 1
     assert data["test_version"] == "TOEFL iBT 2026"
     assert data["effective_from"] == date(2026, 1, 21)
-    assert data["last_verified"] == date(2026, 7, 31)
+    assert data["last_verified"] == date(2026, 8, 8)
     assert set(data["rubrics"]) == {
         "ets-writing-email-2025-applicable-2026",
         "ets-writing-discussion-2025-applicable-2026",

@@ -207,6 +207,16 @@ def test_historical_discussion_fixture_is_valid() -> None:
     validate_writing_assessment(attempt_data, event_data, feedback)
 
 
+def test_feedback_result_must_match_the_persisted_simulated_task_score() -> None:
+    row = attempt(
+        "academic_discussion", "ets-writing-discussion-2025-applicable-2026"
+    )
+    with pytest.raises(ValidationError, match="matching simulated task score"):
+        validate_writing_assessment(
+            row, [], VALID_FEEDBACK.replace("3/5", "4/5")
+        )
+
+
 def test_writing_registration_refreshes_all_derived_coaching_views(tmp_path) -> None:
     from test_validation import MANIFEST, valid_attempt
 
@@ -221,3 +231,4 @@ def test_writing_registration_refreshes_all_derived_coaching_views(tmp_path) -> 
     assert (tmp_path / "tracker/writing/training-plan.md").exists()
     assert (tmp_path / "tracker/writing/progress-overview.md").exists()
     assert (tmp_path / "tracker/writing/practice-queue.md").exists()
+    assert (tmp_path / "tracker/writing/revision-learning.md").exists()

@@ -172,6 +172,9 @@ python3 tools/rebuild_training_plan.py
 # 產生目前可執行的 Writing drill → transfer 練習順序
 python3 tools/rebuild_practice_queue.py
 
+# 顯示每輪修訂保留、消失與新出現的錯誤碼
+python3 tools/rebuild_revision_learning.py
+
 # 只重建單一類型
 python3 tools/rebuild_reports.py --modality writing
 python3 tools/rebuild_reports.py --modality speaking

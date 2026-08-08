@@ -13,6 +13,7 @@ from toefl_tracker.lineage import lineage_summary
 from toefl_tracker.mastery import derive_mastery
 from toefl_tracker.status import classify_code
 from toefl_tracker.taxonomy import load_taxonomy
+from toefl_tracker.weaknesses import rank_writing_weaknesses
 
 
 _COUNTED = {"must_fix", "should_fix"}
@@ -62,14 +63,14 @@ def build_progress_overview(root: Path) -> dict:
     recent = formals[-3:]
     recent_ids = {row["attempt_id"] for row in recent}
     counted = [event for event in events if event.get("level") in _COUNTED and event.get("attempt_id") in recent_ids]
-    counts = Counter(event["code"] for event in counted)
     errors_by_attempt = Counter(event["attempt_id"] for event in counted)
     severe_by_attempt = Counter(
         event["attempt_id"]
         for event in counted
         if event.get("severity") == "meaning_changing"
     )
-    focus_codes = [code for code, _ in counts.most_common(2)] if len(formals) >= 3 else []
+    weakness_signals = rank_writing_weaknesses(root)
+    focus_signals = weakness_signals[:2] if len(formals) >= 3 else []
     compatibility = load_legacy_compatibility(root, "writing")
     revision_summaries = [
         lineage_summary(
@@ -101,9 +102,18 @@ def build_progress_overview(root: Path) -> dict:
         "routes": {task: _route_summary(task, formals, events, taxonomy, families) for task in ("email", "academic_discussion")},
         "revision_chains": revision_summaries,
         "mastery": derive_mastery(root),
+        "weakness_signals": weakness_signals,
         "next_focuses": [
-            {"code": code, "reason": f"{counts[code]} counted events in the latest three formal records."}
-            for code in focus_codes
+            {
+                "code": signal["code"],
+                "reason": (
+                    f"{signal['recent_counted_events']} counted events across "
+                    f"{signal['recent_opportunities']} recent opportunities; "
+                    f"{signal['formal_records_affected']} formal records affected; "
+                    f"status: {signal['historical_status']}."
+                ),
+            }
+            for signal in focus_signals
         ],
         "data_quality": {
             "timing_unknown_attempt_ids": [

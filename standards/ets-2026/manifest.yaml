@@ -1,7 +1,7 @@
 schema_version: 1
 test_version: "TOEFL iBT 2026"
 effective_from: 2026-01-21
-last_verified: 2026-07-31
+last_verified: 2026-08-08
 rubrics:
   ets-writing-email-2025-applicable-2026:
     task_type: email
