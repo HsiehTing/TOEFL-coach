@@ -98,6 +98,7 @@ def validate_writing_assessment(
     ):
         if not feedback[start:end].strip():
             raise ValidationError(f"first-round feedback {heading} is empty")
+    evidence_block = feedback[heading_matches[3].end():heading_matches[4].start()]
     priority_block = feedback[
         heading_matches[-2].end():heading_matches[-1].start()
     ]
@@ -115,10 +116,10 @@ def validate_writing_assessment(
         if (
             not isinstance(excerpt, str)
             or not excerpt.strip()
-            or excerpt.strip() not in feedback
+            or excerpt.strip() not in evidence_block
         ):
             raise ValidationError(
-                f"feedback omits counted evidence: {event.get('event_id')}"
+                f"evidence section omits counted evidence: {event.get('event_id')}"
             )
 
 

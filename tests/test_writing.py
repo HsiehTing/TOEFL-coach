@@ -120,6 +120,19 @@ def test_feedback_must_include_each_counted_excerpt() -> None:
         validate_writing_assessment(row, [event], VALID_FEEDBACK)
 
 
+def test_counted_excerpt_must_be_in_the_evidence_section_not_only_elsewhere() -> None:
+    row = attempt(
+        "academic_discussion", "ets-writing-discussion-2025-applicable-2026"
+    )
+    event = {"event_id": "ERR-1", "level": "must_fix", "source_excerpt": "a object"}
+    feedback = VALID_FEEDBACK.replace(
+        "Evidence.\n# Why not", "Evidence includes a object.\n# Why not"
+    ).replace("| a object | should_fix |", "| omitted | should_fix |")
+
+    with pytest.raises(ValidationError, match="evidence section"):
+        validate_writing_assessment(row, [event], feedback)
+
+
 @pytest.mark.parametrize(
     "feedback",
     [

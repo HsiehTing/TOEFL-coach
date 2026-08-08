@@ -32,11 +32,20 @@ def build_revision_learning(root: Path) -> dict:
             continue
         parent_codes = {event["code"] for event in events_by_attempt[parent_id]}
         revision_codes = {event["code"] for event in events_by_attempt[revision["attempt_id"]]}
+        no_longer_observed = parent_codes - revision_codes
+        opportunities = revision.get("opportunities", {})
+        comparable_removed = {
+            code for code in no_longer_observed
+            if isinstance(opportunities, dict) and opportunities.get(code, 0) > 0
+        }
         comparisons.append({
             "revision_attempt_id": revision["attempt_id"],
             "parent_attempt_id": parent_id,
             "retained_codes": sorted(parent_codes & revision_codes),
-            "no_longer_observed_codes": sorted(parent_codes - revision_codes),
+            "opportunity_confirmed_no_longer_observed_codes": sorted(comparable_removed),
+            "not_comparable_without_opportunity_codes": sorted(
+                no_longer_observed - comparable_removed
+            ),
             "new_codes": sorted(revision_codes - parent_codes),
             "parent_evidence": [
                 {"event_id": event["event_id"], "code": event["code"], "source_excerpt": event.get("source_excerpt", "")}
@@ -46,7 +55,7 @@ def build_revision_learning(root: Path) -> dict:
                 {"event_id": event["event_id"], "code": event["code"], "source_excerpt": event.get("source_excerpt", "")}
                 for event in events_by_attempt[revision["attempt_id"]]
             ],
-            "note": "No-longer-observed codes are comparison signals, not proof of mastery; opportunity confirmation is required on a fresh formal prompt.",
+            "note": "Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.",
         })
     return {"version": 1, "source_records_modified": False, "comparisons": comparisons}
 
@@ -61,7 +70,8 @@ def write_revision_learning(root: Path) -> Path:
         lines.extend([
             f"## `{row['revision_attempt_id']}` from `{row['parent_attempt_id']}`",
             f"- Retained codes: {', '.join(f'`{code}`' for code in row['retained_codes']) or 'none'}",
-            f"- No longer observed: {', '.join(f'`{code}`' for code in row['no_longer_observed_codes']) or 'none'}",
+            f"- Opportunity-confirmed, no longer observed: {', '.join(f'`{code}`' for code in row['opportunity_confirmed_no_longer_observed_codes']) or 'none'}",
+            f"- Not comparable (no recorded opportunity): {', '.join(f'`{code}`' for code in row['not_comparable_without_opportunity_codes']) or 'none'}",
             f"- New codes: {', '.join(f'`{code}`' for code in row['new_codes']) or 'none'}",
             f"- {row['note']}",
             "",
