@@ -97,6 +97,15 @@ def _validate_codes(root: Path, task_type: str, codes: list[str]) -> None:
             raise ValidationError(f"drill generation is not yet supported for code: {code}")
 
 
+def supports_writing_drill(root: Path, task_type: str, code: str) -> bool:
+    """Return whether an evidence-linked drill can be generated for this route."""
+    try:
+        _validate_codes(root, task_type, [code])
+    except ValidationError:
+        return False
+    return True
+
+
 def _clause_item(number: int, task_type: str, evidence: dict) -> dict:
     route_context = (
         "a professional email that completes one requested action"

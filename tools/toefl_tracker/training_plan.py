@@ -5,6 +5,7 @@ from pathlib import Path
 
 from toefl_tracker.canonical import load_canonical_events
 from toefl_tracker.io import atomic_write_text, read_yaml
+from toefl_tracker.legacy_migration import load_legacy_compatibility, synthetic_sort_key
 from toefl_tracker.lineage import lineage_summary
 
 
@@ -14,7 +15,8 @@ _COUNTED = {"must_fix", "should_fix"}
 def _attempts(root: Path) -> list[dict]:
     base = root / "tracker/writing/attempts"
     rows = [read_yaml(path) for path in base.glob("*/attempt.yaml")] if base.exists() else []
-    return sorted(rows, key=lambda row: (row.get("submitted_at", ""), row.get("attempt_id", "")))
+    compatibility = load_legacy_compatibility(root, "writing")
+    return sorted(rows, key=lambda row: synthetic_sort_key(compatibility, row))
 
 
 def _full(outcome: dict | None) -> bool:
@@ -29,12 +31,15 @@ def _full(outcome: dict | None) -> bool:
 
 def build_training_plan(root: Path) -> dict:
     attempts = _attempts(root)
+    compatibility = load_legacy_compatibility(root, "writing")
     formals = [row for row in attempts if row.get("record_type") == "formal_original"]
     revisions = [row for row in attempts if row.get("record_type") == "revision"]
     events = [row for row in load_canonical_events(root, "writing") if row.get("level") in _COUNTED]
     recommendations: list[dict] = []
     for formal in formals:
-        summary = lineage_summary(formal["attempt_id"], [*formals, *revisions])
+        summary = lineage_summary(
+            formal["attempt_id"], [*formals, *revisions], compatibility=compatibility
+        )
         if summary["round_count"] < 2 or _full(summary["latest_outcome"]):
             continue
         chain_ids = {formal["attempt_id"], *summary["revision_ids"]}

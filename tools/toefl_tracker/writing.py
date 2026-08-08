@@ -17,6 +17,9 @@ from toefl_tracker.register import (
 )
 from toefl_tracker.validation import validate_attempt, validate_reevaluation_metadata
 from toefl_tracker.training_plan import write_training_plan
+from toefl_tracker.progress import write_progress_overview
+from toefl_tracker.practice_queue import write_practice_queue
+from toefl_tracker.reports import rebuild_modality
 
 
 RUBRICS = {
@@ -170,5 +173,8 @@ def register_writing_attempt(
     destination = publish_registration(root, manifest, registration)
     with _registration_lock(root):
         write_aggregate_events(root, attempt["modality"])
+        rebuild_modality(root, attempt["modality"])
         write_training_plan(root)
+        write_progress_overview(root)
+        write_practice_queue(root)
     return destination

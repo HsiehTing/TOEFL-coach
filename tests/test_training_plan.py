@@ -80,3 +80,31 @@ def test_write_training_plan_is_a_derived_artifact(tmp_path: Path) -> None:
     path = write_training_plan(tmp_path)
     assert path == tmp_path / "tracker/writing/training-plan.md"
     assert "Derived" in path.read_text(encoding="utf-8")
+
+
+def test_plan_uses_explicit_legacy_order_for_timestamp_reversed_revision(
+    tmp_path: Path,
+) -> None:
+    write_attempt(tmp_path, "W-AD-1", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-1-R1", "academic_discussion", "revision")
+    write_attempt(tmp_path, "W-AD-1-R2", "academic_discussion", "revision")
+    root = tmp_path / "tracker/writing/attempts"
+    for attempt_id, parent_id in [("W-AD-1-R1", "W-AD-1"), ("W-AD-1-R2", "W-AD-1-R1")]:
+        path = root / attempt_id / "attempt.yaml"
+        attempt = yaml.safe_load(path.read_text(encoding="utf-8"))
+        attempt["parent_attempt_id"] = parent_id
+        attempt["submitted_at"] = "2026-07-01T10:00:00+08:00"
+        path.write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    (tmp_path / "tracker/writing/legacy-compat.yaml").write_text(
+        yaml.safe_dump({
+            "version": 1,
+            "modality": "writing",
+            "source_records_modified": False,
+            "synthetic_lineage_order": ["W-AD-1", "W-AD-1-R1", "W-AD-1-R2"],
+        }),
+        encoding="utf-8",
+    )
+
+    plan = build_training_plan(tmp_path)
+
+    assert plan["recommendations"] == []

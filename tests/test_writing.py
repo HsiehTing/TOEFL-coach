@@ -1,7 +1,8 @@
 import pytest
 
+from toefl_tracker.io import canonical_source_hash
 from toefl_tracker.models import ValidationError
-from toefl_tracker.writing import validate_writing_assessment
+from toefl_tracker.writing import register_writing_attempt, validate_writing_assessment
 
 
 def attempt(task_type: str, rubric: str) -> dict:
@@ -204,3 +205,19 @@ def test_historical_discussion_fixture_is_valid() -> None:
     ]
     feedback = (fixture / "feedback.md").read_text()
     validate_writing_assessment(attempt_data, event_data, feedback)
+
+
+def test_writing_registration_refreshes_all_derived_coaching_views(tmp_path) -> None:
+    from test_validation import MANIFEST, valid_attempt
+
+    attempt_data = valid_attempt()
+    attempt_data["source_hash"] = canonical_source_hash("prompt", "response")
+
+    register_writing_attempt(
+        tmp_path, MANIFEST, attempt_data, "prompt", "response", VALID_FEEDBACK, []
+    )
+
+    assert (tmp_path / "tracker/writing/dashboard.csv").exists()
+    assert (tmp_path / "tracker/writing/training-plan.md").exists()
+    assert (tmp_path / "tracker/writing/progress-overview.md").exists()
+    assert (tmp_path / "tracker/writing/practice-queue.md").exists()
