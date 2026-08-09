@@ -1,0 +1,616 @@
+version: 1
+source_records_modified: false
+comparisons:
+- revision_attempt_id: W-AD-20260805-001-R1
+  parent_attempt_id: W-AD-20260805-001
+  retained_codes:
+  - GRAM-AGREEMENT
+  - GRAM-ARTICLE
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  - LEX-WORDFORM
+  opportunity_confirmed_no_longer_observed_codes:
+  - DISCUSSION-SUPPORT
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260805-0035
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260805-0036
+    code: GRAM-CLAUSE
+    source_excerpt: if governments allow public transportation more accessible, cheaper,
+      and easier to public
+  - event_id: ERR-20260805-0037
+    code: LEX-COLLOCATION
+    source_excerpt: investing public transportation
+  - event_id: ERR-20260805-0038
+    code: GRAM-AGREEMENT
+    source_excerpt: Some argues
+  - event_id: ERR-20260805-0039
+    code: GRAM-CLAUSE
+    source_excerpt: Although electric-cars provide a more eco-friendly option for
+      people who are not accessible to public transportation. But overlooks
+  - event_id: ERR-20260805-0040
+    code: LEX-WORDFORM
+    source_excerpt: the amount of carbon dioxide emitted was differ largely
+  - event_id: ERR-20260805-0041
+    code: DISCUSSION-SUPPORT
+    source_excerpt: investing public transportation is a more financially stable way
+      than offering financial incentives
+  revision_evidence:
+  - event_id: ERR-20260806-0001
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0002
+    code: LEX-COLLOCATION
+    source_excerpt: easier to public
+  - event_id: ERR-20260806-0003
+    code: GRAM-AGREEMENT
+    source_excerpt: the population in urban and rural areas are
+  - event_id: ERR-20260806-0004
+    code: LEX-WORDFORM
+    source_excerpt: the amount of carbon dioxide emitted was differ largely
+  - event_id: ERR-20260806-0005
+    code: GRAM-CLAUSE
+    source_excerpt: I think benefit companies that manufacture electric-car does not
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260805-001-R1
+  parent_attempt_id: W-EM-20260805-001
+  retained_codes: []
+  opportunity_confirmed_no_longer_observed_codes:
+  - EMAIL-ACTION
+  - GRAM-CLAUSE
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260805-0001
+    code: GRAM-CLAUSE
+    source_excerpt: The presentation is scheduled for this evening and the materials
+      are mandatory for the presentation, I urgently need the correct copies.
+  - event_id: ERR-20260805-0002
+    code: EMAIL-ACTION
+    source_excerpt: prioritize this issue and reprint the correct files right away
+  revision_evidence: []
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260805-002-R1
+  parent_attempt_id: W-EM-20260805-002
+  retained_codes:
+  - EMAIL-ACTION
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - GRAM-AGREEMENT
+  new_codes:
+  - MECH-SPELLING
+  parent_evidence:
+  - event_id: ERR-20260805-0003
+    code: LEX-COLLOCATION
+    source_excerpt: considering seeking job opportunities
+  - event_id: ERR-20260805-0004
+    code: LEX-COLLOCATION
+    source_excerpt: the city we are at
+  - event_id: ERR-20260805-0005
+    code: LEX-COLLOCATION
+    source_excerpt: ambitious about your career
+  - event_id: ERR-20260805-0006
+    code: GRAM-CLAUSE
+    source_excerpt: Although I encourage that you should move to a bigger city
+  - event_id: ERR-20260805-0007
+    code: GRAM-CLAUSE
+    source_excerpt: Either you decide to move or not
+  - event_id: ERR-20260805-0008
+    code: GRAM-AGREEMENT
+    source_excerpt: If there's any questions
+  - event_id: ERR-20260805-0009
+    code: EMAIL-ACTION
+    source_excerpt: take your time pondering the options
+  revision_evidence:
+  - event_id: ERR-20260805-0010
+    code: LEX-COLLOCATION
+    source_excerpt: ambitious about your career
+  - event_id: ERR-20260805-0011
+    code: LEX-COLLOCATION
+    source_excerpt: accessible to the nature
+  - event_id: ERR-20260805-0012
+    code: GRAM-CLAUSE
+    source_excerpt: You have been so ambitious about your career, I believe that moving
+      to a bigger city
+  - event_id: ERR-20260805-0013
+    code: GRAM-CLAUSE
+    source_excerpt: outdoor activities, thus, I suggest
+  - event_id: ERR-20260805-0014
+    code: MECH-SPELLING
+    source_excerpt: feeling to well
+  - event_id: ERR-20260805-0015
+    code: GRAM-CLAUSE
+    source_excerpt: I recommend that move to a closer city
+  - event_id: ERR-20260805-0016
+    code: EMAIL-ACTION
+    source_excerpt: take your time pondering the options
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260805-001-R2
+  parent_attempt_id: W-AD-20260805-001-R1
+  retained_codes:
+  - GRAM-AGREEMENT
+  - GRAM-ARTICLE
+  - GRAM-CLAUSE
+  - LEX-WORDFORM
+  opportunity_confirmed_no_longer_observed_codes:
+  - LEX-COLLOCATION
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260806-0001
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0002
+    code: LEX-COLLOCATION
+    source_excerpt: easier to public
+  - event_id: ERR-20260806-0003
+    code: GRAM-AGREEMENT
+    source_excerpt: the population in urban and rural areas are
+  - event_id: ERR-20260806-0004
+    code: LEX-WORDFORM
+    source_excerpt: the amount of carbon dioxide emitted was differ largely
+  - event_id: ERR-20260806-0005
+    code: GRAM-CLAUSE
+    source_excerpt: I think benefit companies that manufacture electric-car does not
+  revision_evidence:
+  - event_id: ERR-20260806-0006
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0007
+    code: GRAM-CLAUSE
+    source_excerpt: As Claire suggests, by making public transportation more accessible,
+      cheaper, and easier to public.
+  - event_id: ERR-20260806-0008
+    code: GRAM-CLAUSE
+    source_excerpt: People would be less likely to drive, further diminishes air pollution.
+  - event_id: ERR-20260806-0009
+    code: GRAM-CLAUSE
+    source_excerpt: Although electric-cars provide a more eco-friendly option for
+      people who are not accessible to public transportation. However, it overlooks
+  - event_id: ERR-20260806-0010
+    code: GRAM-AGREEMENT
+    source_excerpt: improving public transportation in urban area would replace more
+      vehicle than offer benefits to electric-cars company
+  - event_id: ERR-20260806-0011
+    code: LEX-WORDFORM
+    source_excerpt: the amount of carbon dioxide emitted was differ largely
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260805-002-R2
+  parent_attempt_id: W-EM-20260805-002-R1
+  retained_codes:
+  - EMAIL-ACTION
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - MECH-SPELLING
+  new_codes:
+  - LEX-WORDFORM
+  parent_evidence:
+  - event_id: ERR-20260805-0010
+    code: LEX-COLLOCATION
+    source_excerpt: ambitious about your career
+  - event_id: ERR-20260805-0011
+    code: LEX-COLLOCATION
+    source_excerpt: accessible to the nature
+  - event_id: ERR-20260805-0012
+    code: GRAM-CLAUSE
+    source_excerpt: You have been so ambitious about your career, I believe that moving
+      to a bigger city
+  - event_id: ERR-20260805-0013
+    code: GRAM-CLAUSE
+    source_excerpt: outdoor activities, thus, I suggest
+  - event_id: ERR-20260805-0014
+    code: MECH-SPELLING
+    source_excerpt: feeling to well
+  - event_id: ERR-20260805-0015
+    code: GRAM-CLAUSE
+    source_excerpt: I recommend that move to a closer city
+  - event_id: ERR-20260805-0016
+    code: EMAIL-ACTION
+    source_excerpt: take your time pondering the options
+  revision_evidence:
+  - event_id: ERR-20260805-0017
+    code: LEX-COLLOCATION
+    source_excerpt: ambitious about your career
+  - event_id: ERR-20260805-0018
+    code: GRAM-CLAUSE
+    source_excerpt: outdoor activities, so, I suggest
+  - event_id: ERR-20260805-0019
+    code: GRAM-CLAUSE
+    source_excerpt: mother hasn’t been feeling too well, I recommend that move
+  - event_id: ERR-20260805-0020
+    code: GRAM-CLAUSE
+    source_excerpt: career growth that brought by the new job
+  - event_id: ERR-20260805-0021
+    code: LEX-COLLOCATION
+    source_excerpt: get to the nature
+  - event_id: ERR-20260805-0022
+    code: LEX-WORDFORM
+    source_excerpt: the city your mother lived in
+  - event_id: ERR-20260805-0023
+    code: EMAIL-ACTION
+    source_excerpt: compare the career growth ... how easily you can get to the nature,
+      and your distance
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260805-001-R3
+  parent_attempt_id: W-AD-20260805-001-R2
+  retained_codes:
+  - GRAM-AGREEMENT
+  - GRAM-ARTICLE
+  - GRAM-CLAUSE
+  - LEX-WORDFORM
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260806-0006
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0007
+    code: GRAM-CLAUSE
+    source_excerpt: As Claire suggests, by making public transportation more accessible,
+      cheaper, and easier to public.
+  - event_id: ERR-20260806-0008
+    code: GRAM-CLAUSE
+    source_excerpt: People would be less likely to drive, further diminishes air pollution.
+  - event_id: ERR-20260806-0009
+    code: GRAM-CLAUSE
+    source_excerpt: Although electric-cars provide a more eco-friendly option for
+      people who are not accessible to public transportation. However, it overlooks
+  - event_id: ERR-20260806-0010
+    code: GRAM-AGREEMENT
+    source_excerpt: improving public transportation in urban area would replace more
+      vehicle than offer benefits to electric-cars company
+  - event_id: ERR-20260806-0011
+    code: LEX-WORDFORM
+    source_excerpt: the amount of carbon dioxide emitted was differ largely
+  revision_evidence:
+  - event_id: ERR-20260806-0012
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0013
+    code: GRAM-CLAUSE
+    source_excerpt: As Claire suggests.
+  - event_id: ERR-20260806-0014
+    code: GRAM-CLAUSE
+    source_excerpt: If Governments making public transportation more accessible, cheaper,
+      and easier to use
+  - event_id: ERR-20260806-0015
+    code: GRAM-CLAUSE
+    source_excerpt: It is because that when buses, and railways are way more convenient
+      and cheaper than driving
+  - event_id: ERR-20260806-0016
+    code: GRAM-AGREEMENT
+    source_excerpt: the population in urban and rural areas are
+  - event_id: ERR-20260806-0017
+    code: LEX-WORDFORM
+    source_excerpt: the amount of carbon dioxide emitted was differ largely
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260805-002-R3
+  parent_attempt_id: W-EM-20260805-002-R2
+  retained_codes:
+  - EMAIL-ACTION
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - LEX-WORDFORM
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260805-0017
+    code: LEX-COLLOCATION
+    source_excerpt: ambitious about your career
+  - event_id: ERR-20260805-0018
+    code: GRAM-CLAUSE
+    source_excerpt: outdoor activities, so, I suggest
+  - event_id: ERR-20260805-0019
+    code: GRAM-CLAUSE
+    source_excerpt: mother hasn’t been feeling too well, I recommend that move
+  - event_id: ERR-20260805-0020
+    code: GRAM-CLAUSE
+    source_excerpt: career growth that brought by the new job
+  - event_id: ERR-20260805-0021
+    code: LEX-COLLOCATION
+    source_excerpt: get to the nature
+  - event_id: ERR-20260805-0022
+    code: LEX-WORDFORM
+    source_excerpt: the city your mother lived in
+  - event_id: ERR-20260805-0023
+    code: EMAIL-ACTION
+    source_excerpt: compare the career growth ... how easily you can get to the nature,
+      and your distance
+  revision_evidence:
+  - event_id: ERR-20260805-0024
+    code: GRAM-CLAUSE
+    source_excerpt: mother hasn’t been feeling too well, I recommend that you move
+  - event_id: ERR-20260805-0025
+    code: GRAM-CLAUSE
+    source_excerpt: I suggest that you can consider
+  - event_id: ERR-20260805-0026
+    code: LEX-COLLOCATION
+    source_excerpt: ambitious about your career
+  - event_id: ERR-20260805-0027
+    code: LEX-COLLOCATION
+    source_excerpt: way more helpful to your career goals
+  - event_id: ERR-20260805-0028
+    code: LEX-COLLOCATION
+    source_excerpt: your distance to the city where your mother lives
+  - event_id: ERR-20260805-0029
+    code: EMAIL-ACTION
+    source_excerpt: compare the career growth offered by the new job, how easily you
+      can access nature, and your distance
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260805-001-R4
+  parent_attempt_id: W-AD-20260805-001-R3
+  retained_codes:
+  - GRAM-AGREEMENT
+  - GRAM-ARTICLE
+  - GRAM-CLAUSE
+  - LEX-WORDFORM
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260806-0012
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0013
+    code: GRAM-CLAUSE
+    source_excerpt: As Claire suggests.
+  - event_id: ERR-20260806-0014
+    code: GRAM-CLAUSE
+    source_excerpt: If Governments making public transportation more accessible, cheaper,
+      and easier to use
+  - event_id: ERR-20260806-0015
+    code: GRAM-CLAUSE
+    source_excerpt: It is because that when buses, and railways are way more convenient
+      and cheaper than driving
+  - event_id: ERR-20260806-0016
+    code: GRAM-AGREEMENT
+    source_excerpt: the population in urban and rural areas are
+  - event_id: ERR-20260806-0017
+    code: LEX-WORDFORM
+    source_excerpt: the amount of carbon dioxide emitted was differ largely
+  revision_evidence:
+  - event_id: ERR-20260806-0018
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0019
+    code: GRAM-CLAUSE
+    source_excerpt: As Claire suggests.
+  - event_id: ERR-20260806-0020
+    code: GRAM-CLAUSE
+    source_excerpt: make make public transportation
+  - event_id: ERR-20260806-0021
+    code: GRAM-CLAUSE
+    source_excerpt: It is because that when buses, and railways are way more convenient
+      and cheaper than driving
+  - event_id: ERR-20260806-0022
+    code: GRAM-AGREEMENT
+    source_excerpt: cities have denser population
+  - event_id: ERR-20260806-0023
+    code: LEX-WORDFORM
+    source_excerpt: when it is ran by the government
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260805-002-R4
+  parent_attempt_id: W-EM-20260805-002-R3
+  retained_codes:
+  - EMAIL-ACTION
+  - LEX-COLLOCATION
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - GRAM-CLAUSE
+  new_codes:
+  - GRAM-AGREEMENT
+  parent_evidence:
+  - event_id: ERR-20260805-0024
+    code: GRAM-CLAUSE
+    source_excerpt: mother hasn’t been feeling too well, I recommend that you move
+  - event_id: ERR-20260805-0025
+    code: GRAM-CLAUSE
+    source_excerpt: I suggest that you can consider
+  - event_id: ERR-20260805-0026
+    code: LEX-COLLOCATION
+    source_excerpt: ambitious about your career
+  - event_id: ERR-20260805-0027
+    code: LEX-COLLOCATION
+    source_excerpt: way more helpful to your career goals
+  - event_id: ERR-20260805-0028
+    code: LEX-COLLOCATION
+    source_excerpt: your distance to the city where your mother lives
+  - event_id: ERR-20260805-0029
+    code: EMAIL-ACTION
+    source_excerpt: compare the career growth offered by the new job, how easily you
+      can access nature, and your distance
+  revision_evidence:
+  - event_id: ERR-20260805-0030
+    code: LEX-COLLOCATION
+    source_excerpt: Based on the fact that we had experience discussing
+  - event_id: ERR-20260805-0031
+    code: GRAM-AGREEMENT
+    source_excerpt: the job opportunity is limited
+  - event_id: ERR-20260805-0032
+    code: LEX-COLLOCATION
+    source_excerpt: way more helpful to your career goals
+  - event_id: ERR-20260805-0033
+    code: LEX-COLLOCATION
+    source_excerpt: be responsible for the option you make
+  - event_id: ERR-20260805-0034
+    code: EMAIL-ACTION
+    source_excerpt: compare the career growth offered by the new job, access to nature,
+      and the distance
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260805-001-R5
+  parent_attempt_id: W-AD-20260805-001-R4
+  retained_codes:
+  - GRAM-AGREEMENT
+  - GRAM-ARTICLE
+  - GRAM-CLAUSE
+  opportunity_confirmed_no_longer_observed_codes:
+  - LEX-WORDFORM
+  not_comparable_without_opportunity_codes: []
+  new_codes:
+  - LEX-COLLOCATION
+  - MECH-SPELLING
+  parent_evidence:
+  - event_id: ERR-20260806-0018
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0019
+    code: GRAM-CLAUSE
+    source_excerpt: As Claire suggests.
+  - event_id: ERR-20260806-0020
+    code: GRAM-CLAUSE
+    source_excerpt: make make public transportation
+  - event_id: ERR-20260806-0021
+    code: GRAM-CLAUSE
+    source_excerpt: It is because that when buses, and railways are way more convenient
+      and cheaper than driving
+  - event_id: ERR-20260806-0022
+    code: GRAM-AGREEMENT
+    source_excerpt: cities have denser population
+  - event_id: ERR-20260806-0023
+    code: LEX-WORDFORM
+    source_excerpt: when it is ran by the government
+  revision_evidence:
+  - event_id: ERR-20260806-0024
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0025
+    code: GRAM-CLAUSE
+    source_excerpt: As Claire suggests.
+  - event_id: ERR-20260806-0026
+    code: GRAM-AGREEMENT
+    source_excerpt: cities have denser population
+  - event_id: ERR-20260806-0027
+    code: MECH-SPELLING
+    source_excerpt: public investment educes emissions
+  - event_id: ERR-20260806-0028
+    code: LEX-COLLOCATION
+    source_excerpt: an expanded train or rail system
+  - event_id: ERR-20260806-0029
+    code: GRAM-CLAUSE
+    source_excerpt: I think benefit companies that manufacture electric-car does not
+      resolve the problem efficiently
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260805-002-R5
+  parent_attempt_id: W-EM-20260805-002-R4
+  retained_codes: []
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - EMAIL-ACTION
+  - GRAM-AGREEMENT
+  - LEX-COLLOCATION
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260805-0030
+    code: LEX-COLLOCATION
+    source_excerpt: Based on the fact that we had experience discussing
+  - event_id: ERR-20260805-0031
+    code: GRAM-AGREEMENT
+    source_excerpt: the job opportunity is limited
+  - event_id: ERR-20260805-0032
+    code: LEX-COLLOCATION
+    source_excerpt: way more helpful to your career goals
+  - event_id: ERR-20260805-0033
+    code: LEX-COLLOCATION
+    source_excerpt: be responsible for the option you make
+  - event_id: ERR-20260805-0034
+    code: EMAIL-ACTION
+    source_excerpt: compare the career growth offered by the new job, access to nature,
+      and the distance
+  revision_evidence: []
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260805-001-R6
+  parent_attempt_id: W-AD-20260805-001-R5
+  retained_codes:
+  - GRAM-ARTICLE
+  - LEX-COLLOCATION
+  - MECH-SPELLING
+  opportunity_confirmed_no_longer_observed_codes:
+  - GRAM-AGREEMENT
+  - GRAM-CLAUSE
+  not_comparable_without_opportunity_codes: []
+  new_codes:
+  - LEX-WORDFORM
+  parent_evidence:
+  - event_id: ERR-20260806-0024
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0025
+    code: GRAM-CLAUSE
+    source_excerpt: As Claire suggests.
+  - event_id: ERR-20260806-0026
+    code: GRAM-AGREEMENT
+    source_excerpt: cities have denser population
+  - event_id: ERR-20260806-0027
+    code: MECH-SPELLING
+    source_excerpt: public investment educes emissions
+  - event_id: ERR-20260806-0028
+    code: LEX-COLLOCATION
+    source_excerpt: an expanded train or rail system
+  - event_id: ERR-20260806-0029
+    code: GRAM-CLAUSE
+    source_excerpt: I think benefit companies that manufacture electric-car does not
+      resolve the problem efficiently
+  revision_evidence:
+  - event_id: ERR-20260806-0030
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0031
+    code: LEX-WORDFORM
+    source_excerpt: I believe that expand public transportation is
+  - event_id: ERR-20260806-0032
+    code: MECH-SPELLING
+    source_excerpt: public investment educes emissions
+  - event_id: ERR-20260806-0033
+    code: LEX-COLLOCATION
+    source_excerpt: an expanded train or rail system
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260805-001-R7
+  parent_attempt_id: W-AD-20260805-001-R6
+  retained_codes:
+  - MECH-SPELLING
+  opportunity_confirmed_no_longer_observed_codes:
+  - LEX-COLLOCATION
+  - LEX-WORDFORM
+  not_comparable_without_opportunity_codes:
+  - GRAM-ARTICLE
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260806-0030
+    code: GRAM-ARTICLE
+    source_excerpt: is topic that worth discussing
+  - event_id: ERR-20260806-0031
+    code: LEX-WORDFORM
+    source_excerpt: I believe that expand public transportation is
+  - event_id: ERR-20260806-0032
+    code: MECH-SPELLING
+    source_excerpt: public investment educes emissions
+  - event_id: ERR-20260806-0033
+    code: LEX-COLLOCATION
+    source_excerpt: an expanded train or rail system
+  revision_evidence:
+  - event_id: ERR-20260806-0034
+    code: MECH-SPELLING
+    source_excerpt: public investment educes emissions
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.

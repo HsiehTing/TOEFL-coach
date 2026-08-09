@@ -1,0 +1,31 @@
+schema_version: 1
+attempt_id: W-EM-20260805-001
+modality: writing
+task_type: email
+record_type: formal_original
+submitted_at: '2026-08-05T00:00:00+08:00'
+practiced_at: null
+timed: null
+duration_seconds: null
+assistance:
+  spellcheck: null
+  translation: null
+  other: null
+word_count: 139
+rubric_version: ets-writing-email-2025-applicable-2026
+standard_verified_at: '2026-07-31'
+task_score:
+  scale: 0-5
+  value: 4
+  confidence: medium_high
+task_metrics:
+  purpose: clear
+  required_points: complete
+  register: generally_appropriate
+  action_formulation: partial
+opportunities:
+  GRAM-CLAUSE: 1
+  EMAIL-ACTION: 1
+parent_attempt_id: null
+revision_outcomes: null
+source_hash: sha256:0dbddeb916efbad07c507d5f2fc57b1bb337d126ad5994b8bb42d448f83c4a26

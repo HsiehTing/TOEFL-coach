@@ -1,0 +1,114 @@
+version: 3
+recommendation_id: PLAN-W-EM-20260805-002
+source_attempt_id: W-EM-20260805-002
+task_type: email
+target_codes:
+- GRAM-CLAUSE
+- LEX-COLLOCATION
+evidence_event_ids:
+- ERR-20260805-0006
+- ERR-20260805-0007
+- ERR-20260805-0003
+- ERR-20260805-0004
+- ERR-20260805-0005
+seed: 0
+drill_id: WD-7E93C42E4E1907E2
+items:
+- item_id: I01
+  kind: rewrite_fragment
+  prompt: 'Rewrite this fragment as one complete sentence explaining why the university
+    should add an AI laboratory: `Because AI is increasingly used by technology companies.`'
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0006
+    code: GRAM-CLAUSE
+  answer_guidance: The answer contains a main clause after the dependent `Because`
+    clause and clearly states the requested reason.
+- item_id: I02
+  kind: combine
+  prompt: 'Combine these ideas into one professional email sentence using `because`
+    or `so`: `The current computer room is often full. I recommend adding another
+    computer laboratory.`'
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0007
+    code: GRAM-CLAUSE
+  answer_guidance: The answer has one complete sentence, a clear connector, and the
+    recommendation remains explicit.
+- item_id: I03
+  kind: collocation
+  prompt: 'Rewrite this sentence using natural English: `The laboratory can teach
+    students practical using skills.`'
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0003
+    code: LEX-COLLOCATION
+  answer_guidance: The answer uses a natural collocation such as `develop practical
+    skills` or `gain practical experience`.
+- item_id: I04
+  kind: collocation
+  prompt: 'Rewrite this sentence using natural English: `The laboratory can teach
+    students practical using skills.`'
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0004
+    code: LEX-COLLOCATION
+  answer_guidance: The answer uses a natural collocation such as `develop practical
+    skills` or `gain practical experience`.
+- item_id: I05
+  kind: collocation
+  prompt: 'Rewrite this sentence using natural English: `The laboratory can teach
+    students practical using skills.`'
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0005
+    code: LEX-COLLOCATION
+  answer_guidance: The answer uses a natural collocation such as `develop practical
+    skills` or `gain practical experience`.
+- item_id: I06
+  kind: combine
+  prompt: 'Combine these ideas into one professional email sentence using `because`
+    or `so`: `The current computer room is often full. I recommend adding another
+    computer laboratory.`'
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0006
+    code: GRAM-CLAUSE
+  answer_guidance: The answer has one complete sentence, a clear connector, and the
+    recommendation remains explicit.
+- item_id: I07
+  kind: rewrite_fragment
+  prompt: 'Repair this sentence boundary: `Although building the laboratory would
+    be expensive. It would benefit many students.`'
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0007
+    code: GRAM-CLAUSE
+  answer_guidance: The `Although` clause is attached to a complete main clause; do
+    not leave it as a sentence fragment.
+- item_id: I08
+  kind: collocation
+  prompt: 'Rewrite this sentence using natural English: `The laboratory can teach
+    students practical using skills.`'
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0003
+    code: LEX-COLLOCATION
+  answer_guidance: The answer uses a natural collocation such as `develop practical
+    skills` or `gain practical experience`.

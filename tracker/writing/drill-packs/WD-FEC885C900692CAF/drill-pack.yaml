@@ -1,0 +1,108 @@
+version: 1
+recommendation_id: PLAN-W-EM-20260805-002
+source_attempt_id: W-EM-20260805-002
+task_type: email
+target_codes:
+- GRAM-CLAUSE
+- LEX-COLLOCATION
+evidence_event_ids:
+- ERR-20260805-0006
+- ERR-20260805-0007
+- ERR-20260805-0003
+- ERR-20260805-0004
+- ERR-20260805-0005
+seed: 0
+drill_id: WD-FEC885C900692CAF
+items:
+- item_id: I01
+  kind: identify_boundary
+  prompt: For a professional email that completes one requested action, Identify the
+    clause-boundary problem in a fresh example, then explain the repair in one phrase.
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0006
+    code: GRAM-CLAUSE
+  answer_guidance: A valid response has a complete main clause and makes the logical
+    relationship explicit.
+- item_id: I02
+  kind: combine
+  prompt: For a professional email that completes one requested action, Combine two
+    short ideas into one clear sentence with a complete main clause.
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0007
+    code: GRAM-CLAUSE
+  answer_guidance: A valid response has a complete main clause and makes the logical
+    relationship explicit.
+- item_id: I03
+  kind: collocation
+  prompt: Write a fresh sentence using a natural verb–noun or adjective–noun combination
+    for this route.
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0003
+    code: LEX-COLLOCATION
+  answer_guidance: The word combination is idiomatic in the intended context.
+- item_id: I04
+  kind: collocation
+  prompt: Write a fresh sentence using a natural verb–noun or adjective–noun combination
+    for this route.
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0004
+    code: LEX-COLLOCATION
+  answer_guidance: The word combination is idiomatic in the intended context.
+- item_id: I05
+  kind: collocation
+  prompt: Write a fresh sentence using a natural verb–noun or adjective–noun combination
+    for this route.
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0005
+    code: LEX-COLLOCATION
+  answer_guidance: The word combination is idiomatic in the intended context.
+- item_id: I06
+  kind: combine
+  prompt: For a professional email that completes one requested action, Combine two
+    short ideas into one clear sentence with a complete main clause.
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0006
+    code: GRAM-CLAUSE
+  answer_guidance: A valid response has a complete main clause and makes the logical
+    relationship explicit.
+- item_id: I07
+  kind: rewrite
+  prompt: For a professional email that completes one requested action, Rewrite a
+    fresh sentence so that every dependent clause has a clear main clause.
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0007
+    code: GRAM-CLAUSE
+  answer_guidance: A valid response has a complete main clause and makes the logical
+    relationship explicit.
+- item_id: I08
+  kind: collocation
+  prompt: Write a fresh sentence using a natural verb–noun or adjective–noun combination
+    for this route.
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0003
+    code: LEX-COLLOCATION
+  answer_guidance: The word combination is idiomatic in the intended context.

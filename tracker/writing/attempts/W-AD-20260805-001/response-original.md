@@ -1,0 +1,5 @@
+Which measures governments should take to control the emissions of carbon dioxide by vehicles is topic that worth discussing. I believe that expand public transportation is a more viable method to resolve this problem.
+
+As Claire suggests, if governments allow public transportation more accessible, cheaper, and easier to public. In this way, people would be less likely to drive, diminishing air pollution. Even more, investing public transportation is a more financially stable way than offering financial incentives to electric vehicle companies, because it is more controllable and easier to monitor when it is ran by the government.
+
+Some argues that providing financial support to electric-car companies is a better long-term strategy. Although electric-cars provide a more eco-friendly option for people who are not accessible to public transportation. But overlooks the fact that the population in urban and rural areas are significantly different, and the amount of carbon dioxide emitted was differ largely as well. So, I think benefit companies that manufacture electric-car does not resolve the problem efficiently.

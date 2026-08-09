@@ -1,0 +1,41 @@
+schema_version: 1
+attempt_id: W-AD-20260805-001-R7
+modality: writing
+task_type: academic_discussion
+record_type: revision
+submitted_at: '2026-08-06T00:06:00+08:00'
+practiced_at: null
+timed: null
+duration_seconds: null
+assistance:
+  spellcheck: null
+  translation: null
+  other: null
+word_count: 141
+rubric_version: ets-writing-discussion-2025-applicable-2026
+standard_verified_at: '2026-07-31'
+task_score:
+  scale: 0-5
+  value: 4
+  confidence: high
+task_metrics:
+  prompt_alignment: clear
+  position: clear
+  original_contribution: generally_successful
+  elaboration: generally_successful
+opportunities:
+  GRAM-CLAUSE: 3
+  LEX-WORDFORM: 2
+  LEX-COLLOCATION: 2
+  MECH-SPELLING: 1
+  DISCUSSION-SUPPORT: 2
+  DISCUSSION-ELABORATION: 2
+parent_attempt_id: W-AD-20260805-001-R6
+revision_outcomes:
+  assigned: 3
+  resolved: 3
+  partly_resolved: 0
+  unresolved: 0
+  new_errors: 0
+  resolution_rate: 1.0
+source_hash: sha256:d80d8199020132d8f265532802508ae661d1a53cfbf07708148dc1d7ba8b5f6e

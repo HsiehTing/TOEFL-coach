@@ -1,2 +1,6 @@
 attempt_id,submitted_at,task_type,timed,score,word_count,duration_seconds,counted_errors,errors_per_100_words,meaning_changing_per_100_words,task_metrics
 W-AD-20260731-001,2026-07-31T00:00:00+08:00,academic_discussion,,3,183,,7,3.83,1.09,"{""elaboration"": ""partial"", ""original_contribution"": ""limited"", ""position"": ""clear"", ""prompt_alignment"": ""limited""}"
+W-AD-20260805-001,2026-08-05T00:00:00+08:00,academic_discussion,,3,168,,7,4.17,0.00,"{""elaboration"": ""partial"", ""original_contribution"": ""generally_successful"", ""position"": ""clear"", ""prompt_alignment"": ""clear""}"
+W-EM-20260805-001,2026-08-05T00:00:00+08:00,email,,4,139,,2,1.44,0.00,"{""action_formulation"": ""partial"", ""purpose"": ""clear"", ""register"": ""generally_appropriate"", ""required_points"": ""complete""}"
+W-EM-20260805-002,2026-08-05T00:00:00+08:00,email,,4,172,,7,4.07,0.00,"{""action_formulation"": ""generally_clear"", ""purpose"": ""clear"", ""register"": ""generally_appropriate"", ""required_points"": ""complete""}"
+W-AD-20260809-001,2026-08-09T11:40:17+08:00,academic_discussion,,3,220,,6,2.73,0.45,"{""elaboration"": ""partial"", ""original_contribution"": ""generally_successful"", ""position"": ""internally_inconsistent"", ""prompt_alignment"": ""partial""}"

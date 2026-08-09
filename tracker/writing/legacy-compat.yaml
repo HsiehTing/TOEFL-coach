@@ -1,0 +1,301 @@
+version: 1
+modality: writing
+source_records_modified: false
+synthetic_lineage_order:
+- W-AD-20260731-001
+- W-AD-20260805-001
+- W-EM-20260805-001
+- W-EM-20260805-002
+- W-AD-20260805-001-R1
+- W-EM-20260805-001-R1
+- W-EM-20260805-002-R1
+- W-AD-20260805-001-R2
+- W-EM-20260805-002-R2
+- W-AD-20260805-001-R3
+- W-EM-20260805-002-R3
+- W-AD-20260805-001-R4
+- W-EM-20260805-002-R4
+- W-AD-20260805-001-R5
+- W-EM-20260805-002-R5
+- W-AD-20260805-001-R6
+- W-AD-20260805-001-R7
+timestamp_conflict_attempt_ids:
+- W-EM-20260805-002-R1
+- W-AD-20260805-001-R2
+- W-EM-20260805-002-R2
+- W-AD-20260805-001-R3
+- W-EM-20260805-002-R3
+- W-AD-20260805-001-R4
+- W-EM-20260805-002-R4
+- W-AD-20260805-001-R5
+- W-EM-20260805-002-R5
+- W-AD-20260805-001-R6
+- W-AD-20260805-001-R7
+manual_review:
+  historical_status: Preserve legacy event values; review before converting them to
+    current status semantics.
+  evidence_excerpts: Review any event excerpt that does not occur in its immutable
+    response before registering a compatibility exception.
+approved_exceptions:
+  historical_status:
+  - event_id: ERR-20260805-0001
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0003
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0004
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0005
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0006
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0007
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0008
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0009
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0010
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0011
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0012
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0013
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0014
+    stored_status: new
+    recomputed_status: null
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0015
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0016
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0017
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0018
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0019
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0020
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0021
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0022
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0023
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0024
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0025
+    stored_status: new
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0026
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0027
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0028
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0029
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0030
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0031
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0032
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0033
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0034
+    stored_status: new
+    recomputed_status: recurring
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0037
+    stored_status: recurring
+    recomputed_status: new
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260805-0038
+    stored_status: recurring
+    recomputed_status: new
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0005
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0007
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0008
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0009
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0013
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0014
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0015
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0019
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0020
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0021
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0025
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0027
+    stored_status: new
+    recomputed_status: null
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0029
+    stored_status: recurring
+    recomputed_status: persistent
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0032
+    stored_status: new
+    recomputed_status: null
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0034
+    stored_status: new
+    recomputed_status: null
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  source_excerpt:
+  - event_id: ERR-20260805-0023
+    source_excerpt: compare the career growth ... how easily you can get to the nature,
+      and your distance
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
+  - event_id: ERR-20260806-0009
+    source_excerpt: Although electric-cars provide a more eco-friendly option for
+      people who are not accessible to public transportation. However, it overlooks
+    reason: Learner approved the 2026-08-08 legacy review; preserve source values
+      while derived reports use recomputed semantics.
