@@ -26,6 +26,12 @@ After feedback is accepted, register the immutable attempt through `tools/regist
 - For counted errors in either route: read `references/writing-error-taxonomy.md`.
 - Do not load the other task route.
 
+## Source fidelity
+
+Treat the learner's submitted response as the source of truth. If the learner also provides a correction table, use it only as a draft; the response overrides it. Copy every `原句` excerpt verbatim, without silently repairing articles, capitalization, word forms, or punctuation. If no complete response is available, use the table's left-hand text verbatim and do not infer omitted words.
+
+Before delivering a correction table, verify each row: the quoted original contains the diagnosed problem, the minimal correction changes that problem, and the reason matches the exact change. Omit a row that fails this check rather than reporting an error already absent from the quoted original.
+
 ## First-round output
 
 Give these parts in order:
@@ -40,9 +46,13 @@ Give these parts in order:
 
 第一輪不提供完整範文。Do not convert the task result to a Writing section band.
 
+For every counted sentence-level issue, give only the minimal correction in the evidence table. Explain the error before the learner revises; do not provide a clearer alternative phrasing in first-round feedback. Keep each diagnosis to one short sentence naming the main error and rule; add a second sentence only when the correction changes the task meaning.
+
 ## Revision output
 
 Compare only against the assigned priorities. Report resolved, partly resolved, unresolved, and newly introduced issues; calculate target-resolution rate. A revision never increases the formal-attempt count. Provide a high-scoring model only after the learner has attempted the revision.
+
+After the priority comparison, provide up to three `Clearer options after revision:` for sentences the learner has revised. Use each option to show a more natural or precise way to express the learner's own intended meaning. Keep every option to one sentence, preserve the learner's position and ideas, and never combine options into a complete model post. For remaining or newly introduced errors, give only the minimal correction and one short diagnosis.
 
 ## Recurrence and progress output
 
