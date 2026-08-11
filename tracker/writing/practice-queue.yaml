@@ -1,9 +1,11 @@
 version: 1
 result_label: diagnostic_practice_queue
 source_records_modified: false
+active_training_plan_count: 3
 actions:
 - action_id: PQ-01-DRILL
   kind: targeted_drill
+  recommendation_id: PLAN-W-AD-20260809-002
   task_type: academic_discussion
   source_attempt_id: W-AD-20260809-002
   target_codes: &id001
@@ -18,12 +20,65 @@ actions:
     answer key, then record the result as a targeted drill.
 - action_id: PQ-02-TRANSFER
   kind: fresh_transfer_check
+  recommendation_id: PLAN-W-AD-20260809-002
   task_type: academic_discussion
   source_action_id: PQ-01-DRILL
   target_codes: *id001
   status: blocked_by_pack_drift
   status_reason: A prior drill uses a different target-code set; generate the current
     plan's pack.
+  instruction: After meeting the drill threshold, complete one new formal prompt on
+    this route. Confirm relevant opportunities; do not reuse the source prompt.
+- action_id: PQ-03-DRILL
+  kind: targeted_drill
+  recommendation_id: PLAN-W-EM-20260808-001
+  task_type: email
+  source_attempt_id: W-EM-20260808-001
+  target_codes: &id002
+  - GRAM-CLAUSE
+  - GRAM-AGREEMENT
+  item_count: 8
+  minimum_accuracy: 0.8
+  status: deferred_by_priority
+  status_reason: Finish or resolve the higher-priority plan `PLAN-W-AD-20260809-002`
+    first.
+  instruction: Generate an evidence-linked drill, complete it without viewing the
+    answer key, then record the result as a targeted drill.
+- action_id: PQ-04-TRANSFER
+  kind: fresh_transfer_check
+  recommendation_id: PLAN-W-EM-20260808-001
+  task_type: email
+  source_action_id: PQ-03-DRILL
+  target_codes: *id002
+  status: deferred_by_priority
+  status_reason: Finish or resolve the higher-priority plan `PLAN-W-AD-20260809-002`
+    first.
+  instruction: After meeting the drill threshold, complete one new formal prompt on
+    this route. Confirm relevant opportunities; do not reuse the source prompt.
+- action_id: PQ-05-DRILL
+  kind: targeted_drill
+  recommendation_id: PLAN-W-EM-20260805-002
+  task_type: email
+  source_attempt_id: W-EM-20260805-002
+  target_codes: &id003
+  - GRAM-CLAUSE
+  - GRAM-AGREEMENT
+  item_count: 8
+  minimum_accuracy: 0.8
+  status: deferred_by_priority
+  status_reason: Finish or resolve the higher-priority plan `PLAN-W-AD-20260809-002`
+    first.
+  instruction: Generate an evidence-linked drill, complete it without viewing the
+    answer key, then record the result as a targeted drill.
+- action_id: PQ-06-TRANSFER
+  kind: fresh_transfer_check
+  recommendation_id: PLAN-W-EM-20260805-002
+  task_type: email
+  source_action_id: PQ-05-DRILL
+  target_codes: *id003
+  status: deferred_by_priority
+  status_reason: Finish or resolve the higher-priority plan `PLAN-W-AD-20260809-002`
+    first.
   instruction: After meeting the drill threshold, complete one new formal prompt on
     this route. Confirm relevant opportunities; do not reuse the source prompt.
 deferred_actions: []

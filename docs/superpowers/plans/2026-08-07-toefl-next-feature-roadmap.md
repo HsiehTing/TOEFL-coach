@@ -29,7 +29,7 @@ Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺�
 | 從未解決 revision 產生 training plan | 可用 | 可產生有來源、route 與目標 code 的 recommendation。 |
 | 新 pack 的答案隔離 | 已修復 | 目前 `build_drill_pack()` 的 learner markdown 不含 answer key；answer key 保持獨立。 |
 | 重新產生既有 recommendation | 阻塞 | `WD-90608621535FD7B6` 的 persisted 內容與現行 renderer 對同一 ID 的輸出不同，immutable write 因而正確拒絕覆寫，但使用者無法取得可用的新 pack。 |
-| 新生成題目的情境與獨立性 | 未修復 | 目前仍可生成公共運輸／大學設施模板，且可重複同一 prompt。 |
+| 新生成題目的情境與獨立性 | 已修復（支援情境） | 產生前會檢查 context binding 與正規化後的 prompt 唯一性；沒有對應安全模板的情境直接拒絕產生。 |
 | 作答完整性讀取 | 可用 | 讀取器會拒絕遺漏的 response field。 |
 | 開放題評量與 drill 統計 | 未修復 | 現行資料只有整組 `correct_count`；`W-DRILL-20260810-001` 同時記錄 0/8 與四題已有部分因果概念，不能可靠支持 mastery。 |
 | transfer 前置條件 | 未修復 | 現行實作驗證來源、route、prompt 與 opportunity，但未強制檢查 drill 是否達到 recommendation 的最低正確率；0/8 理論上仍可送進 transfer。 |
@@ -41,17 +41,38 @@ Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺�
 
 已完成：
 
-- pack format 升級至 version 4；renderer／schema 更新會產生新的 stable drill ID，不覆寫舊 pack。
+- pack format 升級至 version 10；renderer／schema 更新會產生新的 stable drill ID，不覆寫舊 pack。
 - 舊版或 learner artifact 含非 response 內容時，`read_completed_drill()` 會拒絕註冊。
 - transfer 會檢查 persisted drill 的最低正確率；未達門檻不能進入新題 transfer。
 - practice queue 會輸出 `ready`、`blocked_by_drill`、`blocked_by_accuracy`、`blocked_by_pack_drift`、`blocked_by_template` 等狀態與原因；目前工作區的舊 5-code drill 因與最新 2-code plan 不一致而顯示 `blocked_by_pack_drift`。
 - 回歸測試已涵蓋 version collision、legacy pack、答案混入、低正確率 transfer 與 unsupported target 狀態。
+- source prompt 現為 drill 的必要 context evidence；Academic Discussion pack 會保存 context summary 與 prompt hash，且無法辨識主題時 fail closed。品牌行銷案例已確認不再生成公共運輸／大學設施題目。
+- drill 現可保存每題 `meets_target`、`partially_meets_target`、`needs_revision` 與判定理由；`correct_count` 必須與實際達標題數一致，mastery 會另外顯示部分達標題數。
+- practice queue 現會列出所有 active training plan；目前最高優先項以外的 plan 明確標示 `deferred_by_priority`，並保留 template／accuracy／pack drift 等阻塞原因。
+- causal-chain drill 已改為每題單一、明示 25–35 字的句子作答；主張、機制、具體結果與回扣立場是同一句的語意條件，不再是四個完整句子的欄位。
+- 獨立 answer key 現會列出每題短示範答案與 `Acceptable when` 判定條件；learner drill 仍不含示範答案。
+- 每個新 pack 會產生 `assessment.json` 逐題評量模板；registration 預設讀取它並驗證題號、狀態與 `correct_count` 的一致性。
+- `validate_drill_pack()` 現在是 build 與 write 的必經品質閘門：驗證 context/template family、每題 evidence、response field、正規化 prompt 唯一性、learner／answer-key renderer 一致性，以及 learner artifact 不含示範答案或判定條件。模板池不足時會在落檔前失敗，而不是複製題目補足數量。
+- source context 現採 fail-closed template family：已支援品牌識別的 Academic Discussion，以及校園設施、職涯選擇建議、印錯文件更正的 Email；其他來源題目會明確要求先補對應模板，不再挪用不相關的固定情境。
+- Email 已新增「職涯選擇建議」與「印錯文件的緊急更正」兩個 context-safe template family；題目、示範答案與可接受條件均留在原始任務情境，並有回歸測試避免混入校園設施內容。
+- 新完成的 generated drill 在成功登錄後，會把最低門檻、來源 prompt hash 與 renderer version 轉存到標記為 `result_only` 的 targeted drill metadata，隨即刪除該 `drill-packs/WD-...` 下的 learner drill、answer key 與 assessment artifact，以及 targeted drill attempt 內的 prompt／learner response。transfer 改讀這份已登錄的最小 lineage；audit 會拒絕 result-only record 殘留的 learner content 或 item events。既有歷史 pack 與 drill attempt 不會被自動刪除。
+- practice queue 現在會在顯示「可生成 drill」前讀取來源 prompt；若缺少對應的 context-safe template，會直接標示 `blocked_by_template` 與具體原因，而不是先把使用者帶到失敗的生成步驟。
+- `review_writing_drill.py` 可對完成但尚未登錄的 drill 產生一次性的 `assessment-hints.json`：檢查句尾、句數、字數與 causal-chain 的 25–35 字／單句規則。輸出固定為 `diagnostic_only`，不會自行決定 `meets_target`，仍由教練完成語意與語言正確性判定。
+- 每個 drill item 現明確保存 `response_mode`；目前所有產生題皆為 `open_response`，評量輔助也會輸出此標記，禁止將示範答案當成唯一正解。未來若加入封閉題，必須明確標為 `closed_response` 才能使用唯一答案比對。
 
 尚未完成：
 
-- source prompt 的情境抽取與 Academic Discussion 題目保真；目前仍需移除固定公共運輸／大學設施模板。
-- 逐題 `meets_target`／`partially_meets_target`／`needs_revision` 評量與 mastery 統計重建。
-- queue 對所有 active training plan 的完整排序、延後與不支援原因呈現。
+- 開放題的語意與語言正確性判定仍由教練提供；目前自動化僅涵蓋不涉及語意評分的格式檢查。
+- 為其他真實題目情境（例如期限調整）補上各自的 context-safe template family，之後才可由該來源產生 drill。
+
+### 需求 DRILL-RETENTION-11：一次性 drill artifact 清理
+
+- Drill 題目、answer key 與逐題評量檔是當次訓練介面，不是可重複使用的題庫；完成且成功登錄後不得繼續保留在 `tracker/writing/drill-packs/`。
+- 登錄後必須保留最小 transfer lineage：drill ID、來源 attempt、target codes、item / correct count、最低門檻、來源 prompt hash、renderer version 與逐題評量結果。
+- `prepare_transfer_attempt()` 必須只依賴已登錄的最小 lineage，不得需要已刪除的 learner drill 或 answer key。
+- 清理只能發生在 targeted drill attempt 已成功寫入後；註冊失敗或尚未完成評量時，原始 pack 必須保留以便續作。
+- 新的 result-only targeted drill 不保存 prompt、learner response 或 item event；其 `source_hash` 僅作為當次已完成內容的不可逆識別，audit 不會嘗試從已刪除內容重新計算它。
+- 既有歷史 pack 不做自動刪除；只對採用此 retention contract 的新完成 drill 生效。若需要清理歷史資料，另行提供明確、可預覽的 migration 指令。
 
 ### 需求 DRILL-CONTEXT-01：來源情境必須保真
 
