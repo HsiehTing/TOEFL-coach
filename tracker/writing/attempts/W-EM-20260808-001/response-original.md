@@ -1,0 +1,6 @@
+Dear Ms.Patterson,
+Hello, my name is John. I read the email stated that our university is planning to add new facilities to the campus next semester. I am writing to propose some ideas about the new facility. I believe that my experience as a school council member would bring helpful insight to school administration.
+We can all agree that adding new facilities is essential for universities. New laboratories could strengthen the academic abilities to our university and a career center could greatly assist students exploring their careers. New facilities could benefits both faculties and students, but what facilities to choose is the real issue.
+With the Artificial Intelligence gets more advanced and being widely adapted to companies. I strongly recommend that we should build a All. laboratory. Also, according to statics form career center, 60 percent of the alumni of our university work at tech companies after graduate. Therefore I believe that building a A.l. laboratory will be a great benefit for our students.
+Although I am a member of the school council, I do not have the authority to officially involved in school administration affairs. So, It would be very kind of you to consider my propose, and bring it to the administration. If there's any questions, fell free to contact me.
+Sincerely, John.

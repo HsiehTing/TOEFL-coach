@@ -1,0 +1,45 @@
+schema_version: 1
+attempt_id: W-DRILL-20260810-001
+modality: writing
+task_type: academic_discussion
+record_type: targeted_drill
+submitted_at: '2026-08-10T18:00:00+08:00'
+practiced_at: '2026-08-10'
+timed: null
+duration_seconds: null
+assistance:
+  spellcheck: null
+  translation: null
+  other: null
+word_count: 227
+rubric_version: ets-writing-discussion-2025-applicable-2026
+standard_verified_at: '2026-08-08'
+task_score: null
+task_metrics:
+  item_accuracy: 0.0
+  complete_item_count: 0
+  item_count: 8
+  partial_logic_items: 4
+opportunities:
+  GRAM-AGREEMENT: 2
+  GRAM-CLAUSE: 4
+  LEX-COLLOCATION: 2
+  DISCUSSION-ELABORATION: 2
+  DISCUSSION-SUPPORT: 2
+parent_attempt_id: null
+revision_outcomes: null
+drill:
+  set_id: WD-90608621535FD7B6
+  target_codes:
+  - GRAM-AGREEMENT
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  - DISCUSSION-ELABORATION
+  - DISCUSSION-SUPPORT
+  item_count: 8
+  correct_count: 0
+  source_attempt_ids:
+  - W-AD-20260809-002
+  drill_pack_id: WD-90608621535FD7B6
+  recommendation_id: PLAN-W-AD-20260809-002
+source_hash: sha256:5f248dffaccb6149e4760cee60ba7ef15566be4077ece717235372d8be4bb197

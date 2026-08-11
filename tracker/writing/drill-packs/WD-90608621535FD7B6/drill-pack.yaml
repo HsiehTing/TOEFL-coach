@@ -1,0 +1,99 @@
+version: 3
+recommendation_id: PLAN-W-AD-20260809-002
+source_attempt_id: W-AD-20260809-002
+task_type: academic_discussion
+target_codes:
+- GRAM-AGREEMENT
+- GRAM-CLAUSE
+- LEX-COLLOCATION
+- DISCUSSION-ELABORATION
+- DISCUSSION-SUPPORT
+evidence_event_ids:
+- ERR-20260809-0048
+- ERR-20260809-0050
+- ERR-20260809-0052
+- ERR-20260809-0053
+- ERR-20260809-0056
+seed: 0
+drill_id: WD-90608621535FD7B6
+items:
+- item_id: I01
+  kind: clause_control
+  prompt: "Rewrite this opening sentence in natural English. Preserve the meaning, correct every grammar error, and make the brand clearly the subject of any updating action: `Whether a brand's visual designs and advertising message should be consistent or regularly update its appearance and messaging is an issue that worth discussing.`"
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0048
+    code: GRAM-CLAUSE
+  answer_guidance: The response must use a complete clause and make the brand, not its visual design, perform the updating action.
+- item_id: I02
+  kind: clause_control
+  prompt: "Rewrite this sentence in natural English so that it clearly means the decision deserves discussion. Preserve the meaning and do not copy a complete sentence from the instructions: `A brand's decision to refresh its advertising is an issue worth discussing.`"
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0048
+    code: GRAM-CLAUSE
+  answer_guidance: The answer needs a grammatical expression meaning that the issue deserves discussion.
+- item_id: I03
+  kind: clause_control
+  prompt: "Repair this sentence as one complete sentence with one clear main verb: `The first brand comes to the their minds are the brands that keep up the trends of the World Cup.`"
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0056
+    code: GRAM-CLAUSE
+  answer_guidance: Use one clear subject-verb structure to express which brand comes first to customers' minds.
+- item_id: I04
+  kind: collocation_control
+  prompt: "Rewrite this sentence with correct subject–verb agreement and natural wording: `The popularity and impression of the two brands are always in high end, and the popularity can further lead to sales.`"
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0052
+    code: DISCUSSION-ELABORATION
+  answer_guidance: Keep the intended sales connection and replace the unnatural expression `in high end`.
+- item_id: I05
+  kind: causal_chain
+  prompt: "Write one 25–35-word sentence about World Cup-themed packages. Compress these links into one sentence: brand update → customer reaction → purchase outcome → why this supports regular updating."
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0052
+    code: DISCUSSION-ELABORATION
+  answer_guidance: The sentence must contain all four links and must not use an unsupported statistic.
+- item_id: I06
+  kind: causal_chain
+  prompt: "Write one 25–35-word sentence that acknowledges Kelly's concern about trust, then explains how a company can preserve its core identity while updating its campaign; do not use `Although ... But ...`."
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0053
+    code: DISCUSSION-SUPPORT
+  answer_guidance: The sentence must acknowledge consistency, explain the updating mechanism, and return to your position.
+- item_id: I07
+  kind: causal_chain
+  prompt: "Write one 25–35-word sentence about younger customers. Use the pattern `the brand that ... is ...` and include a concrete customer or sales outcome."
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0056
+    code: GRAM-CLAUSE
+  answer_guidance: The sentence must contain a complete relative clause and a concrete result.
+- item_id: I08
+  kind: causal_chain
+  prompt: "Fresh transfer: A sports-shoe company is deciding whether to keep one advertising style for ten years or update it every two years. Choose one strategy and write one 25–35-word sentence containing claim → mechanism → outcome → link back to long-term success."
+  response_fields:
+  - response
+  evidence:
+    attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0050
+    code: GRAM-CLAUSE
+  answer_guidance: The sentence must make a clear choice and connect the strategy to a concrete long-term business result.

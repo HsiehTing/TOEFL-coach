@@ -288,6 +288,41 @@ approved_exceptions:
     recomputed_status: null
     reason: Learner approved the 2026-08-08 legacy review; preserve source values
       while derived reports use recomputed semantics.
+  - event_id: ERR-20260808-0001
+    stored_status: improving
+    recomputed_status: persistent
+    reason: Backfilled 2026-08-08 Writing practice changes chronological status recomputation;
+      preserve stored immutable event statuses.
+  - event_id: ERR-20260808-0002
+    stored_status: improving
+    recomputed_status: persistent
+    reason: Backfilled 2026-08-08 Writing practice changes chronological status recomputation;
+      preserve stored immutable event statuses.
+  - event_id: ERR-20260808-0006
+    stored_status: improving
+    recomputed_status: persistent
+    reason: Backfilled 2026-08-08 Writing practice changes chronological status recomputation;
+      preserve stored immutable event statuses.
+  - event_id: ERR-20260808-0007
+    stored_status: improving
+    recomputed_status: persistent
+    reason: Backfilled 2026-08-08 Writing practice changes chronological status recomputation;
+      preserve stored immutable event statuses.
+  - event_id: ERR-20260809-0043
+    stored_status: persistent
+    recomputed_status: improving
+    reason: Backfilled 2026-08-08 Writing practice changes chronological status recomputation;
+      preserve stored immutable event statuses.
+  - event_id: ERR-20260809-0044
+    stored_status: persistent
+    recomputed_status: improving
+    reason: Backfilled 2026-08-08 Writing practice changes chronological status recomputation;
+      preserve stored immutable event statuses.
+  - event_id: ERR-20260809-0046
+    stored_status: persistent
+    recomputed_status: improving
+    reason: Backfilled 2026-08-08 Writing practice changes chronological status recomputation;
+      preserve stored immutable event statuses.
   source_excerpt:
   - event_id: ERR-20260805-0023
     source_excerpt: compare the career growth ... how easily you can get to the nature,

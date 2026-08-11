@@ -92,3 +92,45 @@ Derived code-level comparison; not proof of mastery or a TOEFL score.
 - Not comparable (no recorded opportunity): `GRAM-ARTICLE`
 - New codes: none
 - Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-EM-20260808-001-R1` from `W-EM-20260808-001`
+- Retained codes: none
+- Opportunity-confirmed, no longer observed: none
+- Not comparable (no recorded opportunity): `EMAIL-ACTION`, `GRAM-AGREEMENT`, `GRAM-ARTICLE`, `GRAM-CLAUSE`, `LEX-COLLOCATION`, `LEX-WORDFORM`, `MECH-SPELLING`
+- New codes: none
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-EM-20260808-001-R2` from `W-EM-20260808-001-R1`
+- Retained codes: none
+- Opportunity-confirmed, no longer observed: none
+- Not comparable (no recorded opportunity): none
+- New codes: none
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-EM-20260808-001-R3` from `W-EM-20260808-001-R2`
+- Retained codes: none
+- Opportunity-confirmed, no longer observed: none
+- Not comparable (no recorded opportunity): none
+- New codes: none
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-EM-20260808-001-R4` from `W-EM-20260808-001-R3`
+- Retained codes: none
+- Opportunity-confirmed, no longer observed: none
+- Not comparable (no recorded opportunity): none
+- New codes: none
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-AD-20260809-002-R1` from `W-AD-20260809-002`
+- Retained codes: `GRAM-AGREEMENT`, `GRAM-CLAUSE`
+- Opportunity-confirmed, no longer observed: `DISCUSSION-ELABORATION`, `DISCUSSION-SUPPORT`, `LEX-WORDFORM`, `MECH-SPELLING`
+- Not comparable (no recorded opportunity): none
+- New codes: `GRAM-ARTICLE`, `LEX-COLLOCATION`
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-AD-20260809-002-R2` from `W-AD-20260809-002-R1`
+- Retained codes: `GRAM-ARTICLE`, `GRAM-CLAUSE`, `LEX-COLLOCATION`
+- Opportunity-confirmed, no longer observed: `GRAM-AGREEMENT`
+- Not comparable (no recorded opportunity): none
+- New codes: none
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.

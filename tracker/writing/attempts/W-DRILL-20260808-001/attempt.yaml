@@ -1,0 +1,38 @@
+schema_version: 1
+attempt_id: W-DRILL-20260808-001
+modality: writing
+task_type: email
+record_type: targeted_drill
+submitted_at: '2026-08-08T09:40:00+08:00'
+practiced_at: null
+timed: null
+duration_seconds: null
+assistance:
+  spellcheck: null
+  translation: null
+  other: null
+word_count: 118
+rubric_version: ets-writing-email-2025-applicable-2026
+standard_verified_at: '2026-08-08'
+task_score: null
+task_metrics:
+  item_accuracy: 1.0
+  clause_accuracy: 1.0
+  collocation_accuracy: 1.0
+opportunities:
+  GRAM-CLAUSE: 4
+  LEX-COLLOCATION: 4
+parent_attempt_id: null
+revision_outcomes: null
+drill:
+  set_id: WD-FEC885C900692CAF
+  target_codes:
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  item_count: 8
+  correct_count: 8
+  source_attempt_ids:
+  - W-EM-20260805-002
+  drill_pack_id: WD-FEC885C900692CAF
+  recommendation_id: PLAN-W-EM-20260805-002
+source_hash: sha256:7b79e14c56a70632258413d58565991354235ba102ee03d0a90f5a5a34928694

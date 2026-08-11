@@ -1,0 +1,104 @@
+DISCUSSION-ALIGNMENT:
+  status: identified
+  drill_sets: 0
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-AD-20260731-001
+DISCUSSION-BORROWING:
+  status: identified
+  drill_sets: 0
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-AD-20260731-001
+DISCUSSION-ELABORATION:
+  status: practised
+  drill_sets: 1
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-DRILL-20260810-001
+DISCUSSION-POSITION:
+  status: identified
+  drill_sets: 0
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-AD-20260809-001
+DISCUSSION-SUPPORT:
+  status: practised
+  drill_sets: 1
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-DRILL-20260810-001
+EMAIL-ACTION:
+  status: identified
+  drill_sets: 0
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-EM-20260805-001
+GRAM-AGREEMENT:
+  status: practised
+  drill_sets: 1
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-DRILL-20260810-001
+GRAM-ARTICLE:
+  status: identified
+  drill_sets: 0
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-AD-20260731-001
+GRAM-CLAUSE:
+  status: practised
+  drill_sets: 1
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-DRILL-20260810-001
+GRAM-NEGATION:
+  status: identified
+  drill_sets: 0
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-AD-20260731-001
+LEX-COLLOCATION:
+  status: practised
+  drill_sets: 1
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-DRILL-20260810-001
+LEX-WORDFORM:
+  status: identified
+  drill_sets: 0
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-AD-20260731-001
+MECH-SPELLING:
+  status: identified
+  drill_sets: 0
+  drill_accuracy: 0.0
+  formal_opportunities: 0
+  formal_errors: 0
+  evidence_attempt_ids:
+  - W-AD-20260805-001-R5

@@ -5,12 +5,15 @@ actions:
 - action_id: PQ-01-DRILL
   kind: targeted_drill
   task_type: academic_discussion
-  source_attempt_id: W-AD-20260809-001
+  source_attempt_id: W-AD-20260809-002
   target_codes: &id001
   - GRAM-CLAUSE
-  - LEX-COLLOCATION
+  - GRAM-AGREEMENT
   item_count: 8
   minimum_accuracy: 0.8
+  status: blocked_by_pack_drift
+  status_reason: A prior drill uses a different target-code set; generate the current
+    plan's pack.
   instruction: Generate an evidence-linked drill, complete it without viewing the
     answer key, then record the result as a targeted drill.
 - action_id: PQ-02-TRANSFER
@@ -18,5 +21,9 @@ actions:
   task_type: academic_discussion
   source_action_id: PQ-01-DRILL
   target_codes: *id001
+  status: blocked_by_pack_drift
+  status_reason: A prior drill uses a different target-code set; generate the current
+    plan's pack.
   instruction: After meeting the drill threshold, complete one new formal prompt on
     this route. Confirm relevant opportunities; do not reuse the source prompt.
+deferred_actions: []

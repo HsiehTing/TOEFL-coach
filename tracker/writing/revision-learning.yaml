@@ -614,3 +614,218 @@ comparisons:
     source_excerpt: public investment educes emissions
   note: Only opportunity-confirmed comparisons can show an issue was not observed
     in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260808-001-R1
+  parent_attempt_id: W-EM-20260808-001
+  retained_codes: []
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - EMAIL-ACTION
+  - GRAM-AGREEMENT
+  - GRAM-ARTICLE
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  - LEX-WORDFORM
+  - MECH-SPELLING
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260808-0001
+    code: GRAM-CLAUSE
+    source_excerpt: With the Artificial Intelligence gets more advanced and being
+      widely adapted to companies.
+  - event_id: ERR-20260808-0002
+    code: GRAM-AGREEMENT
+    source_excerpt: New facilities could benefits both faculties and students
+  - event_id: ERR-20260808-0003
+    code: GRAM-ARTICLE
+    source_excerpt: a A.l. laboratory
+  - event_id: ERR-20260808-0004
+    code: LEX-WORDFORM
+    source_excerpt: after graduate
+  - event_id: ERR-20260808-0005
+    code: LEX-WORDFORM
+    source_excerpt: consider my propose
+  - event_id: ERR-20260808-0006
+    code: LEX-COLLOCATION
+    source_excerpt: strengthen the academic abilities to our university
+  - event_id: ERR-20260808-0007
+    code: LEX-COLLOCATION
+    source_excerpt: being widely adapted to companies
+  - event_id: ERR-20260808-0008
+    code: MECH-SPELLING
+    source_excerpt: statics form career center
+  - event_id: ERR-20260808-0009
+    code: MECH-SPELLING
+    source_excerpt: fell free to contact me
+  - event_id: ERR-20260808-0010
+    code: EMAIL-ACTION
+    source_excerpt: bring it to the administration
+  revision_evidence: []
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260808-001-R2
+  parent_attempt_id: W-EM-20260808-001-R1
+  retained_codes: []
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence: []
+  revision_evidence: []
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260808-001-R3
+  parent_attempt_id: W-EM-20260808-001-R2
+  retained_codes: []
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence: []
+  revision_evidence: []
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260808-001-R4
+  parent_attempt_id: W-EM-20260808-001-R3
+  retained_codes: []
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence: []
+  revision_evidence: []
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260809-002-R1
+  parent_attempt_id: W-AD-20260809-002
+  retained_codes:
+  - GRAM-AGREEMENT
+  - GRAM-CLAUSE
+  opportunity_confirmed_no_longer_observed_codes:
+  - DISCUSSION-ELABORATION
+  - DISCUSSION-SUPPORT
+  - LEX-WORDFORM
+  - MECH-SPELLING
+  not_comparable_without_opportunity_codes: []
+  new_codes:
+  - GRAM-ARTICLE
+  - LEX-COLLOCATION
+  parent_evidence:
+  - event_id: ERR-20260809-0048
+    code: GRAM-CLAUSE
+    source_excerpt: Whether a brand's visual designs and advertising message should
+      be consistent or regularly updates its appearance and messaging is an issue
+      that worth discuss about.
+  - event_id: ERR-20260809-0049
+    code: LEX-WORDFORM
+    source_excerpt: I believe regularly updates a company's appearance and message
+      is a better marketing strategy.
+  - event_id: ERR-20260809-0050
+    code: GRAM-CLAUSE
+    source_excerpt: And I also believe that by following the trends would help a brand
+      getting more relevant to customers.
+  - event_id: ERR-20260809-0051
+    code: GRAM-AGREEMENT
+    source_excerpt: brand new package of beverages or meal that match the theme of
+      the sport event
+  - event_id: ERR-20260809-0052
+    code: DISCUSSION-ELABORATION
+    source_excerpt: And during the World Cup the popularity and impression of the
+      two brands is always in high end and further transform in to sales.
+  - event_id: ERR-20260809-0053
+    code: DISCUSSION-SUPPORT
+    source_excerpt: According to the statistics, in the year of 2026, 40% of the revenue
+      was gained during the Wold Cup.
+  - event_id: ERR-20260809-0054
+    code: MECH-SPELLING
+    source_excerpt: Wold Cup
+  - event_id: ERR-20260809-0055
+    code: GRAM-AGREEMENT
+    source_excerpt: Some argues
+  - event_id: ERR-20260809-0056
+    code: GRAM-CLAUSE
+    source_excerpt: it is unlikely of them to consider the brand that the image remain
+      unchanged since they were child.
+  revision_evidence:
+  - event_id: ERR-20260810-0001
+    code: GRAM-CLAUSE
+    source_excerpt: Whether a brand's visual designs and advertising message should
+      be consistent or regularly update its appearance and messaging is an issue that
+      worth discuss about.
+  - event_id: ERR-20260810-0002
+    code: GRAM-ARTICLE
+    source_excerpt: during FIFA World Cup
+  - event_id: ERR-20260810-0003
+    code: GRAM-AGREEMENT
+    source_excerpt: the popularity and impression of the two brands is
+  - event_id: ERR-20260810-0004
+    code: LEX-COLLOCATION
+    source_excerpt: is always in high end
+  - event_id: ERR-20260810-0005
+    code: GRAM-AGREEMENT
+    source_excerpt: can further leads
+  - event_id: ERR-20260810-0006
+    code: GRAM-AGREEMENT
+    source_excerpt: the customers gets
+  - event_id: ERR-20260810-0007
+    code: GRAM-ARTICLE
+    source_excerpt: the their mind
+  - event_id: ERR-20260810-0008
+    code: GRAM-AGREEMENT
+    source_excerpt: brand that keep
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260809-002-R2
+  parent_attempt_id: W-AD-20260809-002-R1
+  retained_codes:
+  - GRAM-ARTICLE
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  opportunity_confirmed_no_longer_observed_codes:
+  - GRAM-AGREEMENT
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260810-0001
+    code: GRAM-CLAUSE
+    source_excerpt: Whether a brand's visual designs and advertising message should
+      be consistent or regularly update its appearance and messaging is an issue that
+      worth discuss about.
+  - event_id: ERR-20260810-0002
+    code: GRAM-ARTICLE
+    source_excerpt: during FIFA World Cup
+  - event_id: ERR-20260810-0003
+    code: GRAM-AGREEMENT
+    source_excerpt: the popularity and impression of the two brands is
+  - event_id: ERR-20260810-0004
+    code: LEX-COLLOCATION
+    source_excerpt: is always in high end
+  - event_id: ERR-20260810-0005
+    code: GRAM-AGREEMENT
+    source_excerpt: can further leads
+  - event_id: ERR-20260810-0006
+    code: GRAM-AGREEMENT
+    source_excerpt: the customers gets
+  - event_id: ERR-20260810-0007
+    code: GRAM-ARTICLE
+    source_excerpt: the their mind
+  - event_id: ERR-20260810-0008
+    code: GRAM-AGREEMENT
+    source_excerpt: brand that keep
+  revision_evidence:
+  - event_id: ERR-20260810-0009
+    code: GRAM-CLAUSE
+    source_excerpt: Whether a brand's visual designs and advertising message should
+      be consistent or regularly update its appearance and messaging is an issue that
+      worth discussing.
+  - event_id: ERR-20260810-0010
+    code: GRAM-ARTICLE
+    source_excerpt: during FIFA World Cup
+  - event_id: ERR-20260810-0011
+    code: LEX-COLLOCATION
+    source_excerpt: the sport event
+  - event_id: ERR-20260810-0012
+    code: LEX-COLLOCATION
+    source_excerpt: are always in high end
+  - event_id: ERR-20260810-0013
+    code: GRAM-CLAUSE
+    source_excerpt: the first brand comes to the their minds are the brands that keep
+      up the trends of the World Cup.
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.

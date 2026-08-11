@@ -1,22 +1,14 @@
 version: 1
 result_label: diagnostic_only_progress_view
-formal_record_count: 5
+formal_record_count: 7
 recent_formals:
-- attempt_id: W-EM-20260805-001
+- attempt_id: W-EM-20260808-001
   task_type: email
-  simulated_task_score: 4
-  word_count: 139
+  simulated_task_score: 3
+  word_count: 215
   timed: null
-  counted_errors: 2
-  errors_per_100_words: 1.44
-  meaning_changing_per_100_words: 0.0
-- attempt_id: W-EM-20260805-002
-  task_type: email
-  simulated_task_score: 4
-  word_count: 172
-  timed: null
-  counted_errors: 7
-  errors_per_100_words: 4.07
+  counted_errors: 10
+  errors_per_100_words: 4.65
   meaning_changing_per_100_words: 0.0
 - attempt_id: W-AD-20260809-001
   task_type: academic_discussion
@@ -26,24 +18,44 @@ recent_formals:
   counted_errors: 6
   errors_per_100_words: 2.73
   meaning_changing_per_100_words: 0.45
+- attempt_id: W-AD-20260809-002
+  task_type: academic_discussion
+  simulated_task_score: 3
+  word_count: 227
+  timed: null
+  counted_errors: 9
+  errors_per_100_words: 3.96
+  meaning_changing_per_100_words: 0.44
 routes:
   email:
-    formal_record_count: 2
+    formal_record_count: 3
     atomic_codes:
       EMAIL-ACTION:
+        events: 3
+        formal_records: 3
+        historical_status: persistent
+      GRAM-AGREEMENT:
         events: 2
         formal_records: 2
         historical_status: recurring
-      GRAM-AGREEMENT:
+      GRAM-ARTICLE:
         events: 1
         formal_records: 1
         historical_status: new
       GRAM-CLAUSE:
-        events: 3
+        events: 4
+        formal_records: 3
+        historical_status: persistent
+      LEX-COLLOCATION:
+        events: 5
         formal_records: 2
         historical_status: recurring
-      LEX-COLLOCATION:
-        events: 3
+      LEX-WORDFORM:
+        events: 2
+        formal_records: 1
+        historical_status: new
+      MECH-SPELLING:
+        events: 2
         formal_records: 1
         historical_status: new
     skill_families:
@@ -57,8 +69,8 @@ routes:
         task_types:
         - email
         - academic_discussion
-        event_count: 4
-        formal_record_count: 2
+        event_count: 7
+        formal_record_count: 3
         evidence:
         - code: GRAM-CLAUSE
           attempt_id: W-EM-20260805-001
@@ -77,6 +89,19 @@ routes:
           attempt_id: W-EM-20260805-002
           task_type: email
           source_excerpt: If there's any questions
+        - code: GRAM-CLAUSE
+          attempt_id: W-EM-20260808-001
+          task_type: email
+          source_excerpt: With the Artificial Intelligence gets more advanced and
+            being widely adapted to companies.
+        - code: GRAM-AGREEMENT
+          attempt_id: W-EM-20260808-001
+          task_type: email
+          source_excerpt: New facilities could benefits both faculties and students
+        - code: GRAM-ARTICLE
+          attempt_id: W-EM-20260808-001
+          task_type: email
+          source_excerpt: a A.l. laboratory
       LEXICAL-NATURALNESS:
         family: LEXICAL-NATURALNESS
         members:
@@ -85,8 +110,8 @@ routes:
         task_types:
         - email
         - academic_discussion
-        event_count: 3
-        formal_record_count: 1
+        event_count: 7
+        formal_record_count: 2
         evidence:
         - code: LEX-COLLOCATION
           attempt_id: W-EM-20260805-002
@@ -100,6 +125,22 @@ routes:
           attempt_id: W-EM-20260805-002
           task_type: email
           source_excerpt: ambitious about your career
+        - code: LEX-WORDFORM
+          attempt_id: W-EM-20260808-001
+          task_type: email
+          source_excerpt: after graduate
+        - code: LEX-WORDFORM
+          attempt_id: W-EM-20260808-001
+          task_type: email
+          source_excerpt: consider my propose
+        - code: LEX-COLLOCATION
+          attempt_id: W-EM-20260808-001
+          task_type: email
+          source_excerpt: strengthen the academic abilities to our university
+        - code: LEX-COLLOCATION
+          attempt_id: W-EM-20260808-001
+          task_type: email
+          source_excerpt: being widely adapted to companies
       EMAIL-ACTION-CLARITY:
         family: EMAIL-ACTION-CLARITY
         members:
@@ -108,8 +149,8 @@ routes:
         - EMAIL-ORGANIZATION
         task_types:
         - email
-        event_count: 2
-        formal_record_count: 2
+        event_count: 3
+        formal_record_count: 3
         evidence:
         - code: EMAIL-ACTION
           attempt_id: W-EM-20260805-001
@@ -120,8 +161,12 @@ routes:
           attempt_id: W-EM-20260805-002
           task_type: email
           source_excerpt: take your time pondering the options
+        - code: EMAIL-ACTION
+          attempt_id: W-EM-20260808-001
+          task_type: email
+          source_excerpt: bring it to the administration
   academic_discussion:
-    formal_record_count: 3
+    formal_record_count: 4
     atomic_codes:
       DISCUSSION-ALIGNMENT:
         events: 1
@@ -132,28 +177,28 @@ routes:
         formal_records: 1
         historical_status: new
       DISCUSSION-ELABORATION:
-        events: 2
-        formal_records: 2
-        historical_status: recurring
+        events: 3
+        formal_records: 3
+        historical_status: persistent
       DISCUSSION-POSITION:
         events: 1
         formal_records: 1
         historical_status: new
       DISCUSSION-SUPPORT:
-        events: 1
-        formal_records: 1
-        historical_status: new
-      GRAM-AGREEMENT:
         events: 2
         formal_records: 2
         historical_status: recurring
+      GRAM-AGREEMENT:
+        events: 4
+        formal_records: 3
+        historical_status: persistent
       GRAM-ARTICLE:
         events: 2
         formal_records: 2
         historical_status: recurring
       GRAM-CLAUSE:
-        events: 4
-        formal_records: 3
+        events: 7
+        formal_records: 4
         historical_status: persistent
       GRAM-NEGATION:
         events: 1
@@ -162,11 +207,15 @@ routes:
       LEX-COLLOCATION:
         events: 2
         formal_records: 2
-        historical_status: recurring
+        historical_status: improving
       LEX-WORDFORM:
-        events: 3
-        formal_records: 3
-        historical_status: persistent
+        events: 4
+        formal_records: 4
+        historical_status: improving
+      MECH-SPELLING:
+        events: 1
+        formal_records: 1
+        historical_status: new
     skill_families:
       SENTENCE-CONTROL:
         family: SENTENCE-CONTROL
@@ -178,8 +227,8 @@ routes:
         task_types:
         - email
         - academic_discussion
-        event_count: 9
-        formal_record_count: 3
+        event_count: 14
+        formal_record_count: 4
         evidence:
         - code: GRAM-ARTICLE
           attempt_id: W-AD-20260731-001
@@ -221,6 +270,31 @@ routes:
           attempt_id: W-AD-20260809-001
           task_type: academic_discussion
           source_excerpt: government should only gives them money
+        - code: GRAM-CLAUSE
+          attempt_id: W-AD-20260809-002
+          task_type: academic_discussion
+          source_excerpt: Whether a brand's visual designs and advertising message
+            should be consistent or regularly updates its appearance and messaging
+            is an issue that worth discuss about.
+        - code: GRAM-CLAUSE
+          attempt_id: W-AD-20260809-002
+          task_type: academic_discussion
+          source_excerpt: And I also believe that by following the trends would help
+            a brand getting more relevant to customers.
+        - code: GRAM-AGREEMENT
+          attempt_id: W-AD-20260809-002
+          task_type: academic_discussion
+          source_excerpt: brand new package of beverages or meal that match the theme
+            of the sport event
+        - code: GRAM-AGREEMENT
+          attempt_id: W-AD-20260809-002
+          task_type: academic_discussion
+          source_excerpt: Some argues
+        - code: GRAM-CLAUSE
+          attempt_id: W-AD-20260809-002
+          task_type: academic_discussion
+          source_excerpt: it is unlikely of them to consider the brand that the image
+            remain unchanged since they were child.
       LEXICAL-NATURALNESS:
         family: LEXICAL-NATURALNESS
         members:
@@ -229,8 +303,8 @@ routes:
         task_types:
         - email
         - academic_discussion
-        event_count: 5
-        formal_record_count: 3
+        event_count: 6
+        formal_record_count: 4
         evidence:
         - code: LEX-WORDFORM
           attempt_id: W-AD-20260731-001
@@ -252,6 +326,11 @@ routes:
           attempt_id: W-AD-20260809-001
           task_type: academic_discussion
           source_excerpt: break their comfort zone
+        - code: LEX-WORDFORM
+          attempt_id: W-AD-20260809-002
+          task_type: academic_discussion
+          source_excerpt: I believe regularly updates a company's appearance and message
+            is a better marketing strategy.
       IDEA-DEVELOPMENT:
         family: IDEA-DEVELOPMENT
         members:
@@ -259,8 +338,8 @@ routes:
         - DISCUSSION-SUPPORT
         task_types:
         - academic_discussion
-        event_count: 3
-        formal_record_count: 3
+        event_count: 5
+        formal_record_count: 4
         evidence:
         - code: DISCUSSION-ELABORATION
           attempt_id: W-AD-20260731-001
@@ -275,6 +354,16 @@ routes:
           attempt_id: W-AD-20260809-001
           task_type: academic_discussion
           source_excerpt: a great incentive for them to break their comfort zone
+        - code: DISCUSSION-ELABORATION
+          attempt_id: W-AD-20260809-002
+          task_type: academic_discussion
+          source_excerpt: And during the World Cup the popularity and impression of
+            the two brands is always in high end and further transform in to sales.
+        - code: DISCUSSION-SUPPORT
+          attempt_id: W-AD-20260809-002
+          task_type: academic_discussion
+          source_excerpt: According to the statistics, in the year of 2026, 40% of
+            the revenue was gained during the Wold Cup.
 revision_chains:
 - root_attempt_id: W-AD-20260731-001
   revision_ids: []
@@ -360,6 +449,30 @@ revision_chains:
   first_full_resolution_round: null
   total_new_errors: 5
   switch_recommended_after_round: 2
+- root_attempt_id: W-EM-20260808-001
+  revision_ids:
+  - W-EM-20260808-001-R1
+  - W-EM-20260808-001-R2
+  - W-EM-20260808-001-R3
+  - W-EM-20260808-001-R4
+  latest_revision_id: W-EM-20260808-001-R4
+  round_count: 4
+  score_trajectory:
+  - 3
+  - 3
+  - 3
+  - 3
+  - 3
+  latest_outcome:
+    assigned: 3
+    resolved: 0
+    partly_resolved: 3
+    unresolved: 0
+    new_errors: 0
+    resolution_rate: 0.0
+  first_full_resolution_round: null
+  total_new_errors: 4
+  switch_recommended_after_round: 2
 - root_attempt_id: W-AD-20260809-001
   revision_ids: []
   latest_revision_id: null
@@ -369,6 +482,26 @@ revision_chains:
   latest_outcome: null
   first_full_resolution_round: null
   total_new_errors: 0
+  switch_recommended_after_round: 2
+- root_attempt_id: W-AD-20260809-002
+  revision_ids:
+  - W-AD-20260809-002-R1
+  - W-AD-20260809-002-R2
+  latest_revision_id: W-AD-20260809-002-R2
+  round_count: 2
+  score_trajectory:
+  - 3
+  - 3
+  - 3
+  latest_outcome:
+    assigned: 3
+    resolved: 0
+    partly_resolved: 2
+    unresolved: 1
+    new_errors: 0
+    resolution_rate: 0.0
+  first_full_resolution_round: null
+  total_new_errors: 2
   switch_recommended_after_round: 2
 mastery:
   DISCUSSION-ALIGNMENT:
@@ -388,13 +521,13 @@ mastery:
     evidence_attempt_ids:
     - W-AD-20260731-001
   DISCUSSION-ELABORATION:
-    status: identified
-    drill_sets: 0
+    status: practised
+    drill_sets: 1
     drill_accuracy: 0.0
     formal_opportunities: 0
     formal_errors: 0
     evidence_attempt_ids:
-    - W-AD-20260731-001
+    - W-DRILL-20260810-001
   DISCUSSION-POSITION:
     status: identified
     drill_sets: 0
@@ -404,13 +537,13 @@ mastery:
     evidence_attempt_ids:
     - W-AD-20260809-001
   DISCUSSION-SUPPORT:
-    status: identified
-    drill_sets: 0
+    status: practised
+    drill_sets: 1
     drill_accuracy: 0.0
     formal_opportunities: 0
     formal_errors: 0
     evidence_attempt_ids:
-    - W-AD-20260805-001
+    - W-DRILL-20260810-001
   EMAIL-ACTION:
     status: identified
     drill_sets: 0
@@ -420,13 +553,13 @@ mastery:
     evidence_attempt_ids:
     - W-EM-20260805-001
   GRAM-AGREEMENT:
-    status: identified
-    drill_sets: 0
+    status: practised
+    drill_sets: 1
     drill_accuracy: 0.0
     formal_opportunities: 0
     formal_errors: 0
     evidence_attempt_ids:
-    - W-AD-20260805-001
+    - W-DRILL-20260810-001
   GRAM-ARTICLE:
     status: identified
     drill_sets: 0
@@ -436,13 +569,14 @@ mastery:
     evidence_attempt_ids:
     - W-AD-20260731-001
   GRAM-CLAUSE:
-    status: identified
-    drill_sets: 0
-    drill_accuracy: 0.0
+    status: practised
+    drill_sets: 2
+    drill_accuracy: 0.5
     formal_opportunities: 0
     formal_errors: 0
     evidence_attempt_ids:
-    - W-AD-20260731-001
+    - W-DRILL-20260808-001
+    - W-DRILL-20260810-001
   GRAM-NEGATION:
     status: identified
     drill_sets: 0
@@ -452,13 +586,14 @@ mastery:
     evidence_attempt_ids:
     - W-AD-20260731-001
   LEX-COLLOCATION:
-    status: identified
-    drill_sets: 0
-    drill_accuracy: 0.0
+    status: practised
+    drill_sets: 2
+    drill_accuracy: 0.5
     formal_opportunities: 0
     formal_errors: 0
     evidence_attempt_ids:
-    - W-AD-20260805-001
+    - W-DRILL-20260808-001
+    - W-DRILL-20260810-001
   LEX-WORDFORM:
     status: identified
     drill_sets: 0
@@ -477,13 +612,13 @@ mastery:
     - W-AD-20260805-001-R5
 weakness_signals:
 - code: GRAM-CLAUSE
-  priority_score: 182.67
-  historical_status: persistent
-  formal_records_affected: 5
-  counted_events: 7
-  opportunities: 13
-  recent_counted_events: 4
-  recent_opportunities: 6
+  priority_score: 223.56
+  historical_status: improving
+  formal_records_affected: 7
+  counted_events: 11
+  opportunities: 18
+  recent_counted_events: 5
+  recent_opportunities: 9
   max_severity: 2
   evidence:
   - attempt_id: W-AD-20260731-001
@@ -502,6 +637,19 @@ weakness_signals:
     event_id: ERR-20260809-0043
     source_excerpt: modern training programs are usually costly, many people could
       not afford it without the financial help from the government
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0048
+    source_excerpt: Whether a brand's visual designs and advertising message should
+      be consistent or regularly updates its appearance and messaging is an issue
+      that worth discuss about.
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0050
+    source_excerpt: And I also believe that by following the trends would help a brand
+      getting more relevant to customers.
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0056
+    source_excerpt: it is unlikely of them to consider the brand that the image remain
+      unchanged since they were child.
   - attempt_id: W-EM-20260805-001
     event_id: ERR-20260805-0001
     source_excerpt: The presentation is scheduled for this evening and the materials
@@ -512,14 +660,166 @@ weakness_signals:
   - attempt_id: W-EM-20260805-002
     event_id: ERR-20260805-0007
     source_excerpt: Either you decide to move or not
-- code: LEX-COLLOCATION
-  priority_score: 171.14
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0001
+    source_excerpt: With the Artificial Intelligence gets more advanced and being
+      widely adapted to companies.
+- code: GRAM-AGREEMENT
+  priority_score: 170.44
+  historical_status: improving
+  formal_records_affected: 5
+  counted_events: 6
+  opportunities: 13
+  recent_counted_events: 4
+  recent_opportunities: 9
+  max_severity: 2
+  evidence:
+  - attempt_id: W-AD-20260805-001
+    event_id: ERR-20260805-0038
+    source_excerpt: Some argues
+  - attempt_id: W-AD-20260809-001
+    event_id: ERR-20260809-0044
+    source_excerpt: government should only gives them money
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0051
+    source_excerpt: brand new package of beverages or meal that match the theme of
+      the sport event
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0055
+    source_excerpt: Some argues
+  - attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0008
+    source_excerpt: If there's any questions
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0002
+    source_excerpt: New facilities could benefits both faculties and students
+- code: LEX-WORDFORM
+  priority_score: 146.0
+  historical_status: improving
+  formal_records_affected: 5
+  counted_events: 6
+  opportunities: 15
+  recent_counted_events: 4
+  recent_opportunities: 10
+  max_severity: 2
+  evidence:
+  - attempt_id: W-AD-20260731-001
+    event_id: ERR-20260731-0004
+    source_excerpt: in a objected way
+  - attempt_id: W-AD-20260805-001
+    event_id: ERR-20260805-0040
+    source_excerpt: the amount of carbon dioxide emitted was differ largely
+  - attempt_id: W-AD-20260809-001
+    event_id: ERR-20260809-0045
+    source_excerpt: financial aids
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0049
+    source_excerpt: I believe regularly updates a company's appearance and message
+      is a better marketing strategy.
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0004
+    source_excerpt: after graduate
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0005
+    source_excerpt: consider my propose
+- code: MECH-SPELLING
+  priority_score: 140.0
+  historical_status: recurring
+  formal_records_affected: 2
+  counted_events: 3
+  opportunities: 4
+  recent_counted_events: 3
+  recent_opportunities: 4
+  max_severity: 1
+  evidence:
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0054
+    source_excerpt: Wold Cup
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0008
+    source_excerpt: statics form career center
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0009
+    source_excerpt: fell free to contact me
+- code: DISCUSSION-POSITION
+  priority_score: 135.0
+  historical_status: new
+  formal_records_affected: 1
+  counted_events: 1
+  opportunities: 1
+  recent_counted_events: 1
+  recent_opportunities: 1
+  max_severity: 3
+  evidence:
+  - attempt_id: W-AD-20260809-001
+    event_id: ERR-20260809-0042
+    source_excerpt: Overall, I think that a better way is providing free modern technologies
+      training programs while giving them partial financial aid.
+- code: EMAIL-ACTION
+  priority_score: 134.0
   historical_status: persistent
   formal_records_affected: 3
-  counted_events: 5
-  opportunities: 14
-  recent_counted_events: 4
-  recent_opportunities: 7
+  counted_events: 3
+  opportunities: 3
+  recent_counted_events: 1
+  recent_opportunities: 1
+  max_severity: 2
+  evidence:
+  - attempt_id: W-EM-20260805-001
+    event_id: ERR-20260805-0002
+    source_excerpt: prioritize this issue and reprint the correct files right away
+  - attempt_id: W-EM-20260805-002
+    event_id: ERR-20260805-0009
+    source_excerpt: take your time pondering the options
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0010
+    source_excerpt: bring it to the administration
+- code: DISCUSSION-ELABORATION
+  priority_score: 107.33
+  historical_status: persistent
+  formal_records_affected: 3
+  counted_events: 3
+  opportunities: 10
+  recent_counted_events: 2
+  recent_opportunities: 6
+  max_severity: 2
+  evidence:
+  - attempt_id: W-AD-20260731-001
+    event_id: ERR-20260731-0007
+    source_excerpt: modern issues like gender equality, A.I. governance
+  - attempt_id: W-AD-20260809-001
+    event_id: ERR-20260809-0047
+    source_excerpt: a great incentive for them to break their comfort zone
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0052
+    source_excerpt: And during the World Cup the popularity and impression of the
+      two brands is always in high end and further transform in to sales.
+- code: DISCUSSION-SUPPORT
+  priority_score: 101.0
+  historical_status: recurring
+  formal_records_affected: 2
+  counted_events: 2
+  opportunities: 4
+  recent_counted_events: 1
+  recent_opportunities: 2
+  max_severity: 3
+  evidence:
+  - attempt_id: W-AD-20260805-001
+    event_id: ERR-20260805-0041
+    source_excerpt: investing public transportation is a more financially stable way
+      than offering financial incentives
+  - attempt_id: W-AD-20260809-002
+    event_id: ERR-20260809-0053
+    source_excerpt: According to the statistics, in the year of 2026, 40% of the revenue
+      was gained during the Wold Cup.
+- code: LEX-COLLOCATION
+  priority_score: 100.0
+  historical_status: improving
+  formal_records_affected: 4
+  counted_events: 7
+  opportunities: 20
+  recent_counted_events: 3
+  recent_opportunities: 10
   max_severity: 2
   evidence:
   - attempt_id: W-AD-20260805-001
@@ -537,98 +837,20 @@ weakness_signals:
   - attempt_id: W-EM-20260805-002
     event_id: ERR-20260805-0005
     source_excerpt: ambitious about your career
-- code: EMAIL-ACTION
-  priority_score: 148.0
-  historical_status: recurring
-  formal_records_affected: 2
-  counted_events: 2
-  opportunities: 2
-  recent_counted_events: 2
-  recent_opportunities: 2
-  max_severity: 2
-  evidence:
-  - attempt_id: W-EM-20260805-001
-    event_id: ERR-20260805-0002
-    source_excerpt: prioritize this issue and reprint the correct files right away
-  - attempt_id: W-EM-20260805-002
-    event_id: ERR-20260805-0009
-    source_excerpt: take your time pondering the options
-- code: DISCUSSION-POSITION
-  priority_score: 145.0
-  historical_status: new
-  formal_records_affected: 1
-  counted_events: 1
-  opportunities: 1
-  recent_counted_events: 1
-  recent_opportunities: 1
-  max_severity: 3
-  evidence:
-  - attempt_id: W-AD-20260809-001
-    event_id: ERR-20260809-0042
-    source_excerpt: Overall, I think that a better way is providing free modern technologies
-      training programs while giving them partial financial aid.
-- code: GRAM-AGREEMENT
-  priority_score: 114.0
-  historical_status: persistent
-  formal_records_affected: 3
-  counted_events: 3
-  opportunities: 8
-  recent_counted_events: 2
-  recent_opportunities: 5
-  max_severity: 2
-  evidence:
-  - attempt_id: W-AD-20260805-001
-    event_id: ERR-20260805-0038
-    source_excerpt: Some argues
-  - attempt_id: W-AD-20260809-001
-    event_id: ERR-20260809-0044
-    source_excerpt: government should only gives them money
-  - attempt_id: W-EM-20260805-002
-    event_id: ERR-20260805-0008
-    source_excerpt: If there's any questions
-- code: DISCUSSION-ELABORATION
-  priority_score: 81.33
-  historical_status: recurring
-  formal_records_affected: 2
-  counted_events: 2
-  opportunities: 7
-  recent_counted_events: 1
-  recent_opportunities: 3
-  max_severity: 2
-  evidence:
-  - attempt_id: W-AD-20260731-001
-    event_id: ERR-20260731-0007
-    source_excerpt: modern issues like gender equality, A.I. governance
-  - attempt_id: W-AD-20260809-001
-    event_id: ERR-20260809-0047
-    source_excerpt: a great incentive for them to break their comfort zone
-- code: LEX-WORDFORM
-  priority_score: 79.0
-  historical_status: persistent
-  formal_records_affected: 3
-  counted_events: 3
-  opportunities: 9
-  recent_counted_events: 1
-  recent_opportunities: 4
-  max_severity: 2
-  evidence:
-  - attempt_id: W-AD-20260731-001
-    event_id: ERR-20260731-0004
-    source_excerpt: in a objected way
-  - attempt_id: W-AD-20260805-001
-    event_id: ERR-20260805-0040
-    source_excerpt: the amount of carbon dioxide emitted was differ largely
-  - attempt_id: W-AD-20260809-001
-    event_id: ERR-20260809-0045
-    source_excerpt: financial aids
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0006
+    source_excerpt: strengthen the academic abilities to our university
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0007
+    source_excerpt: being widely adapted to companies
 - code: GRAM-ARTICLE
-  priority_score: 18
-  historical_status: recurring
-  formal_records_affected: 2
-  counted_events: 2
-  opportunities: 4
-  recent_counted_events: 0
-  recent_opportunities: 0
+  priority_score: 84.0
+  historical_status: persistent
+  formal_records_affected: 3
+  counted_events: 3
+  opportunities: 6
+  recent_counted_events: 1
+  recent_opportunities: 2
   max_severity: 2
   evidence:
   - attempt_id: W-AD-20260731-001
@@ -637,6 +859,9 @@ weakness_signals:
   - attempt_id: W-AD-20260805-001
     event_id: ERR-20260805-0035
     source_excerpt: is topic that worth discussing
+  - attempt_id: W-EM-20260808-001
+    event_id: ERR-20260808-0003
+    source_excerpt: a A.l. laboratory
 - code: DISCUSSION-ALIGNMENT
   priority_score: 15
   historical_status: new
@@ -676,37 +901,27 @@ weakness_signals:
   - attempt_id: W-AD-20260731-001
     event_id: ERR-20260731-0002
     source_excerpt: history can be presented in a biased way
-- code: DISCUSSION-SUPPORT
-  priority_score: 12
-  historical_status: new
-  formal_records_affected: 1
-  counted_events: 1
-  opportunities: 2
-  recent_counted_events: 0
-  recent_opportunities: 0
-  max_severity: 2
-  evidence:
-  - attempt_id: W-AD-20260805-001
-    event_id: ERR-20260805-0041
-    source_excerpt: investing public transportation is a more financially stable way
-      than offering financial incentives
 next_focuses:
 - code: GRAM-CLAUSE
-  reason: '4 counted events across 6 recent opportunities; 5 formal records affected;
-    status: persistent.'
-- code: LEX-COLLOCATION
-  reason: '4 counted events across 7 recent opportunities; 3 formal records affected;
-    status: persistent.'
+  reason: '5 counted events across 9 recent opportunities; 7 formal records affected;
+    status: improving.'
+- code: GRAM-AGREEMENT
+  reason: '4 counted events across 9 recent opportunities; 5 formal records affected;
+    status: improving.'
 data_quality:
   timing_unknown_attempt_ids:
   - W-AD-20260731-001
   - W-AD-20260805-001
   - W-EM-20260805-001
   - W-EM-20260805-002
+  - W-EM-20260808-001
   - W-AD-20260809-001
+  - W-AD-20260809-002
   assistance_unknown_attempt_ids:
   - W-AD-20260731-001
   - W-AD-20260805-001
   - W-EM-20260805-001
   - W-EM-20260805-002
+  - W-EM-20260808-001
   - W-AD-20260809-001
+  - W-AD-20260809-002
