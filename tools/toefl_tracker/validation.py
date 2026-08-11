@@ -90,7 +90,10 @@ def validate_attempt(data: dict, manifest: dict) -> None:
             if not isinstance(drill, dict):
                 raise ValidationError("targeted_drill requires drill metadata")
             required_drill = {"set_id", "target_codes", "item_count", "correct_count", "source_attempt_ids"}
-            optional_drill = {"drill_pack_id", "recommendation_id"}
+            optional_drill = {
+                "drill_pack_id", "recommendation_id", "item_results",
+                "minimum_accuracy", "source_prompt_hash", "pack_version", "artifact_retention",
+            }
             if not required_drill <= set(drill) <= required_drill | optional_drill:
                 raise ValidationError("targeted_drill metadata fields are invalid")
             if ("drill_pack_id" in drill) != ("recommendation_id" in drill):
@@ -100,6 +103,23 @@ def validate_attempt(data: dict, manifest: dict) -> None:
                 or not isinstance(drill["recommendation_id"], str) or not drill["recommendation_id"].strip()
             ):
                 raise ValidationError("targeted_drill generated-pack metadata is invalid")
+            inline_lineage = {
+                "minimum_accuracy", "source_prompt_hash", "pack_version", "artifact_retention",
+            }
+            if set(drill) & inline_lineage and not inline_lineage <= set(drill):
+                raise ValidationError("targeted_drill inline transfer lineage is incomplete")
+            if inline_lineage <= set(drill) and "drill_pack_id" not in drill:
+                raise ValidationError("targeted_drill inline transfer lineage requires a generated pack ID")
+            if inline_lineage <= set(drill) and (
+                type(drill["minimum_accuracy"]) not in {int, float}
+                or not 0 < drill["minimum_accuracy"] <= 1
+                or not isinstance(drill["source_prompt_hash"], str)
+                or not re.fullmatch(r"sha256:[0-9a-f]{64}", drill["source_prompt_hash"])
+                or type(drill["pack_version"]) is not int
+                or drill["pack_version"] < 5
+                or drill["artifact_retention"] != "result_only"
+            ):
+                raise ValidationError("targeted_drill inline transfer lineage is invalid")
             if not isinstance(drill["set_id"], str) or not drill["set_id"].strip():
                 raise ValidationError("targeted_drill set_id must be non-empty")
             codes = drill["target_codes"]
@@ -111,6 +131,28 @@ def validate_attempt(data: dict, manifest: dict) -> None:
                 raise ValidationError("targeted_drill item_count must be positive")
             if type(drill["correct_count"]) is not int or not 0 <= drill["correct_count"] <= drill["item_count"]:
                 raise ValidationError("targeted_drill correct_count must be within item_count")
+            item_results = drill.get("item_results")
+            if item_results is not None:
+                if not isinstance(item_results, list) or len(item_results) != drill["item_count"]:
+                    raise ValidationError("targeted_drill item_results must cover every item")
+                seen_item_ids = set()
+                meets_target = 0
+                for item in item_results:
+                    if not isinstance(item, dict) or set(item) != {"item_id", "status", "reason"}:
+                        raise ValidationError("targeted_drill item result fields are invalid")
+                    item_id = item["item_id"]
+                    status = item["status"]
+                    reason = item["reason"]
+                    if not isinstance(item_id, str) or not item_id.strip() or item_id in seen_item_ids:
+                        raise ValidationError("targeted_drill item result IDs must be unique strings")
+                    if status not in {"meets_target", "partially_meets_target", "needs_revision"}:
+                        raise ValidationError("targeted_drill item result status is invalid")
+                    if not isinstance(reason, str) or not reason.strip():
+                        raise ValidationError("targeted_drill item result reason must be a non-empty string")
+                    seen_item_ids.add(item_id)
+                    meets_target += status == "meets_target"
+                if drill["correct_count"] != meets_target:
+                    raise ValidationError("targeted_drill correct_count must match meets_target item results")
             source_attempt_ids = drill["source_attempt_ids"]
             if not isinstance(source_attempt_ids, list) or any(
                 not isinstance(value, str) or not value.strip() for value in source_attempt_ids

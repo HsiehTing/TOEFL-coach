@@ -49,6 +49,48 @@ def test_targeted_drill_requires_bounded_performance_metadata() -> None:
         validate_attempt(attempt, MANIFEST)
 
 
+def test_targeted_drill_requires_complete_inline_transfer_lineage() -> None:
+    attempt = drill_attempt()
+    attempt["drill"].update(
+        {
+            "drill_pack_id": "WD-0000000000000001",
+            "recommendation_id": "PLAN-W-SOURCE-001",
+            "minimum_accuracy": 0.8,
+        }
+    )
+
+    with pytest.raises(ValidationError, match="inline transfer lineage is incomplete"):
+        validate_attempt(attempt, MANIFEST)
+
+    attempt["drill"].update(
+        {
+            "source_prompt_hash": "sha256:" + "0" * 64,
+            "pack_version": 9,
+            "artifact_retention": "result_only",
+        }
+    )
+    validate_attempt(attempt, MANIFEST)
+
+
+def test_targeted_drill_preserves_per_item_partial_results() -> None:
+    attempt = drill_attempt()
+    attempt["drill"]["item_results"] = [
+        {
+            "item_id": f"I{index:02d}",
+            "status": "meets_target" if index <= 6 else "partially_meets_target" if index == 7 else "needs_revision",
+            "reason": "Fixture assessment evidence.",
+        }
+        for index in range(1, 9)
+    ]
+    attempt["drill"]["correct_count"] = 6
+
+    validate_attempt(attempt, MANIFEST)
+
+    attempt["drill"]["correct_count"] = 7
+    with pytest.raises(ValidationError, match="match meets_target"):
+        validate_attempt(attempt, MANIFEST)
+
+
 def test_targeted_drill_registration_persists_without_formal_score(tmp_path: Path) -> None:
     attempt = drill_attempt()
     destination = register_writing_attempt(
@@ -159,3 +201,25 @@ def test_mastery_progresses_from_drills_to_transfer_and_can_relapse(tmp_path: Pa
     path = write_mastery(tmp_path)
     assert path.exists()
     assert "GRAM-CLAUSE" in path.read_text(encoding="utf-8")
+
+
+def test_mastery_reports_partial_drill_items(tmp_path: Path) -> None:
+    attempt = drill_attempt()
+    attempt["drill"]["item_results"] = [
+        {
+            "item_id": f"I{index:02d}",
+            "status": "partially_meets_target" if index <= 2 else "needs_revision",
+            "reason": "Fixture assessment evidence.",
+        }
+        for index in range(1, 9)
+    ]
+    attempt["drill"]["correct_count"] = 0
+    directory = tmp_path / "tracker/writing/attempts" / attempt["attempt_id"]
+    directory.mkdir(parents=True)
+    import yaml
+
+    (directory / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    (directory / "events.jsonl").write_text("", encoding="utf-8")
+    mastery = derive_mastery(tmp_path)
+
+    assert mastery["GRAM-CLAUSE"]["drill_partial_items"] == 2

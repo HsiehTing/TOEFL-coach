@@ -38,6 +38,10 @@ def _source_attempt(root: Path) -> dict:
     directory = root / "tracker/writing/attempts" / attempt_id
     directory.mkdir(parents=True)
     (directory / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    (directory / "prompt.md").write_text(
+        "Write a professional email asking the university to add an AI laboratory for students.",
+        encoding="utf-8",
+    )
     (directory / "events.jsonl").write_text(json.dumps(event) + "\n", encoding="utf-8")
     return attempt
 

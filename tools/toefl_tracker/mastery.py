@@ -66,6 +66,14 @@ def derive_mastery(root: Path, task_type: str | None = None) -> dict[str, dict]:
         drill_rows = data["drills"]
         item_count = sum(row["drill"]["item_count"] for row in drill_rows)
         correct_count = sum(row["drill"]["correct_count"] for row in drill_rows)
+        partial_count = sum(
+            sum(
+                item.get("status") == "partially_meets_target"
+                for item in row["drill"].get("item_results", [])
+                if isinstance(item, dict)
+            )
+            for row in drill_rows
+        )
         accuracy = correct_count / item_count if item_count else 0.0
         transfer_formals = [
             row for row in formals
@@ -80,6 +88,7 @@ def derive_mastery(root: Path, task_type: str | None = None) -> dict[str, dict]:
             "status": status,
             "drill_sets": len(drill_rows),
             "drill_accuracy": round(accuracy, 4),
+            "drill_partial_items": partial_count,
             "formal_opportunities": formal_opportunities,
             "formal_errors": formal_errors,
             "evidence_attempt_ids": list(dict.fromkeys([*data["evidence"], *(row["attempt_id"] for row in transfer_formals)])),
@@ -96,7 +105,7 @@ def write_mastery(root: Path, task_type: str | None = None) -> Path:
     for code, summary in data.items():
         lines.append(
             f"- `{code}`: {summary['status']} | drills {summary['drill_sets']} | "
-            f"accuracy {summary['drill_accuracy']:.1%} | transfer opportunities {summary['formal_opportunities']} | "
+            f"accuracy {summary['drill_accuracy']:.1%} | partial items {summary['drill_partial_items']} | transfer opportunities {summary['formal_opportunities']} | "
             f"transfer errors {summary['formal_errors']}"
         )
         lines.append(f"  - Evidence: {', '.join(summary['evidence_attempt_ids'])}")
