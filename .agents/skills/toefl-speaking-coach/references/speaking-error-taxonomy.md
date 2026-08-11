@@ -20,4 +20,4 @@
 | `INTERVIEW-COHERENCE` | Interview | Connections between ideas are unclear. |
 | `UNCLASSIFIED` | Taxonomy review | Use only as `polish` with `taxonomy_review_required: true`; it never enters rates or status. |
 
-Do not create pronunciation events from recording distortion alone. Every counted event requires an audio timestamp and `must_fix` or `should_fix`; optional refinement is `polish`.
+Do not create pronunciation, stress, rhythm, intonation, fluency, or intelligibility events from transcript-only evidence. Every counted event requires an exact learner-transcript excerpt and `must_fix` or `should_fix`; optional refinement is `polish`.

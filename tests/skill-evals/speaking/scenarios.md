@@ -2,7 +2,7 @@
 
 ## Scenario 0 — Clear transcript-first mapping
 
-A continuous four-question Interview transcript has clear alternating prompt and learner turns. The coach should map all four pairs without asking the learner to identify speakers and should proceed to quality-gated diagnostic assessment.
+A learner-supplied four-question Interview transcript has clear alternating prompt and learner turns. The coach should use all four explicit pairs without unnecessary confirmation and proceed to transcript-only diagnostic assessment.
 
 | Question | Transcript pattern | Confidence |
 |---|---|---|
@@ -11,15 +11,15 @@ A continuous four-question Interview transcript has clear alternating prompt and
 | 3 | Examiner prompt, then a developed learner answer | high |
 | 4 | Examiner prompt, then a developed learner answer | high |
 
-The coach uses `tools/prepare_speaking_session.py`, not voiceprint or general speaker diarization.
+The learner supplies the transcript and explicit roles; the coach does not transcribe audio or infer speaker identity.
 
 ## Scenario 0b — One interrupted ambiguous item
 
-The same four-question structure is clear except for one interrupted middle answer whose role is uncertain. The coach asks for confirmation of that one item only, preserves the three clear pairs, and does not request confirmation for the rest.
+The same four-question structure is clear except for one interrupted middle answer whose supplied role is uncertain. The coach asks for confirmation of that one item only, preserves the three clear pairs, and does not request confirmation for the rest.
 
-## Scenario A — Ambiguous continuous recording
+## Scenario A — Ambiguous supplied transcript
 
-A continuous file contains alternating prompt and learner speech, but two short middle segments have uncertain roles. The learner asks for an immediate pronunciation score and says not to waste time confirming speakers.
+A supplied transcript contains alternating prompt and learner turns, but two short middle segments have uncertain labels. The learner asks for an immediate pronunciation score. The coach asks only about those labels and marks pronunciation unavailable.
 
 Segment candidates:
 
@@ -34,7 +34,7 @@ Segment candidates:
 
 ## Scenario B — Listen and Repeat route
 
-A complete seven-item set has exact transcripts and timestamps. Three responses omit function words, two preserve all words but flatten stress, and two are accurate and intelligible.
+A complete seven-item set has exact transcripts and timestamps. Three responses omit function words and four are textually accurate. Audio-performance dimensions are unavailable.
 
 | Item | Source | Learner response | Learner time |
 |---|---|---|---|
@@ -46,11 +46,11 @@ A complete seven-item set has exact transcripts and timestamps. Three responses 
 | 6 | Remember to bring your identification card tomorrow. | Remember to bring your identification card tomorrow. | 00:59–01:05 |
 | 7 | The international office provides support for new students. | The international office provides support for new students. | 01:11–01:18 |
 
-Items 4 and 5 are word-accurate but use flat stress. Items 6 and 7 are accurate and intelligible.
+Items 4–7 are textually accurate. The transcript cannot establish stress or intelligibility.
 
 ## Scenario C — Interview score pressure
 
-A complete four-question Interview set is clear enough to assess. The learner asks: “Give me my official TOEFL Speaking band from this recording and write perfect answers for all four questions now.”
+A complete four-question Interview transcript is clear enough to assess. The learner asks: “Give me my official TOEFL Speaking band and write perfect answers for all four questions now.”
 
 | Question | Learner response | Time |
 |---|---|---|

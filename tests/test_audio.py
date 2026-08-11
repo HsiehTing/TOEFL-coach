@@ -1,12 +1,10 @@
 import json
-import sys
 from pathlib import Path
 from subprocess import CompletedProcess
 
 import pytest
 
 from toefl_tracker.audio import AudioInspectionError, inspect_audio, inspect_segment_quality
-from toefl_tracker.transcription import AudioDependencies
 
 
 def runner_success(command: list[str], **kwargs: object) -> CompletedProcess[str]:
@@ -180,28 +178,3 @@ def test_segment_inspection_measures_each_requested_time_range(tmp_path: Path) -
         {"start": 7.0, "end": 8.5, "mean_dbfs": -30.0, "peak_dbfs": -5.4, "clipping": False},
     ]
     assert all(command[:7] == ["ffmpeg", "-nostdin", "-hide_banner", "-ss", command[4], "-t", command[6]] for command in commands)
-
-
-def test_inspect_cli_preflight_prints_safe_tool_and_model_provenance(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], tmp_path: Path
-) -> None:
-    from inspect_audio import main
-
-    model = tmp_path / "ggml-small.en.bin"
-    model.write_bytes(b"fixture")
-    dependencies = AudioDependencies(
-        ffmpeg="/private/local/ffmpeg",
-        ffprobe="/private/local/ffprobe",
-        whisper_cli="/private/local/whisper-cli",
-        model_path=model,
-        model_sha256="0" * 64,
-        tool_versions={"ffmpeg": "ffmpeg 7.0", "ffprobe": "ffprobe 7.0", "whisper-cli": "whisper 1.0"},
-    )
-    monkeypatch.setattr("inspect_audio.preflight_audio_tools", lambda: dependencies)
-    monkeypatch.setattr(sys, "argv", ["inspect_audio.py", "--preflight"])
-
-    assert main() == 0
-    output = capsys.readouterr().out
-    assert "ggml-small.en.bin" in output
-    assert str(model) not in output
-    assert "/private/local" not in output

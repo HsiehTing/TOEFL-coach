@@ -1,4 +1,4 @@
 interface:
   display_name: "TOEFL Speaking Coach"
-  short_description: "Analyze and track TOEFL 2026 speaking practice"
-  default_prompt: "Analyze this TOEFL 2026 speaking recording, confirm the speaker mapping, and give me a focused re-recording task."
+  short_description: "Analyze TOEFL 2026 speaking transcripts and practice"
+  default_prompt: "Use $toefl-speaking-coach to analyze my TOEFL 2026 speaking transcript and assign a focused revision task."

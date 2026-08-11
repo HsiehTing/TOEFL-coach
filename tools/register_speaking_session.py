@@ -27,7 +27,7 @@ def main() -> int:
         "--transcript-segments",
         type=Path,
         required=True,
-        help="Transcript-first role-mapping artifact from prepare_speaking_session.py",
+        help="Explicit prompt/learner segment map supplied with the transcript",
     )
     args = parser.parse_args()
     prompt = args.prompt.read_text(encoding="utf-8")

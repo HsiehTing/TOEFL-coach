@@ -1,10 +1,7 @@
 import json
-import sys
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
-import yaml
 
 from toefl_tracker.models import ValidationError
 from toefl_tracker.role_mapping import infer_toefl_role_map
@@ -110,55 +107,3 @@ def test_overlapping_transcript_is_rejected_before_role_assignment() -> None:
 def test_non_mapping_input_is_rejected() -> None:
     with pytest.raises(ValidationError, match="transcript rows"):
         infer_toefl_role_map("listen_and_repeat", ["not a segment"])
-
-
-def test_prepare_cli_writes_review_artifacts_without_registering(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from prepare_speaking_session import main
-
-    source = tmp_path / "private.m4a"
-    source.write_bytes(b"private audio")
-    output = tmp_path / "review"
-    inspection = {
-        "path": str(source), "duration_seconds": 40.0, "codec": "aac",
-        "sample_rate_hz": 48000, "channels": 1, "mean_dbfs": -30.0,
-        "peak_dbfs": -5.0, "clipping": False, "decodable": True,
-        "quality": {"usable": True, "dimension_set": "all"}, "provenance": {},
-    }
-    monkeypatch.setattr(
-        "prepare_speaking_session.preflight_audio_tools",
-        lambda: SimpleNamespace(ffmpeg="ffmpeg", ffprobe="ffprobe", provenance={}),
-    )
-    monkeypatch.setattr("prepare_speaking_session.inspect_audio", lambda *args, **kwargs: inspection)
-    monkeypatch.setattr(
-        "prepare_speaking_session.transcribe_audio",
-        lambda *args, **kwargs: _rows("listen-repeat-transcript.json"),
-    )
-    monkeypatch.setattr(
-        "prepare_speaking_session.inspect_segment_quality",
-        lambda *args, **kwargs: [
-            {
-                "start": row["start"],
-                "end": row["end"],
-                "mean_dbfs": -30.0,
-                "peak_dbfs": -5.0,
-                "clipping": False,
-            }
-            for row in _rows("listen-repeat-transcript.json")[1::2]
-        ],
-    )
-    monkeypatch.setattr(sys, "argv", [
-        "prepare_speaking_session.py", "--audio", str(source), "--task-type",
-        "listen_and_repeat", "--output-dir", str(output),
-    ])
-
-    assert main() == 0
-    assert {path.name for path in output.iterdir()} == {
-        "audio-inspection.json", "transcript-segments.yaml", "segments.yaml", "source-reference.txt"
-    }
-    assert not list(output.glob("*.m4a"))
-    artifact = json.loads((output / "audio-inspection.json").read_text())
-    assert "path" not in artifact
-    mapping = yaml.safe_load((output / "transcript-segments.yaml").read_text())
-    assert mapping["requires_confirmation"] is False

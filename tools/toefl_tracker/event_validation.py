@@ -17,6 +17,7 @@ class SpeakingEvidenceContext:
     learner_segments: Sequence[Mapping[str, object]] = ()
     duration_seconds: float | int | None = None
     reliable_dimensions: Collection[str] = ()
+    transcript_only: bool = False
 
 
 def normalized_contains(response: str, excerpt: str) -> bool:
@@ -75,6 +76,21 @@ def _validate_speaking_evidence(
         return
     if context is None:
         raise ValidationError("counted speaking event requires evidence context")
+    if context.transcript_only:
+        excerpt = event.get("source_excerpt")
+        if not isinstance(excerpt, str) or not excerpt.strip():
+            raise ValidationError("counted speaking event requires a learner transcript excerpt")
+        if not any(
+            isinstance(segment, Mapping)
+            and isinstance(segment.get("text"), str)
+            and normalized_contains(segment["text"], excerpt)
+            for segment in context.learner_segments
+        ):
+            raise ValidationError("speaking excerpt is not present in learner transcript")
+        dimensions = context.reliable_dimensions
+        if entry.dimension not in dimensions:
+            raise ValidationError("speaking event requires a reliable dimension")
+        return
     timestamp = event.get("audio_timestamp")
     if not isinstance(timestamp, str):
         raise ValidationError("counted speaking event requires a timestamp")

@@ -14,7 +14,7 @@ def test_agents_file_contains_non_negotiable_coaching_rules() -> None:
         "第一輪最多三個改善目標",
         "第一輪不提供完整範文",
         "revision 不計入 formal attempt",
-        "預設不複製原始音檔",
+        "The learner supplies the transcript",
         "validate_tracker.py",
     ]
     assert all(rule in text for rule in required)

@@ -13,7 +13,7 @@ Coach this learner toward TOEFL iBT 2026 Writing and Speaking section band 6 usi
 ## Routing
 
 - Writing prompt, response, revision, or writing progress request: use `.agents/skills/toefl-writing-coach`.
-- Speaking prompt, audio, transcript, re-recording, or speaking progress request: use `.agents/skills/toefl-speaking-coach`.
+- Speaking prompt, transcript, re-recording transcript, or speaking progress request: use `.agents/skills/toefl-speaking-coach`. For audio alone, ask the learner to provide a transcript; do not transcribe it.
 - Load only the selected task route and its directly relevant references.
 - Build a Sentence belongs to the 2026 Writing section but is outside the two open-response coaching routes in this phase.
 
@@ -30,7 +30,7 @@ Coach this learner toward TOEFL iBT 2026 Writing and Speaking section band 6 usi
 - First-round feedback gives evidence, current level, why not the next level, and 第一輪最多三個改善目標。
 - 第一輪不提供完整範文；the learner revises or re-records first.
 - Separate must-fix, should-fix, and polish; polish does not count in error rates.
-- Every counted issue links to an exact excerpt or audio timestamp.
+- Every counted issue links to an exact excerpt; do not invent timestamps.
 - Explain why the work is at the current level and why it has not reached the next level.
 
 ## Persistence
@@ -44,10 +44,9 @@ Coach this learner toward TOEFL iBT 2026 Writing and Speaking section band 6 usi
 - Common language problems may cross writing routes; task-specific codes may not.
 - Common speaking problems may cross speaking routes; task-specific codes may not.
 
-## Audio Privacy
+## Speaking Transcript
 
-- Confirm examiner/learner segment mapping before formal speaking assessment.
-- Use transcript-first TOEFL structure mapping; ask only about ambiguous rows. No voiceprint or general voice-diarization inference is required.
-- Keep raw audio at its source location; a partial or incomplete map is never a formal session.
-- Do not expose private audio URLs.
-- 預設不複製原始音檔；store transcripts, segments, metrics, analysis, and source references.
+- The learner supplies the transcript and explicitly identifies prompt and learner turns.
+- Ask only about missing or ambiguous pairings; do not infer words, roles, timestamps, or audio performance.
+- A partial or incomplete transcript is never a formal session.
+- Store transcripts, labelled segments, analysis, and exact-excerpt evidence; never store raw audio or audio-derived artifacts.

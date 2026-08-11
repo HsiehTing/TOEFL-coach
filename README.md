@@ -100,46 +100,16 @@ identified → practised → provisional → transferred → controlled
 
 目前的基本門檻是：至少兩組 drill 且整體正確率達 `80%` 才能進入 `provisional`。現有 mastery 層屬於診斷基礎版；「只計算 drill 之後的新題 opportunity」與明確的 transfer chain 將在下一個 P0 milestone 補齊，因此目前的 `transferred`／`controlled` 不應單獨視為最終掌握證明。
 
-## 口說功能（選用）
+## 口說功能（逐字稿）
 
-口說轉錄完全在本機執行，另外需要：
+口說教練不再轉錄音檔。請貼上或提供逐字稿，並為每一題清楚標示題目與你的作答；時間戳可提供，但不是必要條件。
 
-- `ffmpeg` 與 `ffprobe`
-- `whisper-cli`（whisper.cpp）
-- 英文模型 `ggml-small.en.bin`
-
-macOS 可先安裝工具：
-
-```bash
-brew install ffmpeg whisper-cpp
+```text
+Item 1 — Prompt: Ask the info desk for help today.
+Item 1 — Learner: Ask info desk to help today.
 ```
 
-將模型放在專案目錄外，再設定其絕對路徑：
-
-```bash
-export TOEFL_WHISPER_MODEL="/absolute/path/to/ggml-small.en.bin"
-python3 tools/inspect_audio.py --preflight
-```
-
-前置檢查成功時會輸出工具版本、模型名稱與模型雜湊。基於隱私與完整性規則，模型與原始錄音都必須放在 repository 外。
-
-準備一段錄音供教練確認說話者：
-
-```bash
-python3 tools/prepare_speaking_session.py \
-  --audio "/absolute/path/to/recording.m4a" \
-  --task-type take_an_interview \
-  --output-dir "/absolute/path/to/private-review"
-```
-
-`--task-type` 可用：
-
-- `listen_and_repeat`：完整 7 題
-- `take_an_interview`：完整 4 題
-
-接著在 Codex 附上錄音並說明練習類型。正式評估前，教練會先請你確認 examiner／learner 的片段配對；不確定的配對不會被默認為正確。
-
-專案預設不複製原始音檔，只保存來源參照、檢查結果、逐段轉錄、角色配對、評估與時間戳事件。
+`listen_and_repeat` 需要完整 7 題，`take_an_interview` 需要完整 4 題，才可作為 formal original。未提供的音訊表現（發音、重音、節奏、流暢度與可懂度）會標示為無法評估，不會從文字臆測。
 
 ## 評分與紀錄原則
 
@@ -243,13 +213,9 @@ python3 tools/register_speaking_session.py --help
 
 不可以。Drill 正確率只用來判斷特定能力是否值得進入新題 transfer check；它不是 ETS task score，也不能換算成 Writing section band。
 
-### `inspect_audio.py --preflight` 為什麼失敗？
+### 我可以附上錄音嗎？
 
-依錯誤訊息依序確認 `ffmpeg`、`ffprobe`、`whisper-cli` 是否在 `PATH` 中，以及 `TOEFL_WHISPER_MODEL` 是否指向 repository 外、檔名完全為 `ggml-small.en.bin` 的可讀檔案。
-
-### 可以把錄音放進專案嗎？
-
-不可以。音訊流程會拒絕 repository 內的原始錄音；常見音訊格式與 `tracker/**/media/` 也已加入 `.gitignore`，降低誤提交風險。
+可以保留作為自己的參考，但教練不會轉錄或分析音檔。請同時提供可核對的逐字稿。
 
 ## 延伸閱讀
 
