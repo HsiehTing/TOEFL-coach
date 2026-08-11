@@ -24,6 +24,15 @@ def _response_name(attempt: dict[str, Any]) -> str:
     return "transcript-revision.md" if attempt["record_type"] == "revision" else "transcript-original.md"
 
 
+def _is_result_only_targeted_drill(attempt: dict[str, Any]) -> bool:
+    return (
+        attempt.get("modality") == "writing"
+        and attempt.get("record_type") == "targeted_drill"
+        and isinstance(attempt.get("drill"), dict)
+        and attempt["drill"].get("artifact_retention") == "result_only"
+    )
+
+
 def _read_events(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -95,7 +104,11 @@ def build_legacy_review(root: Path, modality: str = "writing") -> dict[str, Any]
                 sidecars[attempt_id] = []
 
         response_path = directory / _response_name(attempt)
-        if modality == "writing" and attempt.get("record_type") != "re_evaluation":
+        if (
+            modality == "writing"
+            and attempt.get("record_type") != "re_evaluation"
+            and not _is_result_only_targeted_drill(attempt)
+        ):
             try:
                 responses[attempt_id] = response_path.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError) as error:

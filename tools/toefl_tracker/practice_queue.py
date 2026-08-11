@@ -6,10 +6,11 @@ from pathlib import Path
 import yaml
 
 from toefl_tracker.canonical import load_canonical_events
-from toefl_tracker.drill_generation import supports_writing_drill
+from toefl_tracker.drill_generation import writing_drill_support_status
 from toefl_tracker.io import atomic_write_text, read_yaml
 from toefl_tracker.legacy_migration import load_legacy_compatibility, synthetic_sort_key
 from toefl_tracker.progress import build_progress_overview
+from toefl_tracker.training_plan import build_training_plan
 
 
 _COUNTED = {"must_fix", "should_fix"}
@@ -88,7 +89,7 @@ def _transfer_status(drill: dict) -> tuple[str, str]:
 
 
 def build_practice_queue(root: Path) -> dict:
-    """Sequence at most two evidence-backed drill targets and fresh transfers."""
+    """Show every active training plan, with a fallback for early history."""
     overview = build_progress_overview(root)
     formals = _formals(root)
     events = load_canonical_events(root, "writing") if formals else []
@@ -109,7 +110,8 @@ def build_practice_queue(root: Path) -> dict:
             continue
         source_id = max(candidates, key=lambda event: order[event["attempt_id"]])["attempt_id"]
         task_type = by_id[source_id]["task_type"]
-        if not supports_writing_drill(root, task_type, code):
+        supported, reason = writing_drill_support_status(root, task_type, code, source_id)
+        if not supported:
             deferred.append({
                 "action_id": f"PQ-{len(deferred) + 1:02d}-DEFERRED",
                 "kind": "unsupported_target",
@@ -117,27 +119,84 @@ def build_practice_queue(root: Path) -> dict:
                 "source_attempt_id": source_id,
                 "target_codes": [code],
                 "status": "blocked_by_template",
-                "status_reason": "No evidence-linked drill template supports this target code yet.",
+                "status_reason": reason,
             })
             continue
         key = (source_id, task_type)
         groups[key].append(code)
         sources[key] = source_id
 
+    recommendations = build_training_plan(root)["recommendations"]
+    entries: list[dict] = []
+    if recommendations:
+        for recommendation in sorted(
+            recommendations,
+            key=lambda row: order.get(row["source_attempt_id"], -1),
+            reverse=True,
+        ):
+            target_codes = recommendation["target_codes"]
+            support_statuses = [
+                writing_drill_support_status(
+                    root, recommendation["task_type"], code, recommendation["source_attempt_id"]
+                )
+                for code in target_codes
+            ]
+            unsupported = [
+                code for code, (supported, _) in zip(target_codes, support_statuses) if not supported
+            ]
+            if unsupported:
+                deferred.append({
+                    "action_id": f"PQ-{len(deferred) + 1:02d}-DEFERRED",
+                    "kind": "unsupported_target",
+                    "recommendation_id": recommendation["recommendation_id"],
+                    "task_type": recommendation["task_type"],
+                    "source_attempt_id": recommendation["source_attempt_id"],
+                    "target_codes": unsupported,
+                    "status": "blocked_by_template",
+                    "status_reason": next(
+                        reason for supported, reason in support_statuses if not supported
+                    ),
+                })
+                continue
+            entries.append({
+                "recommendation_id": recommendation["recommendation_id"],
+                "source_attempt_id": recommendation["source_attempt_id"],
+                "task_type": recommendation["task_type"],
+                "target_codes": target_codes,
+                "item_count": recommendation["drill"]["item_count"],
+                "minimum_accuracy": recommendation["drill"]["minimum_accuracy"],
+            })
+    else:
+        for source_id, task_type in sorted(groups, key=lambda key: order[key[0]], reverse=True):
+            entries.append({
+                "recommendation_id": None,
+                "source_attempt_id": sources[(source_id, task_type)],
+                "task_type": task_type,
+                "target_codes": groups[(source_id, task_type)],
+                "item_count": 8,
+                "minimum_accuracy": 0.8,
+            })
+
     actions: list[dict] = []
-    for source_id, task_type in sorted(groups, key=lambda key: order[key[0]], reverse=True):
-        target_codes = groups[(source_id, task_type)]
+    for priority, entry in enumerate(entries):
+        source_id = entry["source_attempt_id"]
+        task_type = entry["task_type"]
+        target_codes = entry["target_codes"]
         drill_id = f"PQ-{len(actions) + 1:02d}-DRILL"
         matching_drill = _latest_matching_drill(root, source_id, task_type, target_codes)
         drill_status, drill_reason = _drill_status(matching_drill)
+        if recommendations and priority > 0:
+            drill_status = "deferred_by_priority"
+            drill_reason = f"Finish or resolve the higher-priority plan `{entries[0]['recommendation_id']}` first."
         actions.append({
             "action_id": drill_id,
             "kind": "targeted_drill",
+            "recommendation_id": entry["recommendation_id"],
             "task_type": task_type,
-            "source_attempt_id": sources[(source_id, task_type)],
+            "source_attempt_id": source_id,
             "target_codes": target_codes,
-            "item_count": 8,
-            "minimum_accuracy": 0.8,
+            "item_count": entry["item_count"],
+            "minimum_accuracy": entry["minimum_accuracy"],
             "status": drill_status,
             "status_reason": drill_reason,
             "instruction": "Generate an evidence-linked drill, complete it without viewing the answer key, then record the result as a targeted drill.",
@@ -146,9 +205,13 @@ def build_practice_queue(root: Path) -> dict:
         transfer_reason = "Complete the targeted drill before starting transfer."
         if matching_drill is not None:
             transfer_status, transfer_reason = _transfer_status(matching_drill)
+        if recommendations and priority > 0:
+            transfer_status = "deferred_by_priority"
+            transfer_reason = f"Finish or resolve the higher-priority plan `{entries[0]['recommendation_id']}` first."
         actions.append({
             "action_id": f"PQ-{len(actions) + 1:02d}-TRANSFER",
             "kind": "fresh_transfer_check",
+            "recommendation_id": entry["recommendation_id"],
             "task_type": task_type,
             "source_action_id": drill_id,
             "target_codes": target_codes,
@@ -160,6 +223,7 @@ def build_practice_queue(root: Path) -> dict:
         "version": 1,
         "result_label": "diagnostic_practice_queue",
         "source_records_modified": False,
+        "active_training_plan_count": len(recommendations),
         "actions": actions,
         "deferred_actions": deferred,
     }
@@ -179,6 +243,7 @@ def write_practice_queue(root: Path) -> Path:
     for action in queue["actions"]:
         lines.extend([
             f"## `{action['action_id']}` — `{action['kind']}`",
+            *([f"- Plan: `{action['recommendation_id']}`"] if action.get("recommendation_id") else []),
             f"- Route: `{action['task_type']}`",
             f"- Targets: {', '.join(f'`{code}`' for code in action['target_codes'])}",
             f"- {action['instruction']}",
@@ -192,6 +257,7 @@ def write_practice_queue(root: Path) -> Path:
     for action in queue.get("deferred_actions", []):
         lines.extend([
             f"## `{action['action_id']}` — `{action['kind']}`",
+            *([f"- Plan: `{action['recommendation_id']}`"] if action.get("recommendation_id") else []),
             f"- Route: `{action['task_type']}`",
             f"- Targets: {', '.join(f'`{code}`' for code in action['target_codes'])}",
             f"- Status: `{action['status']}` — {action['status_reason']}",

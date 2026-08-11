@@ -50,6 +50,12 @@ def write_attempt(
     (directory / "attempt.yaml").write_text(
         yaml.safe_dump(data), encoding="utf-8"
     )
+    prompt = (
+        "Write an email recommending a new university facility for students."
+        if task_type == "email"
+        else "Discuss whether brands should update their marketing and advertising."
+    )
+    (directory / "prompt.md").write_text(prompt, encoding="utf-8")
     (directory / "events.jsonl").write_text("", encoding="utf-8")
 
 

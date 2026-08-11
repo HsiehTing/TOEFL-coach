@@ -9,6 +9,9 @@ from toefl_tracker.models import ValidationError
 
 
 DEFAULT_MINIMUM_ACCURACY = 0.8
+_INLINE_LINEAGE_FIELDS = {
+    "minimum_accuracy", "source_prompt_hash", "pack_version", "artifact_retention",
+}
 
 
 def prompt_hash(prompt: str) -> str:
@@ -46,10 +49,31 @@ def prepare_transfer_attempt(root: Path, attempt: dict, prompt: str, drill_attem
         raise ValidationError("targeted drill lacks a complete transfer lineage")
     source_id = source_ids[0]
     source = read_yaml(root / "tracker/writing/attempts" / source_id / "attempt.yaml")
-    pack = read_yaml(root / "tracker/writing/drill-packs" / pack_id / "drill-pack.yaml")
     item_count = metadata.get("item_count")
     correct_count = metadata.get("correct_count")
-    minimum_accuracy = pack.get("minimum_accuracy", DEFAULT_MINIMUM_ACCURACY)
+    inline_lineage = _INLINE_LINEAGE_FIELDS <= set(metadata)
+    if set(metadata) & _INLINE_LINEAGE_FIELDS and not inline_lineage:
+        raise ValidationError("targeted drill has incomplete inline transfer lineage")
+    if inline_lineage:
+        minimum_accuracy = metadata["minimum_accuracy"]
+        source_prompt_hash = metadata["source_prompt_hash"]
+        pack_version = metadata["pack_version"]
+    else:
+        pack_path = root / "tracker/writing/drill-packs" / pack_id / "drill-pack.yaml"
+        if not pack_path.exists():
+            raise ValidationError("targeted drill lineage was not retained and its drill pack is unavailable")
+        pack = read_yaml(pack_path)
+        minimum_accuracy = pack.get("minimum_accuracy", DEFAULT_MINIMUM_ACCURACY)
+        source_prompt_hash = pack.get("source_prompt_hash") or prompt_hash(
+            (root / "tracker/writing/attempts" / source_id / "prompt.md").read_text(encoding="utf-8")
+        )
+        pack_version = pack.get("version", 0)
+        if (
+            pack.get("source_attempt_id") != source_id
+            or pack.get("task_type") != drill.get("task_type")
+            or pack.get("target_codes") != target_codes
+        ):
+            raise ValidationError("transfer route or drill-pack lineage does not match")
     if (
         type(item_count) is not int
         or item_count <= 0
@@ -57,6 +81,11 @@ def prepare_transfer_attempt(root: Path, attempt: dict, prompt: str, drill_attem
         or not 0 <= correct_count <= item_count
         or type(minimum_accuracy) not in {int, float}
         or not 0 < minimum_accuracy <= 1
+        or not isinstance(source_prompt_hash, str)
+        or not source_prompt_hash.startswith("sha256:")
+        or type(pack_version) is not int
+        or pack_version < 4
+        or (inline_lineage and metadata["artifact_retention"] != "result_only")
     ):
         raise ValidationError("targeted drill has invalid accuracy metadata")
     if correct_count / item_count < minimum_accuracy:
@@ -68,17 +97,17 @@ def prepare_transfer_attempt(root: Path, attempt: dict, prompt: str, drill_attem
         or attempt.get("record_type") != "formal_original"
         or attempt.get("task_type") != drill.get("task_type")
         or source.get("task_type") != drill.get("task_type")
-        or pack.get("source_attempt_id") != source_id
-        or pack.get("task_type") != drill.get("task_type")
-        or pack.get("target_codes") != target_codes
-        or pack.get("version", 0) < 4
     ):
-        raise ValidationError("transfer route or drill-pack lineage does not match")
+        raise ValidationError("transfer route or drill lineage does not match")
     if set(confirmed_opportunities) != set(target_codes) or attempt.get("opportunities", {}) != confirmed_opportunities:
         raise ValidationError("transfer opportunity confirmation must match the persisted attempt opportunities")
-    source_prompt_hash = prompt_hash((root / "tracker/writing/attempts" / source_id / "prompt.md").read_text(encoding="utf-8"))
+    persisted_source_prompt_hash = prompt_hash(
+        (root / "tracker/writing/attempts" / source_id / "prompt.md").read_text(encoding="utf-8")
+    )
+    if source_prompt_hash != persisted_source_prompt_hash:
+        raise ValidationError("targeted drill source prompt lineage does not match")
     new_prompt_hash = prompt_hash(prompt)
-    if source_prompt_hash == new_prompt_hash:
+    if persisted_source_prompt_hash == new_prompt_hash:
         raise ValidationError("transfer must use a new prompt")
     prepared = deepcopy(attempt)
     prepared["transfer"] = {
@@ -87,7 +116,7 @@ def prepare_transfer_attempt(root: Path, attempt: dict, prompt: str, drill_attem
         "source_attempt_id": source_id,
         "target_codes": target_codes,
         "opportunity_confirmation": confirmed_opportunities,
-        "source_prompt_hash": source_prompt_hash,
+        "source_prompt_hash": persisted_source_prompt_hash,
         "transfer_prompt_hash": new_prompt_hash,
     }
     return prepared

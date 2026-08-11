@@ -1,11 +1,12 @@
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 import yaml
 
 from toefl_tracker.models import ValidationError
-from toefl_tracker.transfer import prepare_transfer_attempt
+from toefl_tracker.transfer import prepare_transfer_attempt, prompt_hash
 
 
 def _setup_lineage(root: Path, *, task_type: str = "email") -> dict:
@@ -23,7 +24,19 @@ def _setup_lineage(root: Path, *, task_type: str = "email") -> dict:
         "modality": "writing",
         "task_type": task_type,
         "record_type": "targeted_drill",
-        "drill": {"set_id": "set-1", "target_codes": ["GRAM-CLAUSE"], "item_count": 8, "correct_count": 7, "source_attempt_ids": [source_id], "drill_pack_id": pack_id, "recommendation_id": "PLAN-W-SOURCE-001"},
+        "drill": {
+            "set_id": "set-1",
+            "target_codes": ["GRAM-CLAUSE"],
+            "item_count": 8,
+            "correct_count": 7,
+            "source_attempt_ids": [source_id],
+            "drill_pack_id": pack_id,
+            "recommendation_id": "PLAN-W-SOURCE-001",
+            "minimum_accuracy": 0.8,
+            "source_prompt_hash": prompt_hash("Original prompt"),
+            "pack_version": 9,
+            "artifact_retention": "result_only",
+        },
     }), encoding="utf-8")
     pack = root / "tracker/writing/drill-packs" / pack_id
     pack.mkdir(parents=True)
@@ -43,6 +56,17 @@ def test_transfer_links_source_drill_pack_and_confirmed_opportunity(tmp_path: Pa
     assert prepared["transfer"]["drill_pack_id"] == lineage["pack_id"]
     assert prepared["transfer"]["target_codes"] == ["GRAM-CLAUSE"]
     assert prepared["transfer"]["source_prompt_hash"] != prepared["transfer"]["transfer_prompt_hash"]
+
+
+def test_transfer_uses_registered_lineage_after_one_time_pack_is_removed(tmp_path: Path) -> None:
+    lineage = _setup_lineage(tmp_path)
+    shutil.rmtree(tmp_path / "tracker/writing/drill-packs" / lineage["pack_id"])
+
+    prepared = prepare_transfer_attempt(
+        tmp_path, _attempt(), "A new prompt", lineage["drill_id"], {"GRAM-CLAUSE": 1}
+    )
+
+    assert prepared["transfer"]["drill_pack_id"] == lineage["pack_id"]
 
 
 def test_transfer_rejects_drill_below_accuracy_threshold(tmp_path: Path) -> None:

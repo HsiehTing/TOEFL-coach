@@ -81,6 +81,15 @@ def _response_name(attempt: dict) -> str:
     return "transcript-revision.md" if attempt["record_type"] == "revision" else "transcript-original.md"
 
 
+def _is_result_only_targeted_drill(attempt: dict) -> bool:
+    return (
+        attempt.get("modality") == "writing"
+        and attempt.get("record_type") == "targeted_drill"
+        and isinstance(attempt.get("drill"), dict)
+        and attempt["drill"].get("artifact_retention") == "result_only"
+    )
+
+
 def _audit_speaking_artifacts(
     directory: Path, attempt: dict, events: list[dict], problems: list[str]
 ) -> SpeakingEvidenceContext | None:
@@ -238,16 +247,26 @@ def audit_workspace(root: Path) -> list[str]:
                 if attempt["record_type"] == "re_evaluation" and rows:
                     problems.append(f"{sidecar}: re-evaluation event sidecar must be empty")
                     invalid_data = True
+            result_only_drill = _is_result_only_targeted_drill(attempt)
+            if result_only_drill and sidecars[attempt["attempt_id"]]:
+                problems.append(f"{attempt['attempt_id']}: result-only drill retains item events")
+                invalid_data = True
             required = [directory / "feedback-round-1.md"]
-            if attempt["record_type"] != "re_evaluation":
+            if attempt["record_type"] != "re_evaluation" and not result_only_drill:
                 required.extend([directory / "prompt.md", directory / _response_name(attempt)])
+            if result_only_drill and any(
+                (directory / name).exists()
+                for name in ("prompt.md", "response-original.md")
+            ):
+                problems.append(f"{attempt['attempt_id']}: result-only drill retains learner content")
+                invalid_data = True
             if any(not item.exists() for item in required):
                 problems.append(f"{attempt['attempt_id']}: missing immutable evidence file")
                 invalid_data = True
                 continue
             if _read_utf8(directory / "feedback-round-1.md", problems) is None:
                 invalid_data = True
-            if attempt["record_type"] != "re_evaluation":
+            if attempt["record_type"] != "re_evaluation" and not result_only_drill:
                 prompt = _read_utf8(directory / "prompt.md", problems)
                 response = _read_utf8(directory / _response_name(attempt), problems)
                 if prompt is None or response is None:

@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from test_validation import valid_attempt
+from test_drills import drill_attempt
 from toefl_tracker.audit import audit_workspace
 from toefl_tracker.canonical import canonical_jsonl
 from toefl_tracker.io import canonical_source_hash, read_yaml
@@ -106,6 +107,32 @@ def test_invalid_utf8_becomes_an_audit_finding(tmp_path: Path) -> None:
     problems = audit_workspace(tmp_path)
 
     assert any(str(target) in row and "UTF-8" in row for row in problems)
+
+
+def test_audit_allows_result_only_targeted_drills_without_learner_content(tmp_path: Path) -> None:
+    root = Path(__file__).parents[1]
+    shutil.copytree(root / "standards", tmp_path / "standards")
+    attempt = drill_attempt("W-DRILL-RESULT-ONLY")
+    attempt["drill"].update(
+        {
+            "drill_pack_id": "WD-0000000000000001",
+            "recommendation_id": "PLAN-W-SOURCE-001",
+            "minimum_accuracy": 0.8,
+            "source_prompt_hash": "sha256:" + "0" * 64,
+            "pack_version": 9,
+            "artifact_retention": "result_only",
+        }
+    )
+    destination = tmp_path / "tracker/writing/attempts/W-DRILL-RESULT-ONLY"
+    destination.mkdir(parents=True)
+    (destination / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    (destination / "feedback-round-1.md").write_text("Targeted practice.", encoding="utf-8")
+    (destination / "events.jsonl").write_text("", encoding="utf-8")
+
+    problems = audit_workspace(tmp_path)
+
+    assert not any("W-DRILL-RESULT-ONLY: missing immutable evidence" in row for row in problems)
+    assert not any("W-DRILL-RESULT-ONLY: result-only drill retains" in row for row in problems)
 
 
 def test_malformed_speaking_artifacts_are_semantic_audit_findings(
