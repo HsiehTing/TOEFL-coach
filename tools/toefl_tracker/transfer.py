@@ -8,6 +8,9 @@ from toefl_tracker.io import read_yaml
 from toefl_tracker.models import ValidationError
 
 
+DEFAULT_MINIMUM_ACCURACY = 0.8
+
+
 def prompt_hash(prompt: str) -> str:
     if not isinstance(prompt, str) or not prompt.strip():
         raise ValidationError("transfer prompt must be non-empty")
@@ -44,6 +47,22 @@ def prepare_transfer_attempt(root: Path, attempt: dict, prompt: str, drill_attem
     source_id = source_ids[0]
     source = read_yaml(root / "tracker/writing/attempts" / source_id / "attempt.yaml")
     pack = read_yaml(root / "tracker/writing/drill-packs" / pack_id / "drill-pack.yaml")
+    item_count = metadata.get("item_count")
+    correct_count = metadata.get("correct_count")
+    minimum_accuracy = pack.get("minimum_accuracy", DEFAULT_MINIMUM_ACCURACY)
+    if (
+        type(item_count) is not int
+        or item_count <= 0
+        or type(correct_count) is not int
+        or not 0 <= correct_count <= item_count
+        or type(minimum_accuracy) not in {int, float}
+        or not 0 < minimum_accuracy <= 1
+    ):
+        raise ValidationError("targeted drill has invalid accuracy metadata")
+    if correct_count / item_count < minimum_accuracy:
+        raise ValidationError(
+            f"transfer requires drill accuracy of at least {minimum_accuracy:.0%}"
+        )
     if (
         attempt.get("modality") != "writing"
         or attempt.get("record_type") != "formal_original"
@@ -52,6 +71,7 @@ def prepare_transfer_attempt(root: Path, attempt: dict, prompt: str, drill_attem
         or pack.get("source_attempt_id") != source_id
         or pack.get("task_type") != drill.get("task_type")
         or pack.get("target_codes") != target_codes
+        or pack.get("version", 0) < 4
     ):
         raise ValidationError("transfer route or drill-pack lineage does not match")
     if set(confirmed_opportunities) != set(target_codes) or attempt.get("opportunities", {}) != confirmed_opportunities:

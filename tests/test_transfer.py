@@ -27,7 +27,7 @@ def _setup_lineage(root: Path, *, task_type: str = "email") -> dict:
     }), encoding="utf-8")
     pack = root / "tracker/writing/drill-packs" / pack_id
     pack.mkdir(parents=True)
-    (pack / "drill-pack.yaml").write_text(yaml.safe_dump({"drill_id": pack_id, "source_attempt_id": source_id, "task_type": task_type, "target_codes": ["GRAM-CLAUSE"]}), encoding="utf-8")
+    (pack / "drill-pack.yaml").write_text(yaml.safe_dump({"version": 4, "minimum_accuracy": 0.8, "drill_id": pack_id, "source_attempt_id": source_id, "task_type": task_type, "target_codes": ["GRAM-CLAUSE"]}), encoding="utf-8")
     return {"source_id": source_id, "drill_id": drill_id, "pack_id": pack_id}
 
 
@@ -43,6 +43,23 @@ def test_transfer_links_source_drill_pack_and_confirmed_opportunity(tmp_path: Pa
     assert prepared["transfer"]["drill_pack_id"] == lineage["pack_id"]
     assert prepared["transfer"]["target_codes"] == ["GRAM-CLAUSE"]
     assert prepared["transfer"]["source_prompt_hash"] != prepared["transfer"]["transfer_prompt_hash"]
+
+
+def test_transfer_rejects_drill_below_accuracy_threshold(tmp_path: Path) -> None:
+    lineage = _setup_lineage(tmp_path)
+    drill_path = tmp_path / "tracker/writing/attempts" / lineage["drill_id"] / "attempt.yaml"
+    drill = yaml.safe_load(drill_path.read_text(encoding="utf-8"))
+    drill["drill"]["correct_count"] = 0
+    drill_path.write_text(yaml.safe_dump(drill), encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="at least 80%"):
+        prepare_transfer_attempt(
+            tmp_path,
+            _attempt(),
+            "A new prompt",
+            lineage["drill_id"],
+            {"GRAM-CLAUSE": 1},
+        )
 
 
 @pytest.mark.parametrize(

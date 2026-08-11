@@ -24,6 +24,8 @@ def test_queue_groups_latest_supported_focuses_into_drill_then_transfer(tmp_path
     assert drill["target_codes"] == ["GRAM-CLAUSE", "LEX-COLLOCATION"]
     assert transfer["kind"] == "fresh_transfer_check"
     assert transfer["source_action_id"] == drill["action_id"]
+    assert drill["status"] == "ready"
+    assert transfer["status"] == "blocked_by_drill"
     assert "task_score" not in queue
 
 
@@ -31,6 +33,8 @@ def test_queue_is_derived_and_does_not_create_actions_without_supported_evidence
     tmp_path: Path,
 ) -> None:
     write_attempt(tmp_path, "W-AD-1", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-2", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-3", "academic_discussion", "formal_original")
     write_events(tmp_path, [
         report_event("W-AD-1", "E-1", "GRAM-NEGATION", task_specific=False),
     ])
@@ -39,5 +43,6 @@ def test_queue_is_derived_and_does_not_create_actions_without_supported_evidence
     path = write_practice_queue(tmp_path)
 
     assert queue["actions"] == []
+    assert queue["deferred_actions"][0]["status"] == "blocked_by_template"
     assert path == tmp_path / "tracker/writing/practice-queue.md"
     assert "diagnostic planning artifact" in path.read_text(encoding="utf-8").lower()

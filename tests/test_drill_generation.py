@@ -75,6 +75,28 @@ def test_clause_pack_is_traceable_stable_and_hides_answers(tmp_path: Path) -> No
     assert "Answer key" in (destination / "answer-key.md").read_text(encoding="utf-8")
 
 
+def test_clause_prompts_include_concrete_source_material(tmp_path: Path) -> None:
+    source, _ = _source_attempt(tmp_path, task_type="email", code="GRAM-CLAUSE")
+    pack = build_drill_pack(tmp_path, _recommendation(source, "GRAM-CLAUSE"), seed=0)
+
+    prompts = [item["prompt"] for item in pack["items"]]
+    assert all(prompt.strip() for prompt in prompts)
+    assert all("fresh example" not in prompt for prompt in prompts)
+    assert all("`" in prompt for prompt in prompts)
+    assert any("Because AI is increasingly used" in prompt for prompt in prompts)
+    assert any("Although building the laboratory" in prompt for prompt in prompts)
+
+
+def test_collocation_prompt_is_directly_answerable(tmp_path: Path) -> None:
+    source, _ = _source_attempt(tmp_path, task_type="email", code="LEX-COLLOCATION")
+    pack = build_drill_pack(tmp_path, _recommendation(source, "LEX-COLLOCATION"), seed=0)
+
+    assert all("Write a fresh sentence" not in item["prompt"] for item in pack["items"])
+    assert "practical using skills" in pack["items"][0]["prompt"]
+    assert len({item["prompt"] for item in pack["items"]}) == len(pack["items"])
+    assert all(item["response_fields"] == ["response"] for item in pack["items"])
+
+
 def test_discussion_idea_pack_requires_causal_chain_fields(tmp_path: Path) -> None:
     source, _ = _source_attempt(
         tmp_path, task_type="academic_discussion", code="DISCUSSION-ELABORATION"
