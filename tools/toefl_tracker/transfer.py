@@ -92,6 +92,32 @@ def prepare_transfer_attempt(root: Path, attempt: dict, prompt: str, drill_attem
         raise ValidationError(
             f"transfer requires drill accuracy of at least {minimum_accuracy:.0%}"
         )
+    if inline_lineage:
+        code_results = metadata.get("code_results")
+        if not isinstance(code_results, list):
+            raise ValidationError("targeted drill lacks per-code accuracy metadata")
+        by_code = {
+            row.get("code"): row
+            for row in code_results
+            if isinstance(row, dict) and isinstance(row.get("code"), str)
+        }
+        if set(by_code) != set(target_codes):
+            raise ValidationError("targeted drill per-code accuracy metadata does not match targets")
+        for code in target_codes:
+            result = by_code[code]
+            code_items = result.get("item_count")
+            code_correct = result.get("correct_count")
+            if (
+                type(code_items) is not int
+                or code_items <= 0
+                or type(code_correct) is not int
+                or not 0 <= code_correct <= code_items
+            ):
+                raise ValidationError("targeted drill has invalid per-code accuracy metadata")
+            if code_correct / code_items < minimum_accuracy:
+                raise ValidationError(
+                    f"transfer requires drill accuracy of at least {minimum_accuracy:.0%} for {code}"
+                )
     if (
         attempt.get("modality") != "writing"
         or attempt.get("record_type") != "formal_original"

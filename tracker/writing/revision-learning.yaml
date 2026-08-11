@@ -829,3 +829,133 @@ comparisons:
       up the trends of the World Cup.
   note: Only opportunity-confirmed comparisons can show an issue was not observed
     in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260811-001-R1
+  parent_attempt_id: W-EM-20260811-001
+  retained_codes:
+  - EMAIL-ACTION
+  - LEX-COLLOCATION
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - GRAM-AGREEMENT
+  - GRAM-CLAUSE
+  - LEX-WORDFORM
+  - MECH-SPELLING
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260811-0001
+    code: GRAM-CLAUSE
+    source_excerpt: I suggest that adjust the construction time to 5 PM
+  - event_id: ERR-20260811-0002
+    code: GRAM-AGREEMENT
+    source_excerpt: the date of final exams are approaching
+  - event_id: ERR-20260811-0003
+    code: GRAM-AGREEMENT
+    source_excerpt: the library close
+  - event_id: ERR-20260811-0004
+    code: GRAM-CLAUSE
+    source_excerpt: the apartment that in charge of constructions
+  - event_id: ERR-20260811-0005
+    code: LEX-COLLOCATION
+    source_excerpt: a growing amount of students
+  - event_id: ERR-20260811-0006
+    code: LEX-COLLOCATION
+    source_excerpt: have reached the campus  library committee for one issue
+  - event_id: ERR-20260811-0007
+    code: LEX-WORDFORM
+    source_excerpt: authority to administration of the library
+  - event_id: ERR-20260811-0008
+    code: MECH-SPELLING
+    source_excerpt: construction sight
+  - event_id: ERR-20260811-0009
+    code: EMAIL-ACTION
+    source_excerpt: If there's any thing that you would like to discuss
+  revision_evidence:
+  - event_id: ERR-20260811-0010
+    code: LEX-COLLOCATION
+    source_excerpt: a high note, disturbing noise
+  - event_id: ERR-20260811-0011
+    code: EMAIL-ACTION
+    source_excerpt: could you please consider my suggestion and discuss with the department
+  - event_id: ERR-20260811-0013
+    code: LEX-COLLOCATION
+    source_excerpt: contact my e-mail
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260811-001-R2
+  parent_attempt_id: W-EM-20260811-001-R1
+  retained_codes:
+  - LEX-COLLOCATION
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - EMAIL-ACTION
+  new_codes:
+  - GRAM-AGREEMENT
+  - GRAM-CLAUSE
+  - LEX-WORDFORM
+  - MECH-SPELLING
+  parent_evidence:
+  - event_id: ERR-20260811-0010
+    code: LEX-COLLOCATION
+    source_excerpt: a high note, disturbing noise
+  - event_id: ERR-20260811-0011
+    code: EMAIL-ACTION
+    source_excerpt: could you please consider my suggestion and discuss with the department
+  - event_id: ERR-20260811-0013
+    code: LEX-COLLOCATION
+    source_excerpt: contact my e-mail
+  revision_evidence:
+  - event_id: ERR-20260811-0014
+    code: GRAM-CLAUSE
+    source_excerpt: Recently, the is a growing number of students contacted us for
+      one issue
+  - event_id: ERR-20260811-0015
+    code: GRAM-CLAUSE
+    source_excerpt: Because students urgently need this noise problem to be resolved.
+  - event_id: ERR-20260811-0016
+    code: LEX-WORDFORM
+    source_excerpt: having a hard time try to read and rest
+  - event_id: ERR-20260811-0017
+    code: LEX-COLLOCATION
+    source_excerpt: concentrate on preparing their exams
+  - event_id: ERR-20260811-0018
+    code: GRAM-AGREEMENT
+    source_excerpt: the student would not be affected by the noise
+  - event_id: ERR-20260811-0019
+    code: MECH-SPELLING
+    source_excerpt: feed back
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-EM-20260811-001-R3
+  parent_attempt_id: W-EM-20260811-001-R2
+  retained_codes: []
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - GRAM-AGREEMENT
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  - LEX-WORDFORM
+  - MECH-SPELLING
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260811-0014
+    code: GRAM-CLAUSE
+    source_excerpt: Recently, the is a growing number of students contacted us for
+      one issue
+  - event_id: ERR-20260811-0015
+    code: GRAM-CLAUSE
+    source_excerpt: Because students urgently need this noise problem to be resolved.
+  - event_id: ERR-20260811-0016
+    code: LEX-WORDFORM
+    source_excerpt: having a hard time try to read and rest
+  - event_id: ERR-20260811-0017
+    code: LEX-COLLOCATION
+    source_excerpt: concentrate on preparing their exams
+  - event_id: ERR-20260811-0018
+    code: GRAM-AGREEMENT
+    source_excerpt: the student would not be affected by the noise
+  - event_id: ERR-20260811-0019
+    code: MECH-SPELLING
+    source_excerpt: feed back
+  revision_evidence: []
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.

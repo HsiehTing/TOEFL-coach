@@ -117,3 +117,23 @@ def test_queue_blocks_a_plan_when_its_source_prompt_has_no_safe_template(
     assert queue["actions"] == []
     assert queue["deferred_actions"][0]["status"] == "blocked_by_template"
     assert "no context-safe Email template" in queue["deferred_actions"][0]["status_reason"]
+
+
+def test_queue_blocks_transfer_when_one_target_code_is_below_threshold() -> None:
+    drill = {
+        "drill": {
+            "target_codes": ["GRAM-CLAUSE", "GRAM-AGREEMENT"],
+            "item_count": 10,
+            "correct_count": 8,
+            "minimum_accuracy": 0.8,
+            "code_results": [
+                {"code": "GRAM-CLAUSE", "item_count": 8, "correct_count": 8, "partial_count": 0},
+                {"code": "GRAM-AGREEMENT", "item_count": 2, "correct_count": 0, "partial_count": 0},
+            ],
+        }
+    }
+
+    status, reason = queue_module._drill_status(drill)
+
+    assert status == "blocked_by_accuracy"
+    assert "GRAM-AGREEMENT" in reason

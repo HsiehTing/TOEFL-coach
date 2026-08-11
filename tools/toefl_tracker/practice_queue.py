@@ -66,17 +66,49 @@ def _drill_status(drill: dict | None) -> tuple[str, str]:
     metadata = drill.get("drill", {})
     item_count = metadata.get("item_count")
     correct_count = metadata.get("correct_count")
+    minimum_accuracy = metadata.get("minimum_accuracy", 0.8)
     if (
         type(item_count) is not int
         or item_count <= 0
         or type(correct_count) is not int
         or not 0 <= correct_count <= item_count
+        or type(minimum_accuracy) not in {int, float}
+        or not 0 < minimum_accuracy <= 1
     ):
         return "blocked_by_incomplete_assessment", "The drill result lacks valid item-level accuracy metadata."
+    code_results = metadata.get("code_results")
+    if code_results is not None:
+        target_codes = metadata.get("target_codes")
+        if not isinstance(code_results, list) or not isinstance(target_codes, list):
+            return "blocked_by_incomplete_assessment", "The drill result lacks valid per-code accuracy metadata."
+        by_code = {
+            row.get("code"): row
+            for row in code_results
+            if isinstance(row, dict) and isinstance(row.get("code"), str)
+        }
+        if set(by_code) != set(target_codes):
+            return "blocked_by_incomplete_assessment", "The drill result lacks valid per-code accuracy metadata."
+        for code in target_codes:
+            result = by_code[code]
+            code_items = result.get("item_count")
+            code_correct = result.get("correct_count")
+            if (
+                type(code_items) is not int
+                or code_items <= 0
+                or type(code_correct) is not int
+                or not 0 <= code_correct <= code_items
+            ):
+                return "blocked_by_incomplete_assessment", "The drill result lacks valid per-code accuracy metadata."
+            code_accuracy = code_correct / code_items
+            if code_accuracy < minimum_accuracy:
+                return (
+                    "blocked_by_accuracy",
+                    f"{code} accuracy is {code_accuracy:.0%}; reach {minimum_accuracy:.0%} for every target before transfer.",
+                )
     accuracy = correct_count / item_count
-    if accuracy < 0.8:
-        return "blocked_by_accuracy", f"Accuracy is {accuracy:.0%}; reach 80% before transfer."
-    return "completed", f"Accuracy is {accuracy:.0%}; the drill threshold is met."
+    if accuracy < minimum_accuracy:
+        return "blocked_by_accuracy", f"Accuracy is {accuracy:.0%}; reach {minimum_accuracy:.0%} before transfer."
+    return "completed", f"Accuracy is {accuracy:.0%}; every target meets the drill threshold."
 
 
 def _transfer_status(drill: dict) -> tuple[str, str]:

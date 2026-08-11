@@ -134,3 +134,24 @@ Derived code-level comparison; not proof of mastery or a TOEFL score.
 - Not comparable (no recorded opportunity): none
 - New codes: none
 - Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-EM-20260811-001-R1` from `W-EM-20260811-001`
+- Retained codes: `EMAIL-ACTION`, `LEX-COLLOCATION`
+- Opportunity-confirmed, no longer observed: none
+- Not comparable (no recorded opportunity): `GRAM-AGREEMENT`, `GRAM-CLAUSE`, `LEX-WORDFORM`, `MECH-SPELLING`
+- New codes: none
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-EM-20260811-001-R2` from `W-EM-20260811-001-R1`
+- Retained codes: `LEX-COLLOCATION`
+- Opportunity-confirmed, no longer observed: none
+- Not comparable (no recorded opportunity): `EMAIL-ACTION`
+- New codes: `GRAM-AGREEMENT`, `GRAM-CLAUSE`, `LEX-WORDFORM`, `MECH-SPELLING`
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-EM-20260811-001-R3` from `W-EM-20260811-001-R2`
+- Retained codes: none
+- Opportunity-confirmed, no longer observed: none
+- Not comparable (no recorded opportunity): `GRAM-AGREEMENT`, `GRAM-CLAUSE`, `LEX-COLLOCATION`, `LEX-WORDFORM`, `MECH-SPELLING`
+- New codes: none
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.

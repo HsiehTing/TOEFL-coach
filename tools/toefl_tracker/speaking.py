@@ -20,6 +20,8 @@ from toefl_tracker.register import (
 )
 from toefl_tracker.validation import validate_attempt
 from toefl_tracker.quality import quality_decision
+from toefl_tracker.reports import rebuild_modality
+from toefl_tracker.speaking_progress import write_speaking_progress_overview
 
 
 ITEM_COUNTS = {"listen_and_repeat": 7, "take_an_interview": 4}
@@ -52,9 +54,11 @@ _PERSISTED_INSPECTION_FIELDS = tuple(
     field for field in _INSPECTION_FIELDS if field != "path"
 ) + ("reliable_dimensions",)
 _SEGMENT_QUALITY_FIELD = "segment_quality"
+_DIMENSION_OBSERVATIONS_FIELD = "audio_dimension_observations"
 _DURATION_TOLERANCE_SECONDS = 1e-6
 _PROVENANCE_KEYS = {"executables", "model_identifier", "model_sha256"}
 _EXECUTABLE_NAMES = {"ffmpeg", "ffprobe", "whisper-cli"}
+_AUDIO_PERFORMANCE_DIMENSIONS = {"intelligibility", "pronunciation", "prosody", "fluency"}
 def _text_reliable_dimensions(task_type: str) -> set[str]:
     dimensions = {"content", "grammar", "vocabulary"}
     if task_type == "listen_and_repeat":
@@ -86,7 +90,11 @@ def _normalized_reliable_dimensions(
             or any(not isinstance(dimension, str) for dimension in source)
         ):
             raise ValidationError("speaking reliable_dimensions are invalid")
-        return _all_reliable_dimensions(task_type)
+        # Acoustic quality establishes that the recording can support text
+        # analysis.  It does not, by itself, establish pronunciation,
+        # prosody, fluency, or intelligibility.  Those dimensions require a
+        # separate, persisted human-observed artifact below.
+        return text_dimensions
     return set()
 
 
@@ -418,6 +426,47 @@ def _validate_segment_quality_artifact(value: object) -> list[dict]:
     return validated
 
 
+def _validated_audio_dimension_observations(
+    value: object,
+    learner_segments: Sequence[Mapping],
+) -> dict[str, set[str]]:
+    """Accept only bounded, path-free human evidence for audio dimensions."""
+    if value is None:
+        return {}
+    if not isinstance(value, list):
+        raise ValidationError("audio dimension observations are invalid")
+    expected = {
+        str(segment.get("segment_id")): (segment.get("start"), segment.get("end"))
+        for segment in learner_segments
+    }
+    observed: dict[str, set[str]] = {}
+    for row in value:
+        if not isinstance(row, Mapping) or set(row) != {
+            "segment_id", "start", "end", "observer_type", "observed_at", "dimensions", "evidence_summary"
+        }:
+            raise ValidationError("audio dimension observation fields are invalid")
+        segment_id = row.get("segment_id")
+        dimensions = row.get("dimensions")
+        if (
+            not isinstance(segment_id, str)
+            or segment_id not in expected
+            or (row.get("start"), row.get("end")) != expected[segment_id]
+            or row.get("observer_type") != "human_observed"
+            or not isinstance(row.get("observed_at"), str)
+            or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:[+-]\d{2}:\d{2}|Z)", row["observed_at"])
+            or not isinstance(dimensions, list)
+            or not dimensions
+            or not set(dimensions) <= _AUDIO_PERFORMANCE_DIMENSIONS
+            or len(set(dimensions)) != len(dimensions)
+            or not isinstance(row.get("evidence_summary"), str)
+            or not row["evidence_summary"].strip()
+            or segment_id in observed
+        ):
+            raise ValidationError("audio dimension observations are invalid")
+        observed[segment_id] = set(dimensions)
+    return observed
+
+
 def _learner_quality(
     inspection: Mapping,
     task_type: str,
@@ -454,7 +503,21 @@ def _learner_quality(
         task_type,
         inspection["quality"]["dimension_set"],
     )
-    return rows, reliable
+    observations = _validated_audio_dimension_observations(
+        inspection.get(_DIMENSION_OBSERVATIONS_FIELD), learner_segments
+    )
+    if observations:
+        expected_segment_ids = {str(segment.get("segment_id")) for segment in learner_segments}
+        if set(observations) != expected_segment_ids:
+            raise ValidationError("audio dimension observations must cover every learner segment")
+        # A dimension becomes reliable only when every learner turn has its own
+        # human-observed, timestamp-aligned evidence.  This conservative
+        # intersection prevents a strong recording segment from masking an
+        # unobserved one.
+        reliable |= set.intersection(*observations.values())
+    # The persisted artifact deliberately contains learner turns only.  Whole
+    # file and examiner quality never stand in for a learner performance claim.
+    return [by_id[str(segment["segment_id"])] for segment in learner_segments], reliable
 
 
 def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
@@ -463,7 +526,7 @@ def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
     if (
         not isinstance(inspection, Mapping)
         or not required_fields <= set(inspection)
-        or set(inspection) - required_fields - {"reliable_dimensions", _SEGMENT_QUALITY_FIELD}
+        or set(inspection) - required_fields - {"reliable_dimensions", _SEGMENT_QUALITY_FIELD, _DIMENSION_OBSERVATIONS_FIELD}
     ):
         raise ValidationError("speaking inspection fields are invalid")
     persisted, _ = _validated_inspection({"path": "audit-source", **inspection})
@@ -481,6 +544,15 @@ def validate_persisted_inspection(inspection: object, task_type: str) -> dict:
         persisted[_SEGMENT_QUALITY_FIELD] = _validate_segment_quality_artifact(
             inspection[_SEGMENT_QUALITY_FIELD]
         )
+    if _DIMENSION_OBSERVATIONS_FIELD in inspection:
+        learner_segments = [row for row in persisted[_SEGMENT_QUALITY_FIELD] if isinstance(row, Mapping)] if _SEGMENT_QUALITY_FIELD in persisted else []
+        # Persisted validation has no role map, but segment-quality contains
+        # exactly the learner segments by construction.
+        _validated_audio_dimension_observations(inspection[_DIMENSION_OBSERVATIONS_FIELD], learner_segments)
+        persisted[_DIMENSION_OBSERVATIONS_FIELD] = inspection[_DIMENSION_OBSERVATIONS_FIELD]
+    if _SEGMENT_QUALITY_FIELD in persisted:
+        _, reliable = _learner_quality(persisted, task_type, persisted[_SEGMENT_QUALITY_FIELD])
+        persisted["reliable_dimensions"] = sorted(reliable)
     return persisted
 
 
@@ -628,6 +700,8 @@ def build_speaking_registration(
         learner_segments,
     )
     persisted_inspection["segment_quality"] = segment_quality_rows
+    if _DIMENSION_OBSERVATIONS_FIELD in inspection:
+        persisted_inspection[_DIMENSION_OBSERVATIONS_FIELD] = inspection[_DIMENSION_OBSERVATIONS_FIELD]
     validate_speaking_assessment(
         bounded_attempt,
         segment_rows,
@@ -717,4 +791,6 @@ def register_speaking_session(
     )
     with _registration_lock(root):
         write_aggregate_events(root, attempt["modality"])
+        rebuild_modality(root, attempt["modality"])
+        write_speaking_progress_overview(root)
     return destination

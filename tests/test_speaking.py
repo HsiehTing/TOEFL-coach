@@ -19,6 +19,11 @@ from toefl_tracker.speaking import (
     validate_persisted_inspection,
     validate_speaking_assessment,
 )
+from toefl_tracker.speaking_practice import register_transcript_drill
+from toefl_tracker.speaking_revision import register_transcript_rerecording
+from toefl_tracker.speaking_transfer import prepare_speaking_transfer_attempt
+from toefl_tracker.speaking_progress import build_speaking_progress_overview
+from toefl_tracker.audit import audit_workspace
 
 
 ROOT = Path(__file__).parents[1]
@@ -634,6 +639,10 @@ def test_registration_persists_artifacts_without_copying_raw_audio(
     )
     assert not list(path.glob("*.m4a"))
     assert source.read_bytes() == b"private audio"
+    assert (root / "tracker/speaking/dashboard.csv").exists()
+    overview = root / "tracker/speaking/progress-overview.md"
+    assert overview.exists()
+    assert "Diagnostic progress view only" in overview.read_text(encoding="utf-8")
 
 
 def test_audio_inspection_artifact_is_accepted_by_speaking_gate(tmp_path: Path) -> None:
@@ -805,8 +814,7 @@ def test_missing_or_empty_reliability_normalizes_identically_for_registration_an
 
     assert audited == persisted
     assert audited["reliable_dimensions"] == [
-        "content", "fluency", "grammar", "intelligibility", "pronunciation",
-        "prosody", "reconstruction", "vocabulary",
+        "content", "grammar", "reconstruction", "vocabulary",
     ]
 
 
@@ -1035,9 +1043,43 @@ def test_all_quality_maps_to_every_route_relevant_dimension(tmp_path: Path) -> N
     )
 
     assert registration.speaking_context.reliable_dimensions == {
-        "content", "grammar", "vocabulary", "intelligibility", "pronunciation",
-        "prosody", "fluency", "reconstruction",
+        "content", "grammar", "vocabulary", "reconstruction",
     }
+
+
+def test_audio_performance_dimensions_require_observed_evidence_for_every_learner_segment(tmp_path: Path) -> None:
+    prompt = "Seven source sentences"
+    transcript = "Seven learner repetitions"
+    artifact = inspection("/private/source/practice.m4a")
+    artifact["audio_dimension_observations"] = [
+        {
+            "segment_id": row["segment_id"], "start": row["start"], "end": row["end"],
+            "observer_type": "human_observed", "observed_at": "2026-08-11T12:00:00+08:00",
+            "dimensions": ["pronunciation", "prosody", "fluency", "intelligibility"],
+            "evidence_summary": "A qualified observer confirmed this learner turn was audible for these dimensions.",
+        }
+        for row in segments(7) if row["role"] == "learner"
+    ]
+    registration = build_speaking_registration(
+        tmp_path, MANIFEST, registration_attempt(prompt, transcript), prompt, transcript,
+        FEEDBACK, [], segments(7), artifact,
+    )
+    assert {"pronunciation", "prosody", "fluency", "intelligibility"} <= registration.speaking_context.reliable_dimensions
+
+
+def test_partial_audio_dimension_observations_fail_closed(tmp_path: Path) -> None:
+    artifact = inspection("/private/source/practice.m4a")
+    learner = next(row for row in segments(7) if row["role"] == "learner")
+    artifact["audio_dimension_observations"] = [{
+        "segment_id": learner["segment_id"], "start": learner["start"], "end": learner["end"],
+        "observer_type": "human_observed", "observed_at": "2026-08-11T12:00:00+08:00",
+        "dimensions": ["pronunciation"], "evidence_summary": "Observer checked one segment.",
+    }]
+    with pytest.raises(ValidationError, match="cover every learner segment"):
+        build_speaking_registration(
+            tmp_path, MANIFEST, registration_attempt("Seven source sentences", "Seven learner repetitions"),
+            "Seven source sentences", "Seven learner repetitions", FEEDBACK, [], segments(7), artifact,
+        )
 
 
 def test_null_attempt_duration_uses_inspection_for_segment_bounds(
@@ -1226,3 +1268,93 @@ def test_cli_registers_valid_speaking_session(
     assert (destination / "source-reference.txt").read_text() == (
         "source:" + sha256(b"/private/source/practice.m4a").hexdigest() + "\n"
     )
+
+
+def test_end_to_end_speaking_drill_transfer_keeps_result_only_lineage(tmp_path: Path) -> None:
+    import shutil
+
+    shutil.copytree(ROOT / "standards", tmp_path / "standards")
+    source_prompt = "Seven source sentences"
+    source_transcript = "Seven learner repetitions"
+    source_attempt = registration_attempt(source_prompt, source_transcript, "S-LR-SOURCE-001")
+    register_speaking_session(
+        tmp_path, MANIFEST, source_attempt, source_prompt, source_transcript,
+        FEEDBACK, [counted_event("S-LR-SOURCE-001")], segments(7), inspection("/private/source/source.m4a"),
+    )
+    rerecord_attempt = registration_attempt("ignored", "ignored", "S-LR-SOURCE-001-R1")
+    rerecord_attempt.update({
+        "record_type": "revision", "parent_attempt_id": "S-LR-SOURCE-001",
+        "submitted_at": "2026-08-01T10:00:00+08:00", "revision_outcomes": None,
+        "source_hash": "sha256:" + "0" * 64,
+    })
+    rerecord_path = register_transcript_rerecording(
+        tmp_path,
+        MANIFEST,
+        rerecord_attempt,
+        {
+            "parent_attempt_id": "S-LR-SOURCE-001", "scope": "partial",
+            "target_codes": ["LR-OMISSION"], "source_event_ids": ["ERR-20260731-0001"],
+            "items": [{
+                "item_id": 2, "prompt_excerpt": "The campus library opens at eight for item 2.",
+                "learner_transcript": "The campus library opens at eight for item 2.",
+            }],
+            "outcomes": [{
+                "code": "LR-OMISSION", "item_ids": [2], "status": "meets_target",
+                "reason": "The function word is present in the supplied re-recording.",
+                "evidence_excerpt": "opens at eight",
+            }],
+        },
+        "Transcript-supported re-recording result.",
+    )
+    raw_drill = {
+        "source_attempt_id": "S-LR-SOURCE-001",
+        "target_codes": ["LR-OMISSION"],
+        "minimum_accuracy": 0.8,
+        "item_results": [{
+            "item_id": "I01", "code": "LR-OMISSION", "status": "meets_target",
+            "reason": "The learner restored the omitted function word.",
+        }],
+    }
+    drill_attempt = registration_attempt("ignored", "ignored", "S-LR-DRILL-001")
+    drill_attempt.update({
+        "record_type": "targeted_drill", "timed": False, "duration_seconds": None,
+        "opportunities": {"LR-OMISSION": 1},
+        "source_hash": "sha256:" + "0" * 64,
+    })
+    drill_path = register_transcript_drill(
+        tmp_path, MANIFEST, drill_attempt, raw_drill, "Reviewed transcript drill result.",
+    )
+    transfer_prompt = "Seven new source sentences"
+    transfer_transcript = "The learner restored the omitted function word in the new response."
+    transfer_attempt = registration_attempt(
+        transfer_prompt, transfer_transcript, "S-LR-TRANSFER-001"
+    )
+    transfer_attempt["opportunities"] = {"LR-OMISSION": 1}
+    transfer_attempt = prepare_speaking_transfer_attempt(
+        tmp_path,
+        transfer_attempt,
+        transfer_prompt,
+        transfer_transcript,
+        "S-LR-DRILL-001",
+        {"LR-OMISSION": 1},
+        [{
+            "code": "LR-OMISSION", "status": "meets_target",
+            "reason": "The targeted word is present in the new response.",
+            "evidence_excerpt": "restored the omitted function word",
+        }],
+    )
+    register_speaking_session(
+        tmp_path, MANIFEST, transfer_attempt, transfer_prompt, transfer_transcript,
+        FEEDBACK, [], segments(7), inspection("/private/source/transfer.m4a"),
+    )
+
+    assert not (drill_path / "prompt.md").exists()
+    assert not (drill_path / "transcript-original.md").exists()
+    assert (rerecord_path / "transcript-revision.md").exists()
+    assert not (rerecord_path / "audio-inspection.json").exists()
+    overview = build_speaking_progress_overview(tmp_path)
+    lifecycle = overview["routes"]["listen_and_repeat"]["practice_lifecycle"]
+    assert lifecycle[0]["state"] == "transfer_outcome_meets_target"
+    assert lifecycle[0]["drill_attempt_ids"] == ["S-LR-DRILL-001"]
+    assert lifecycle[0]["transfer_attempt_ids"] == ["S-LR-TRANSFER-001"]
+    assert not [problem for problem in audit_workspace(tmp_path) if problem.startswith("speaking")]

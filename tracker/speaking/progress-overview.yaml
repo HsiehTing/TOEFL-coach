@@ -1,0 +1,26 @@
+version: 2
+result_label: diagnostic_only_speaking_progress
+formal_session_count: 0
+recent_sessions: []
+routes:
+  listen_and_repeat:
+    formal_session_count: 0
+    atomic_codes: {}
+    dimensions: {}
+    practice_lifecycle: []
+    rerecordings: []
+  take_an_interview:
+    formal_session_count: 0
+    atomic_codes: {}
+    dimensions: {}
+    practice_lifecycle: []
+    rerecordings: []
+next_focuses: []
+boundaries:
+- Diagnostic only; not a TOEFL Speaking section band.
+- Transcript evidence never establishes pronunciation, prosody, fluency, or intelligibility
+  unless the persisted audio inspection marks that dimension reliable.
+- Speaking drill and transfer lifecycle is result lineage only; it does not establish
+  a TOEFL task score, section band, or audio-performance claim.
+- Speaking re-recordings are revisions, not formal sessions; their transcript-supported
+  outcomes do not establish audio-performance results.

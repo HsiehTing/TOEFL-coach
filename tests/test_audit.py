@@ -121,6 +121,14 @@ def test_audit_allows_result_only_targeted_drills_without_learner_content(tmp_pa
             "source_prompt_hash": "sha256:" + "0" * 64,
             "pack_version": 9,
             "artifact_retention": "result_only",
+            "code_results": [
+                {
+                    "code": "GRAM-CLAUSE",
+                    "item_count": 8,
+                    "correct_count": 7,
+                    "partial_count": 0,
+                }
+            ],
         }
     )
     destination = tmp_path / "tracker/writing/attempts/W-DRILL-RESULT-ONLY"
@@ -157,6 +165,7 @@ def test_audit_text_only_inspection_rejects_audio_dimension_event(
         "dimension_set": "text_only",
     }
     inspection["reliable_dimensions"] = ["content", "grammar", "vocabulary", "reconstruction"]
+    del inspection["audio_dimension_observations"]
     artifact.write_text(json.dumps(inspection), encoding="utf-8")
 
     assert any("reliable dimension" in row for row in audit_workspace(populated_workspace))

@@ -16,6 +16,49 @@
 
 Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺少的是一條可由 learner 從頭走到尾、結果可信且能恢復舊資料的完整流程。下列使用者流程複核取代「功能存在即視為可交付」的判斷方式。
 
+## Learner request — 修訂完成後的自然度與精確度回饋（2026-08-11）
+
+Learner 明確要求：在每一輪 Writing revision 中，當必要的題目要點已清楚、且可維持或提升 simulated task score 時，coach 要進一步精修文意是否通順、語句是否自然、字詞是否精確，以及文法用法是否道地。此輪的回饋焦點不應完全放在論點表達或邏輯展開；只有它們阻礙題意、讀者理解或分數上限時，才優先處理。
+
+### 使用者結果
+
+每次完成一輪修訂評估後，coach 先完成既有的分數與修訂比對，再在不重複第一輪錯誤表、不把可選潤飾混入錯誤率的前提下，提供一個簡短的「高分精修：自然度、文意與精確度 follow-up」：
+
+- 最多三則 exact-excerpt 建議，優先處理同一封回應中重複的意思／句型、文意或指涉不夠順暢、字義過泛或不精確的字詞，以及雖可理解但不符合自然英文慣用法的句型或文法結構。
+- 每則建議說明其對讀者造成的效果，並提供一個保留 learner 原意的單句改寫選項；不得把選項串成完整範文。
+- 提供 2–4 題、可在 5 分鐘內完成的 mini-practice，讓 learner 改寫自己的句子、消除不必要重複、選擇更精確的字詞，或修正同一語境中的不自然句型；初次輸出不揭露答案。
+- 若沒有足夠的高分精修問題，明確說明「沒有可指出的語句自然度、文意或精確度問題」，不為了湊數而製造問題。
+
+此 follow-up 是 revision completion 的 coaching artifact，不是 `targeted_drill`：它不產生 task score、不增加 formal count、不寫入 counted error event、不改變 error rate、historical status、mastery 或 transfer gate。正式 targeted drill 仍只由 training plan 的有來源 recommendation 產生。
+
+### 觸發與邊界
+
+- 適用於 Email 與 Academic Discussion 的 revision output；至少先完成「resolved／partly resolved／unresolved／newly introduced」的既有修訂比對。
+- 只在 learner 已提交修訂後顯示，因此可使用 learner 已修改過的句子提供 clearer options；第一輪回饋的「不提供完整範文」與最多三個改善目標規則維持不變。
+- 每個建議都必須引用實際 learner excerpt；重複可跨段落判定，但不得臆測 learner 未寫出的意思。
+- 「重複」是同一交際功能或意思在短距離內以近似表達再次出現，不是合理的關鍵詞重複，也不是單純出現相同冠詞或介系詞。
+- 「不精確」需說明為何不精確（例如原因、行動者、時段或影響不明），而非只以更艱深的詞彙取代。
+- 當 prompt points、立場與基本因果關係已足以支持目前或更高的 score 時，follow-up 預設優先順序為：語句通順／文意 → 自然句型與文法用法 → 字詞精確度 → 避免不必要重複；不額外要求擴寫論點或重做邏輯。
+- 若論點或邏輯確實會使讀者無法理解問題、方案或請求，coach 必須說明這是高分精修以外的 task-completion blocker，並回到既有 must-fix／should-fix 流程處理。
+- 練習題必須沿用 learner 的 task route 與原始情境；不得把 Email 練習變成 Discussion 題目，亦不得假裝為 ETS 題目或正式分數。
+
+### 驗收條件
+
+1. 一篇完成修訂的 Email 若重複使用 `Students urgently need...`，follow-up 能引用兩個 exact excerpts，說明重複的語用效果，並提供一個保留 urgency 的單句替代方案。
+2. 不自然但可理解的搭配（例如過泛的 `is from the construction`）能得到一個更精確的單句選項與原因；不會被寫成 counted error，除非它同時符合既有 must-fix／should-fix 標準。
+3. 一篇論點、邏輯與 prompt points 均已清楚的回應，follow-up 仍會優先找出語句通順、指涉、自然用法或精確字詞問題，而不是要求多加一個論點。
+4. follow-up 產生 2–4 題 bounded mini-practice，答案不會在 learner 首次看到練習時出現。
+5. 沒有重複、文意、自然度或精確度問題的完成修訂，輸出明確的零項結果與不計分的 transfer suggestion，而非虛構 feedback。
+6. 回歸測試確認此流程不改寫 immutable attempt、feedback、event，且不改變 dashboard、error rate、mastery、training plan 或 practice queue。
+
+### 實作進度（2026-08-11）
+
+已完成：
+
+- revision feedback 可在既有六個評估區塊後附加 `# Naturalness and precision follow-up`；此區塊只保存於 immutable feedback，不會寫入 event 或衍生學習狀態。
+- 有問題時，gate 會要求 1–3 則 response 中的 distinct exact excerpts，以及 2–4 題未揭露答案的 mini-practice；零項結果可明確寫出固定的 no-issue 訊息。
+- Writing coach skill 已規定用字重複、語意不精確或慣用法不自然的界線，以及保持 route/context 的限制；契約測試會拒絕臆測 excerpt、過量練習與答案洩漏。
+
 ## Incident-driven optimization requirements（2026-08-10）
 
 本節將 `W-AD-20260809-002` 的 drill 產出問題轉成 Milestone 1 的必要開發需求。原始失敗案例為：Academic Discussion 的品牌行銷／世界盃題目，卻產生公共運輸、大學政策與新設施題目；同一 pack 含多組重複題；recommendation 要求 causal-chain items，輸出卻是無關的通用文法模板；並將 causal chain 的四個語意元素誤呈現為每題四個完整句子的硬性要求。
@@ -28,12 +71,12 @@ Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺�
 | --- | --- | --- |
 | 從未解決 revision 產生 training plan | 可用 | 可產生有來源、route 與目標 code 的 recommendation。 |
 | 新 pack 的答案隔離 | 已修復 | 目前 `build_drill_pack()` 的 learner markdown 不含 answer key；answer key 保持獨立。 |
-| 重新產生既有 recommendation | 阻塞 | `WD-90608621535FD7B6` 的 persisted 內容與現行 renderer 對同一 ID 的輸出不同，immutable write 因而正確拒絕覆寫，但使用者無法取得可用的新 pack。 |
+| 重新產生既有 recommendation | 已修復 | renderer／schema version 已納入 pack identity；現行 `PLAN-W-AD-20260809-002` 會產生 v11 的新 ID `WD-E3B7138B89BE6A83`，不覆寫 legacy `WD-90608621535FD7B6`。 |
 | 新生成題目的情境與獨立性 | 已修復（支援情境） | 產生前會檢查 context binding 與正規化後的 prompt 唯一性；沒有對應安全模板的情境直接拒絕產生。 |
 | 作答完整性讀取 | 可用 | 讀取器會拒絕遺漏的 response field。 |
-| 開放題評量與 drill 統計 | 未修復 | 現行資料只有整組 `correct_count`；`W-DRILL-20260810-001` 同時記錄 0/8 與四題已有部分因果概念，不能可靠支持 mastery。 |
-| transfer 前置條件 | 未修復 | 現行實作驗證來源、route、prompt 與 opportunity，但未強制檢查 drill 是否達到 recommendation 的最低正確率；0/8 理論上仍可送進 transfer。 |
-| 多個 plan 的下一步呈現 | 未修復 | queue 只顯示一組行動，未說明其他 pending plan 是延後、阻塞或不支援。 |
+| 開放題評量與 drill 統計 | 已修復（教練判定） | 每題保存 `meets_target`／`partially_meets_target`／`needs_revision` 與理由；各 target code 另保存題數與達標摘要。語意與語言正確性仍由教練判定。 |
+| transfer 前置條件 | 已修復 | transfer 會逐一檢查每個 target code 的最低正確率；未達標的 code 無法進入新題 transfer。 |
+| 多個 plan 的下一步呈現 | 已修復 | queue 列出所有 active plan，並標示 `ready`、`deferred_by_priority` 或具體阻塞原因。 |
 
 歷史 artifact 要與現行功能分開處理：已存的 `WD-90608621535FD7B6/drill.md` 含示範答案，這是需要隔離或遷移的舊資料問題，不代表新的 learner renderer 仍會洩漏答案。現有測試與 tracker audit 通過只能證明其既有契約；本節的流程案例必須成為新的回歸契約。
 
@@ -41,7 +84,7 @@ Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺�
 
 已完成：
 
-- pack format 升級至 version 10；renderer／schema 更新會產生新的 stable drill ID，不覆寫舊 pack。
+- pack format 升級至 version 11；renderer／schema 更新會產生新的 stable drill ID，不覆寫舊 pack。
 - 舊版或 learner artifact 含非 response 內容時，`read_completed_drill()` 會拒絕註冊。
 - transfer 會檢查 persisted drill 的最低正確率；未達門檻不能進入新題 transfer。
 - practice queue 會輸出 `ready`、`blocked_by_drill`、`blocked_by_accuracy`、`blocked_by_pack_drift`、`blocked_by_template` 等狀態與原因；目前工作區的舊 5-code drill 因與最新 2-code plan 不一致而顯示 `blocked_by_pack_drift`。
@@ -59,11 +102,13 @@ Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺�
 - practice queue 現在會在顯示「可生成 drill」前讀取來源 prompt；若缺少對應的 context-safe template，會直接標示 `blocked_by_template` 與具體原因，而不是先把使用者帶到失敗的生成步驟。
 - `review_writing_drill.py` 可對完成但尚未登錄的 drill 產生一次性的 `assessment-hints.json`：檢查句尾、句數、字數與 causal-chain 的 25–35 字／單句規則。輸出固定為 `diagnostic_only`，不會自行決定 `meets_target`，仍由教練完成語意與語言正確性判定。
 - 每個 drill item 現明確保存 `response_mode`；目前所有產生題皆為 `open_response`，評量輔助也會輸出此標記，禁止將示範答案當成唯一正解。未來若加入封閉題，必須明確標為 `closed_response` 才能使用唯一答案比對。
+- `review_writing_drill.py` 現會額外建立一次性的 `assessment-review.md` 給教練審核：逐題集中 learner response、target code、來源 evidence ID、接受條件與格式提示，並明確要求由教練寫入語意／語言判定；不會產生自動對錯結論，成功登錄後會隨 drill pack 清除。
+- 多 code drill 現保證每個 target code 至少有一題，登錄時保存各 code 的 item／達標／部分達標數；transfer、queue 與 mastery 會逐一檢查每個 code 的門檻，不能以總分掩蓋單一弱點未達標。
 
 尚未完成：
 
-- 開放題的語意與語言正確性判定仍由教練提供；目前自動化僅涵蓋不涉及語意評分的格式檢查。
-- 為其他真實題目情境（例如期限調整）補上各自的 context-safe template family，之後才可由該來源產生 drill。
+- 開放題的語意與語言正確性判定仍由教練提供；目前已新增一次性的 coach assessment worksheet，集中 learner response、來源 evidence ID、接受條件與格式提示，但不會自動判為正確或錯誤；登錄後會隨 pack 清理。
+- 只有出現新的真實來源題目情境時，才補上相應的 context-safe template family（例如期限調整）；不預先堆疊可重複練習的題庫或生成 artifact。
 
 ### 需求 DRILL-RETENTION-11：一次性 drill artifact 清理
 
@@ -173,6 +218,18 @@ Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺�
 - Email 與 Academic Discussion 保持不同任務路線；只有 common language code 可跨路線。
 - 衍生檔可以重建，來源紀錄不可覆寫。
 - 每個 milestone 先建立契約測試，再實作，最後執行全套測試與 `tools/validate_tracker.py`。
+- 僅當 learner 在正常使用 coach 時回報非預期行為，才使用 `tools/capture_bug_report.py` 建立不可覆寫的 Bug Capture；開發中的 feature work、測試失敗、roadmap 整理與 intentionally fail-closed 的 capability gap 不建立 Bug Capture。
+- 正常使用 bug 不得直接修改：先確認目的／預期結果／實際結果／操作流程／使用時機與觸發條件／影響範圍／可用證據；資訊不足時先追問，不得臆測。
+- 確認後先以 capture CLI 把 Bug ID、確認過的摘要與 artifact 連結寫入本 roadmap，再開始調查或修復；完整 context、snapshot 與附件放在 artifact，避免 roadmap 取代可重現證據。
+
+## Bug capture ledger
+
+僅記錄正常使用 coach 時發現的 bug。每筆回報至少保存：功能目的、預期／實際結果、錯誤前的操作步驟、時機或觸發條件、受影響流程、重現性與影響範圍、Git revision 與工作區狀態、runtime 資訊，以及使用者提供的 log、畫面或輸出附件及其 checksum。預設不保存完整未提交 diff，避免把無關變更或敏感內容納入證據；若當次重現確實需要，才由呼叫者明確加上 `--include-git-diff`。完整證據存於 `tracker/bug-reports/<BUG-ID>/`，而不是把 snapshot 複製進 roadmap。
+
+| Bug ID | Status | Summary | Evidence | Artifact |
+| --- | --- | --- | --- |
+<!-- BUG-CAPTURE-LEDGER -->
+
 
 ## Milestone 1 — Personalized Drill Pack Generator
 
@@ -272,6 +329,17 @@ Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺�
 - 不將單題趨勢換算為完整 section band。
 - 在資料不足三篇時顯示 diagnostic-only early view，不偽造趨勢。
 
+### 實作進度（2026-08-11）
+
+已完成：
+
+- overview 同時輸出 Markdown 與 YAML；重建不改寫 attempt 或 canonical event。
+- 最近三篇正式作答顯示 route、模擬 task score、錯誤密度與 meaning-changing 密度；資料不足三篇時維持 diagnostic-only early view。
+- 各 route 分開列出 atomic code 的 historical trend signal 與 skill-family evidence 統計，不混用 route-specific code。
+- 每條 revision chain 顯示輪數、最新解決率、最新／累計新增錯誤，以及首次完全解決輪次。
+- 每個 mastery code 顯示 drill sets、逐 code drill accuracy、部分達標題數、transfer opportunities／errors，並分開列出 drill 與 transfer attempt evidence。
+- 已重建 `tracker/writing/progress-overview.md` 與 `.yaml`，並有回歸測試防止資訊遺漏。
+
 ## Milestone 4 — Calibration Regression Suite
 
 優先度：P1
@@ -289,11 +357,68 @@ Drill、transfer 與 progress overview 的基礎 artifact 已存在；目前缺�
 - Counted event 必須有 exact excerpt。
 - 第一輪仍維持最多三個目標與不提供完整範文。
 
+### 實作進度（2026-08-11）
+
+已完成：
+
+- Email 與 Academic Discussion 各有兩個固定、匿名化校準樣本，涵蓋不同的模擬 task-score 水準與診斷重點。
+- 每個樣本鎖定 route、attempt ID、rubric version、核准 score range、全部 counted error codes，以及 `Why this level`／`Why not the next level` 的關鍵理由標記。
+- `validate_writing_calibration.py` 會 fail closed 偵測 score、route、rubric version、分類 code、exact excerpt 或關鍵理由漂移。
+- 既有 schema-v2 `re_evaluation` 測試持續驗證新版 rubric 評估只會新增 lineage，不覆寫原始評估。
+
 ## Milestone 5 — Speaking Progress Parity
 
 優先度：P2
 
 在 Writing 閉環穩定後，將相同概念延伸到 Listen and Repeat 與 Take an Interview，但保留 speaking-specific evidence：learner timestamp、角色確認、音訊可靠維度與 `diagnostic_only` 邊界。
+
+### 第一階段實作進度（2026-08-11）
+
+已完成：
+
+- 新增 `tracker/speaking/progress-overview.md`／`.yaml` 與 `tools/rebuild_speaking_progress_overview.py`；正式 session 顯示 task route、duration、timestamp-based counted events、role mapping 確認與 persisted reliable dimensions。
+- Listen and Repeat 與 Take an Interview 的 atomic code、taxonomy dimension、recent focus 分開統計；至少三個 formal session 前不選擇進度 focus。
+- 每次 `register_speaking_session.py` 成功後會重建 speaking aggregate events、dashboard、三次 session reports 與 progress overview。
+- overview 固定標示 `diagnostic_only`：未被 persisted audio inspection 標為可靠的 pronunciation、prosody、fluency 與 intelligibility 不會從 transcript 推測，且絕不換算 section band。
+
+已完成（audio-performance evidence contract）：
+
+- 錄音品質的 `all` 僅表示訊號完整，不再自動授權 pronunciation、prosody、fluency 或 intelligibility 判定。
+- 若要登錄這些 audio-performance code，必須為每個 learner segment 保存 timestamp-aligned、path-free 的 `human_observed` dimension observation，含觀察時間、對應 dimension 與簡短證據理由；所有 learner segment 的交集才成為 reliable dimension。
+- 未提供該證據時維持 fail closed；不從逐字稿或正常音量推測音訊表現。
+
+### 已核准、實作中：Speaking revision、drill 與 transfer contract
+
+目標是讓 learner 可用新的、有限範圍的口說練習檢查改善是否遷移；它只產生 diagnostic evidence，不產生 TOEFL task score 或 section band，也不把逐字稿當成完整音訊評分。
+
+| 階段 | 允許的輸入與產物 | 必要 evidence | 禁止事項 |
+| --- | --- | --- | --- |
+| Revision / re-recording | 連到一個完整 formal session 的 partial 或 complete re-recording transcript | parent session、指定 item／priority、learner transcript、明確 prompt/learner pairing；若評語涉及音訊維度，該 learner segment 必須有對應 reliable dimension | 不把 partial re-recording 計為新的 formal session；不補寫未提供的字詞或時間戳。 |
+| Targeted drill | 一次性的 mini set：Listen and Repeat 為新句子／受限的 reconstruction target；Interview 為新問題／受限的 response goal | source event IDs、target code、route、item IDs、learner transcript、逐項 `meets_target`／`partially_meets_target`／`needs_revision` 與理由 | 不重複舊題作為 transfer；不保存 raw audio；不以示範答案作唯一正解。 |
+| Transfer | 與來源 formal session 不同的新 stimulus：Listen and Repeat 不重用原句；Interview 不重用原問題 | completed drill、每個 target code 的門檻、new prompt hash、逐 code opportunity、timestamp／transcript evidence | target code 未逐一達標時不可 transfer；audio-unreliable dimension 不可被宣告已 transfer。 |
+| Progress state | 每個 code 只顯示 `identified`、`practised`、`transcript_transferred` 或 `audio_evidence_unavailable` 等 diagnostic state | drill／transfer evidence IDs，及每個 evidence 的 reliable dimensions | 不宣告完整 spoken control；不把文字成功擴大為 pronunciation、prosody、fluency 或 intelligibility 成功。 |
+
+共通資料與門檻：
+
+- 每筆 revision、drill 與 transfer 必須保留 route、source formal session、target code、item／segment ID、learner timestamp（若原始證據含 timestamp）及 reason；不得只保存整組分數。
+- `SPK-PRONUNCIATION`、`SPK-STRESS`、`SPK-RHYTHM`、`SPK-INTONATION`、`SPK-FLUENCY`、`SPK-INTELLIGIBILITY` 只有在每個關聯 learner segment 的 persisted inspection 把該維度列為 reliable 時，才可被評為達標或 transfer；否則 state 必須是 `audio_evidence_unavailable`。
+- transcript-supported code（Listen and Repeat 的 reconstruction、兩種任務的 grammar／vocabulary；Interview 的 directness／relevance／elaboration／coherence）仍須由 learner 提供完整、角色明確的 transcript；沒有 opportunity 不能提升狀態。
+- generated drill prompt、示範答案與審核模板是一次性訓練介面。成功登錄後只保留最小 result lineage，不保留可重複練習的 prompt／answer key／learner transcript；historical formal session 不自動清理。
+- schema、CLI、與資料 migration 必須在本 contract 核准後才實作；第一個實作切點是 transcript-supported code，audio-performance code 保持 fail closed。
+
+第一個實作切片（完成）：`speaking_practice.validate_transcript_drill()` 與 `tools/validate_speaking_drill.py` 會先鎖定 transcript-supported target codes、逐題狀態與每個 code 的練習覆蓋。`tools/register_speaking_drill.py` 只登錄不可變的 result lineage（來源 formal session、逐題／逐 code 結果及 result hash），不保留 prompt、answer key 或 learner transcript。所有 audio-performance codes 仍明確拒絕。
+
+第二個實作切片（完成）：`speaking_transfer.prepare_speaking_transfer_attempt()` 與 `register_speaking_session.py --transfer-drill --confirmed-opportunities` 已強制 Speaking transfer 必須連到逐 code 達門檻的 drill、使用不同於來源 session 的新 prompt，並讓每個 target code 在新的 formal session 都有正數的確認 opportunity。transfer 仍只產生 diagnostic evidence，且 audio-performance 維度在有獨立 audio contract 前維持 fail closed。
+
+第三個實作切片（完成）：Speaking progress overview 現在會按 route、target code 顯示 result lineage：`needs_drill_revision`、`ready_for_transfer`、`awaiting_coach_outcome` 或 transcript-supported 的 `transfer_outcome_*`，並連回 drill／transfer attempt ID 與最近一次 per-code 門檻結果。這是追蹤狀態，不是 TOEFL task score、section band、mastery 宣告或 audio-performance 判斷。
+
+第四個實作切片（完成）：端對端測試已覆蓋 formal source session → result-only drill（無 prompt／transcript）→ 新 prompt 的 formal transfer → 含 exact transcript excerpt 的 per-code outcome → overview lineage，且 Speaking audit 通過。不可用「沒有新增 error event」直接推論已 mastered。
+
+第五個實作切片（完成）：`speaking_revision.validate_transcript_rerecording()` 與 `tools/validate_speaking_rerecording.py` 先鎖定 partial／complete scope、parent session、source event、item prompt/learner pairing、逐 code outcome 與 exact transcript excerpt。`tools/register_speaking_rerecording.py` 會將通過預檢的 payload 寫成不可變 Speaking revision record，保留 transcript 與 pairing，但不產生 audio artifact、也不增加 formal session。audit 會核對 parent formal session、source event coverage 與保存的 re-recording payload。它拒絕 audio-performance code，避免逐字稿被誤用為發音或流暢度判定。
+
+第六個實作切片（完成）：Speaking progress overview 會按 route 顯示每筆 re-recording 的 parent、partial／complete scope 與逐 code transcript-supported outcome，並明確排除在 formal session 計數之外；它不產生 TOEFL task score、section band 或 audio-performance 結果。
+
+下一個切入點：回到主 roadmap 的下一個未完成 learner-facing 或資料品質項目；Speaking revision、drill 與 transfer 的 transcript-supported 閉環已可安全使用，audio-performance 維度仍維持獨立 fail-closed。
 
 ## 建議執行順序
 
@@ -315,11 +440,4 @@ Milestone 1 與 2 應視為同一個 P0 release：只有 drill generator 而沒�
 
 ## 下一個開發切入點
 
-下一個 commit 從 `tests/test_drill_generation.py` 的 RED contract 開始，先固定：
-
-1. `GRAM-CLAUSE` drill 必須引用真實 evidence，但題目不能洩漏完整答案。
-2. `IDEA-DEVELOPMENT` drill 必須產生因果鏈欄位。
-3. Email 與 Academic Discussion route isolation。
-4. stable ID、固定 seed 可重現、未知 code fail closed。
-
-完成 Milestone 1 後立即進入 Transfer Check Lifecycle，不插入新的低優先度報表功能。
+目前已完成 Writing naturalness follow-up、Bug Capture P0–P3，以及 Speaking 的 transcript-supported revision、targeted drill、result-only retention、new-session transfer、progress lineage 和 audio-performance evidence contract。下一個切入點只在出現真實 learner source context 時擴充 drill template；不能以預先生成題庫取代來源情境。

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Capture"
+  short_description: "Capture reproducible bug evidence before fixing"
+  default_prompt: "Use $bug-capture to record this bug before investigating or fixing it."

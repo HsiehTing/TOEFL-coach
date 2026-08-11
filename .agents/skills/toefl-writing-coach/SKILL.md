@@ -52,7 +52,14 @@ For every counted sentence-level issue, give only the minimal correction in the 
 
 Compare only against the assigned priorities. Report resolved, partly resolved, unresolved, and newly introduced issues; calculate target-resolution rate. A revision never increases the formal-attempt count. Provide a high-scoring model only after the learner has attempted the revision.
 
-After the priority comparison, provide up to three `Clearer options after revision:` for sentences the learner has revised. Use each option to show a more natural or precise way to express the learner's own intended meaning. Keep every option to one sentence, preserve the learner's position and ideas, and never combine options into a complete model post. For remaining or newly introduced errors, give only the minimal correction and one short diagnosis.
+After the priority comparison, add `# Naturalness and precision follow-up`. This is a non-scoring revision-completion artifact, not a targeted drill and not a new error table: it must not change task score, formal count, counted events, error rates, historical status, mastery, training plan, or transfer gates.
+
+- When task completion and the core causal/logic relationship are already clear, prioritize sentence flow or reference, then natural grammar/collocation, precise wording, and unnecessary repetition; do not ask for extra ideas merely to fill this follow-up. If one of those core elements blocks reader understanding or the score ceiling, treat it through the existing must-fix/should-fix route instead.
+- If there are issues, give one to three numbered entries in the form `Excerpt: \`exact learner text\``. Each entry identifies either nearby repeated meaning/structure, unclear flow/reference, an overly broad or imprecise word, or an understandable but non-idiomatic construction; explain the reader effect and give one single-sentence option that preserves the learner's meaning. Never combine options into a complete model post.
+- Then add `## Mini-practice` with two to four numbered, answer-hidden five-minute prompts. Reuse the learner's route and original scenario; ask for a rewrite of the learner's own sentence or a more precise choice. Do not give a key, sample answer, or ETS score.
+- If no genuine issue exists, write exactly `No naturalness or precision issue to flag.` and give one non-scoring new-prompt transfer suggestion. Do not invent feedback to fill the section.
+
+For remaining or newly introduced counted errors, give only the minimal correction and one short diagnosis.
 
 ## Recurrence and progress output
 

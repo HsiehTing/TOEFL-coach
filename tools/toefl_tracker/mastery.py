@@ -20,6 +20,20 @@ def _attempts(root: Path) -> list[dict]:
     return sorted(rows, key=lambda row: (row.get("submitted_at", ""), row.get("attempt_id", "")))
 
 
+def _per_code_drill_counts(drill: dict, code: str) -> tuple[int, int, int]:
+    """Use code-specific results when available; retain legacy aggregate compatibility."""
+    metadata = drill["drill"]
+    for result in metadata.get("code_results", []):
+        if isinstance(result, dict) and result.get("code") == code:
+            return result["item_count"], result["correct_count"], result["partial_count"]
+    partial_count = sum(
+        item.get("status") == "partially_meets_target"
+        for item in metadata.get("item_results", [])
+        if isinstance(item, dict)
+    )
+    return metadata["item_count"], metadata["correct_count"], partial_count
+
+
 def _status(drill_count: int, accuracy: float, formal_opportunities: int, formal_errors: int, recent_opportunities: list[int], recent_errors: list[int]) -> str:
     if drill_count == 0 and formal_errors == 0:
         return "identified" if formal_opportunities else "identified"
@@ -64,16 +78,10 @@ def derive_mastery(root: Path, task_type: str | None = None) -> dict[str, dict]:
     result: dict[str, dict] = {}
     for code, data in sorted(by_code.items()):
         drill_rows = data["drills"]
-        item_count = sum(row["drill"]["item_count"] for row in drill_rows)
-        correct_count = sum(row["drill"]["correct_count"] for row in drill_rows)
-        partial_count = sum(
-            sum(
-                item.get("status") == "partially_meets_target"
-                for item in row["drill"].get("item_results", [])
-                if isinstance(item, dict)
-            )
-            for row in drill_rows
-        )
+        counts = [_per_code_drill_counts(row, code) for row in drill_rows]
+        item_count = sum(item_count for item_count, _, _ in counts)
+        correct_count = sum(correct_count for _, correct_count, _ in counts)
+        partial_count = sum(partial_count for _, _, partial_count in counts)
         accuracy = correct_count / item_count if item_count else 0.0
         transfer_formals = [
             row for row in formals
@@ -84,6 +92,8 @@ def derive_mastery(root: Path, task_type: str | None = None) -> dict[str, dict]:
         formal_opportunities = sum(opportunities)
         formal_errors = sum(error for opportunity, error in zip(opportunities, errors) if opportunity)
         status = _status(len(drill_rows), accuracy, formal_opportunities, formal_errors, opportunities, errors)
+        drill_attempt_ids = [row["attempt_id"] for row in drill_rows]
+        transfer_attempt_ids = [row["attempt_id"] for row in transfer_formals]
         result[code] = {
             "status": status,
             "drill_sets": len(drill_rows),
@@ -91,7 +101,9 @@ def derive_mastery(root: Path, task_type: str | None = None) -> dict[str, dict]:
             "drill_partial_items": partial_count,
             "formal_opportunities": formal_opportunities,
             "formal_errors": formal_errors,
-            "evidence_attempt_ids": list(dict.fromkeys([*data["evidence"], *(row["attempt_id"] for row in transfer_formals)])),
+            "drill_attempt_ids": list(dict.fromkeys(drill_attempt_ids)),
+            "transfer_attempt_ids": list(dict.fromkeys(transfer_attempt_ids)),
+            "evidence_attempt_ids": list(dict.fromkeys([*data["evidence"], *transfer_attempt_ids])),
         }
     return result
 

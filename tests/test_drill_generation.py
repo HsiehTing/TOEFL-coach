@@ -13,6 +13,7 @@ from toefl_tracker.drill_generation import (
     retire_registered_drill_pack,
     validate_drill_pack,
     write_assessment_hints,
+    write_assessment_review,
     write_drill_pack,
 )
 from toefl_tracker.models import ValidationError
@@ -137,6 +138,41 @@ def test_discussion_idea_pack_requires_one_bounded_causal_chain_response(tmp_pat
     assert pack["context_summary"] == "brand identity, advertising updates, and customer reactions"
     assert all("brand identity" in item["prompt"] for item in pack["items"])
     assert all("public transportation" not in item["prompt"].lower() for item in pack["items"])
+
+
+def test_multi_code_pack_gives_every_target_code_a_practice_item(tmp_path: Path) -> None:
+    source, event = _source_attempt(tmp_path, task_type="email", code="GRAM-CLAUSE")
+    agreement_event = {**event, "event_id": "E-SOURCE-002", "code": "GRAM-AGREEMENT"}
+    events_path = tmp_path / "tracker/writing/attempts" / source["attempt_id"] / "events.jsonl"
+    events_path.write_text(
+        json.dumps(event) + "\n" + json.dumps(agreement_event) + "\n",
+        encoding="utf-8",
+    )
+    recommendation = _recommendation(source, "GRAM-CLAUSE")
+    recommendation["target_codes"] = ["GRAM-CLAUSE", "GRAM-AGREEMENT"]
+    recommendation["drill"]["item_count"] = 2
+
+    pack = build_drill_pack(tmp_path, recommendation, seed=0)
+
+    assert {item["evidence"]["code"] for item in pack["items"]} == {
+        "GRAM-CLAUSE", "GRAM-AGREEMENT"
+    }
+
+
+def test_multi_code_pack_rejects_too_few_items_for_its_targets(tmp_path: Path) -> None:
+    source, event = _source_attempt(tmp_path, task_type="email", code="GRAM-CLAUSE")
+    agreement_event = {**event, "event_id": "E-SOURCE-002", "code": "GRAM-AGREEMENT"}
+    events_path = tmp_path / "tracker/writing/attempts" / source["attempt_id"] / "events.jsonl"
+    events_path.write_text(
+        json.dumps(event) + "\n" + json.dumps(agreement_event) + "\n",
+        encoding="utf-8",
+    )
+    recommendation = _recommendation(source, "GRAM-CLAUSE")
+    recommendation["target_codes"] = ["GRAM-CLAUSE", "GRAM-AGREEMENT"]
+    recommendation["drill"]["item_count"] = 1
+
+    with pytest.raises(ValidationError, match="at least one item"):
+        build_drill_pack(tmp_path, recommendation, seed=0)
 
 
 @pytest.mark.parametrize(
@@ -343,3 +379,31 @@ def test_assessment_hints_check_causal_response_shape_without_scoring_meaning(tm
     }
     assert any(check["status"] == "attention" for check in checks)
     assert "meets_target" not in hints_path.read_text(encoding="utf-8")
+
+
+def test_assessment_review_keeps_semantic_scoring_with_the_coach(tmp_path: Path) -> None:
+    source, event = _source_attempt(tmp_path, task_type="email", code="GRAM-AGREEMENT")
+    pack = build_drill_pack(
+        tmp_path,
+        _recommendation(source, "GRAM-AGREEMENT") | {"drill": {"item_count": 1}},
+        seed=0,
+    )
+    destination = write_drill_pack(tmp_path, pack)
+    markdown_path = destination / "drill.md"
+    markdown_path.write_text(
+        markdown_path.read_text(encoding="utf-8").replace(
+            "- response: [write your answer here]",
+            "- response: The corrected materials are ready today.",
+        ),
+        encoding="utf-8",
+    )
+
+    review_path = write_assessment_review(destination)
+    review = review_path.read_text(encoding="utf-8")
+
+    assert "The corrected materials are ready today." in review
+    assert event["event_id"] in review
+    assert "Acceptable when:" in review
+    assert "coach must judge meaning, grammar" in review
+    assert "Coach decision: [complete `assessment.json`" in review
+    assert "One sample answer:" not in review

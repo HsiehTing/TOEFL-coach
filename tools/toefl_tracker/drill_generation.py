@@ -4,7 +4,6 @@ import hashlib
 import json
 import re
 import shutil
-from itertools import cycle
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +19,7 @@ _SUPPORTED_CODES = {
     "GRAM-CLAUSE", "GRAM-ARTICLE", "GRAM-AGREEMENT", "LEX-WORDFORM",
     "LEX-COLLOCATION", "EMAIL-ACTION", *_CAUSAL_CODES,
 }
-_PACK_FORMAT_VERSION = 10
+_PACK_FORMAT_VERSION = 11
 _DEFAULT_MINIMUM_ACCURACY = 0.8
 _CONTEXT_TEMPLATE_FAMILIES = {
     "academic_discussion": {"academic_brand_identity"},
@@ -929,12 +928,75 @@ def write_assessment_hints(pack_dir: Path) -> Path:
     return path
 
 
+def _assessment_review_markdown(completed: dict[str, Any], hints: dict[str, Any]) -> str:
+    """Render a temporary coach worksheet without assigning an automatic score."""
+    pack = completed["pack"]
+    responses = completed["responses"]
+    hints_by_item = {
+        row["item_id"]: row
+        for row in hints["items"]
+        if isinstance(row, dict) and isinstance(row.get("item_id"), str)
+    }
+    lines = [
+        f"# Coach assessment worksheet — `{pack['drill_id']}`",
+        "",
+        "Use this temporary worksheet to decide the entries in `assessment.json`. "
+        "It is not an automatic score: the coach must judge meaning, grammar, and whether the response meets the stated condition.",
+        "",
+        f"Route: `{pack['task_type']}`",
+        f"Context: {pack['context_summary']}",
+        "",
+        "For each item, choose exactly one status in `assessment.json`: `meets_target`, "
+        "`partially_meets_target`, or `needs_revision`. In `reason`, cite the learner response and explain the decision; do not mark an answer wrong merely because it differs from a sample answer.",
+        "",
+    ]
+    for item in pack["items"]:
+        item_id = item["item_id"]
+        hint_fields = hints_by_item[item_id]["fields"]
+        lines.extend([
+            f"## {item_id}",
+            f"- Target code: `{item['evidence']['code']}`",
+            f"- Source evidence: `{item['evidence']['event_id']}` from `{item['evidence']['attempt_id']}`",
+            f"- Prompt: {item['prompt']}",
+            f"- Acceptable when: {item['answer_guidance']}",
+            "- Learner response:",
+        ])
+        for field in item["response_fields"]:
+            lines.append(f"  - {field}: {responses[item_id][field]}")
+        lines.append("- Format checks (diagnostic only):")
+        for field_hint in hint_fields:
+            checks = "; ".join(
+                f"{check['check']} = {check['status']} ({check['detail']})"
+                for check in field_hint["checks"]
+            )
+            lines.append(
+                f"  - {field_hint['field']}: {field_hint['word_count']} words; "
+                f"{field_hint['sentence_count']} sentence endings; {checks}"
+            )
+        lines.extend([
+            "- Coach decision: [complete `assessment.json`; do not score in this worksheet]",
+            "",
+        ])
+    return "\n".join(lines)
+
+
+def write_assessment_review(pack_dir: Path) -> Path:
+    """Write a disposable semantic-review worksheet beside an unfinished drill."""
+    completed = read_completed_drill(pack_dir)
+    hints = build_assessment_hints(completed)
+    path = pack_dir / "assessment-review.md"
+    atomic_write_text(path, _assessment_review_markdown(completed, hints).rstrip() + "\n")
+    return path
+
+
 def build_drill_pack(root: Path, recommendation: dict, *, seed: int = 0) -> dict:
     """Build a deterministic, non-scored drill pack from persisted evidence."""
     if type(seed) is not int:
         raise ValidationError("drill seed must be an integer")
     recommendation_id, source_attempt_id, task_type, codes, item_count, minimum_accuracy = _recommendation_fields(recommendation)
     _validate_codes(root, task_type, codes)
+    if item_count < len(codes):
+        raise ValidationError("drill item_count must provide at least one item for every target code")
     evidence = _source_evidence(root, source_attempt_id, task_type, codes)
     context = _source_context(root, source_attempt_id, task_type)
     identity = {
@@ -953,10 +1015,15 @@ def build_drill_pack(root: Path, recommendation: dict, *, seed: int = 0) -> dict
         "source_prompt_hash": context["prompt_hash"],
     }
     drill_id = "WD-" + _canonical_hash(identity)[:16].upper()
-    evidence_cycle = cycle(evidence[seed % len(evidence):] + evidence[:seed % len(evidence)])
+    evidence_by_code = {
+        code: [row for row in evidence if row["code"] == code]
+        for code in codes
+    }
     items: list[dict] = []
     for number in range(1, item_count + 1):
-        row = next(evidence_cycle)
+        code = codes[(seed + number - 1) % len(codes)]
+        code_rows = evidence_by_code[code]
+        row = code_rows[(seed + (number - 1) // len(codes)) % len(code_rows)]
         if row["code"] == "GRAM-CLAUSE":
             items.append(_clause_item(number, task_type, row, context["summary"], context["template_family"]))
         elif row["code"] in _CAUSAL_CODES:
@@ -1037,6 +1104,46 @@ def attach_generated_drill_lineage(attempt: dict, pack: dict) -> None:
             "artifact_retention": "result_only",
         }
     )
+
+
+def summarize_item_results_by_code(pack: dict, item_results: list[dict]) -> list[dict]:
+    """Create the per-code performance record needed after a one-time pack is removed."""
+    items = pack.get("items") if isinstance(pack, dict) else None
+    target_codes = pack.get("target_codes") if isinstance(pack, dict) else None
+    if not isinstance(items, list) or not isinstance(target_codes, list):
+        raise ValidationError("generated drill pack has invalid item-code lineage")
+    code_by_item: dict[str, str] = {}
+    for item in items:
+        evidence = item.get("evidence") if isinstance(item, dict) else None
+        item_id = item.get("item_id") if isinstance(item, dict) else None
+        code = evidence.get("code") if isinstance(evidence, dict) else None
+        if not isinstance(item_id, str) or not isinstance(code, str) or code not in target_codes:
+            raise ValidationError("generated drill item has invalid code lineage")
+        code_by_item[item_id] = code
+    if not isinstance(item_results, list) or {row.get("item_id") for row in item_results if isinstance(row, dict)} != set(code_by_item):
+        raise ValidationError("item results do not cover the generated drill")
+    summaries = {
+        code: {"code": code, "item_count": 0, "correct_count": 0, "partial_count": 0}
+        for code in target_codes
+    }
+    for row in item_results:
+        item_id = row.get("item_id") if isinstance(row, dict) else None
+        if (
+            not isinstance(row, dict)
+            or not isinstance(item_id, str)
+            or item_id not in code_by_item
+            or row.get("status") not in {
+            "meets_target", "partially_meets_target", "needs_revision",
+            }
+        ):
+            raise ValidationError("item results have invalid assessment statuses")
+        summary = summaries[code_by_item[item_id]]
+        summary["item_count"] += 1
+        summary["correct_count"] += row["status"] == "meets_target"
+        summary["partial_count"] += row["status"] == "partially_meets_target"
+    if any(summary["item_count"] == 0 for summary in summaries.values()):
+        raise ValidationError("generated drill does not assess every target code")
+    return [summaries[code] for code in target_codes]
 
 
 def retire_registered_drill_pack(root: Path, pack: dict) -> None:

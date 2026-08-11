@@ -151,16 +151,65 @@ def write_progress_overview(root: Path) -> Path:
             f"- `{route}`: {summary['formal_record_count']} formal records; "
             f"{sum(row['events'] for row in summary['atomic_codes'].values())} counted events"
         )
+    lines.extend(["", "## Atomic-code and skill-family trend signals"])
+    for route, summary in overview["routes"].items():
+        lines.append(f"### `{route}`")
+        codes = summary["atomic_codes"]
+        if codes:
+            lines.append("Atomic codes:")
+            lines.extend(
+                f"- `{code}`: {row['events']} counted events across {row['formal_records']} formal records; "
+                f"trend signal: {row['historical_status']}."
+                for code, row in codes.items()
+            )
+        else:
+            lines.append("- No counted atomic-code signals")
+        families = summary["skill_families"]
+        if families:
+            lines.append("Skill families:")
+            lines.extend(
+                f"- `{name}`: {row['event_count']} counted events across "
+                f"{row['formal_record_count']} formal records."
+                for name, row in families.items()
+            )
+        else:
+            lines.append("- No counted skill-family signals")
     lines.extend(["", "## Next two focuses"])
     lines.extend([f"- `{row['code']}`: {row['reason']}" for row in overview["next_focuses"]] or ["- Need three formal records before trend focuses."])
-    lines.extend(["", "## Mastery"])
-    lines.extend([f"- `{code}`: {summary['status']}" for code, summary in overview["mastery"].items()] or ["- No drill/mastery signals yet"])
+    lines.extend(["", "## Drill, mastery, and transfer evidence"])
+    mastery = overview["mastery"]
+    if mastery:
+        lines.extend([
+            "| Code | State | Drill sets | Drill accuracy | Partial items | Transfer opportunities | Transfer errors |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
+        ])
+        for code, summary in mastery.items():
+            lines.append(
+                f"| `{code}` | `{summary['status']}` | {summary['drill_sets']} | "
+                f"{summary['drill_accuracy']:.1%} | {summary['drill_partial_items']} | "
+                f"{summary['formal_opportunities']} | {summary['formal_errors']} |"
+            )
+            drill_ids = summary.get("drill_attempt_ids", [])
+            transfer_ids = summary.get("transfer_attempt_ids", [])
+            lines.append(
+                "  - Drill evidence: " + ", ".join(f"`{value}`" for value in drill_ids)
+                if drill_ids else "  - Drill evidence: none"
+            )
+            lines.append(
+                "  - Transfer evidence: " + ", ".join(f"`{value}`" for value in transfer_ids)
+                if transfer_ids else "  - Transfer evidence: none"
+            )
+    else:
+        lines.append("- No drill/mastery signals yet")
     lines.extend(["", "## Revision chains"])
     for summary in overview["revision_chains"]:
         if summary["revision_ids"]:
             lines.append(
                 f"- `{summary['root_attempt_id']}`: {summary['round_count']} rounds; "
                 f"latest revision `{summary['latest_revision_id']}`; "
+                f"latest resolution: {summary['latest_outcome']['resolution_rate']:.1%}; "
+                f"latest new errors: {summary['latest_outcome']['new_errors']}; "
+                f"total new errors: {summary['total_new_errors']}; "
                 f"first full resolution: round {summary['first_full_resolution_round'] or 'not reached'}"
             )
     if not any(summary["revision_ids"] for summary in overview["revision_chains"]):

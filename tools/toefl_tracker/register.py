@@ -176,9 +176,18 @@ def _validate_registration(
         if attempt["record_type"] == "re_evaluation":
             raise ValidationError("registration bundle does not match record_type")
         _validate_extra_files(registration.extra_files)
-        expected_hash = canonical_source_hash(registration.prompt, registration.response)
-        if attempt["source_hash"] != expected_hash:
-            raise ValidationError("source_hash does not match prompt and response")
+        if registration.result_only:
+            if (
+                attempt["record_type"] != "targeted_drill"
+                or registration.events
+                or registration.prompt
+                or registration.response
+            ):
+                raise ValidationError("result-only registration must contain only drill results")
+        else:
+            expected_hash = canonical_source_hash(registration.prompt, registration.response)
+            if attempt["source_hash"] != expected_hash:
+                raise ValidationError("source_hash does not match prompt and response")
         event_ids: set[str] = set()
         for event in registration.events:
             validate_error_event(event)
@@ -498,13 +507,14 @@ def publish_registration(
             if failpoint is not None:
                 failpoint("after_attempt")
             if isinstance(registration, ValidatedPracticeRegistration):
-                atomic_write_text(staging / "prompt.md", registration.prompt.rstrip() + "\n")
-                response_name = _response_filename(
-                    attempt["modality"], attempt["record_type"]
-                )
-                atomic_write_text(
-                    staging / response_name, registration.response.rstrip() + "\n"
-                )
+                if not registration.result_only:
+                    atomic_write_text(staging / "prompt.md", registration.prompt.rstrip() + "\n")
+                    response_name = _response_filename(
+                        attempt["modality"], attempt["record_type"]
+                    )
+                    atomic_write_text(
+                        staging / response_name, registration.response.rstrip() + "\n"
+                    )
                 for name, content in registration.extra_files.items():
                     atomic_write_text(staging / name, content)
                 events = registration.events

@@ -16,7 +16,7 @@ Treat the learner-provided transcript as the sole textual record. Do not transcr
 3. Require each item to identify the prompt and learner response. Preserve the supplied English verbatim; timestamps are optional but must not be invented.
 4. Ask only about a missing or ambiguous prompt/response pairing. A complete transcript with explicit labels needs no reconfirmation.
 5. 配對完成前不得正式評估。A partial 7-item Listen and Repeat set or 4-question Interview set is diagnostic only and cannot be registered as a formal session.
-6. Mark pronunciation, stress, rhythm, intonation, fluency, and intelligibility as unavailable unless the learner separately supplies reliable human-observed evidence.
+6. Mark pronunciation, stress, rhythm, intonation, fluency, and intelligibility as unavailable unless the learner separately supplies reliable human-observed evidence for every relevant learner segment. A clear recording alone is not proof that any of those dimensions was reliably assessed.
 
 ## Route
 

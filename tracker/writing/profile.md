@@ -1,6 +1,6 @@
 # Current Profile
 
-Formal records: 7
+Formal records: 8
 
 - `DISCUSSION-ALIGNMENT`: new
 - `DISCUSSION-BORROWING`: new
@@ -10,8 +10,8 @@ Formal records: 7
 - `EMAIL-ACTION`: persistent
 - `GRAM-AGREEMENT`: improving
 - `GRAM-ARTICLE`: persistent
-- `GRAM-CLAUSE`: improving
+- `GRAM-CLAUSE`: persistent
 - `GRAM-NEGATION`: new
 - `LEX-COLLOCATION`: improving
 - `LEX-WORDFORM`: improving
-- `MECH-SPELLING`: recurring
+- `MECH-SPELLING`: persistent

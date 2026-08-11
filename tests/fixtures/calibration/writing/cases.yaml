@@ -3,11 +3,41 @@ cases:
   - case_id: CAL-EMAIL-001
     fixture: email-basic
     task_type: email
+    attempt_id: CAL-EMAIL-001
+    rubric_version: ets-writing-email-2025-applicable-2026
     score_range: {minimum: 4, maximum: 4}
-    required_codes: [EMAIL-ACTION, GRAM-CLAUSE]
+    counted_codes: [EMAIL-ACTION, GRAM-CLAUSE]
+    required_feedback_markers:
+      why_this_level: [clear, practical reason]
+      why_not_next: [action and follow-up timing]
+  - case_id: CAL-EMAIL-002
+    fixture: email-deadline
+    task_type: email
+    attempt_id: CAL-EMAIL-002
+    rubric_version: ets-writing-email-2025-applicable-2026
+    score_range: {minimum: 2, maximum: 2}
+    counted_codes: [EMAIL-ACTION, GRAM-CLAUSE]
+    required_feedback_markers:
+      why_this_level: [request is understandable, reason]
+      why_not_next: [direct request, complete clause]
   - case_id: CAL-DISCUSSION-001
     fixture: ../../writing/history-discussion
     attempt_file: attempt-input.yaml
     task_type: academic_discussion
+    attempt_id: W-AD-20260731-001
+    rubric_version: ets-writing-discussion-2025-applicable-2026
     score_range: {minimum: 3, maximum: 3}
-    required_codes: [DISCUSSION-ALIGNMENT, GRAM-NEGATION]
+    counted_codes: [DISCUSSION-ALIGNMENT, DISCUSSION-BORROWING, DISCUSSION-ELABORATION, GRAM-ARTICLE, GRAM-CLAUSE, GRAM-NEGATION, LEX-WORDFORM]
+    required_feedback_markers:
+      why_this_level: [clear negative position, elaboration is uneven]
+      why_not_next: [answer the exact question, independent contribution]
+  - case_id: CAL-DISCUSSION-002
+    fixture: discussion-support
+    task_type: academic_discussion
+    attempt_id: CAL-DISCUSSION-002
+    rubric_version: ets-writing-discussion-2025-applicable-2026
+    score_range: {minimum: 4, maximum: 4}
+    counted_codes: [GRAM-AGREEMENT]
+    required_feedback_markers:
+      why_this_level: [clear position, relevant example]
+      why_not_next: [more precise explanation, few language errors]

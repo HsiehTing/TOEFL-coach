@@ -81,4 +81,22 @@ actions:
     first.
   instruction: After meeting the drill threshold, complete one new formal prompt on
     this route. Confirm relevant opportunities; do not reuse the source prompt.
-deferred_actions: []
+deferred_actions:
+- action_id: PQ-01-DEFERRED
+  kind: unsupported_target
+  task_type: email
+  source_attempt_id: W-EM-20260811-001
+  target_codes:
+  - GRAM-CLAUSE
+  status: blocked_by_template
+  status_reason: drill generation has no context-safe Email template for this source
+    prompt
+- action_id: PQ-02-DEFERRED
+  kind: unsupported_target
+  task_type: email
+  source_attempt_id: W-EM-20260811-001
+  target_codes:
+  - GRAM-AGREEMENT
+  status: blocked_by_template
+  status_reason: drill generation has no context-safe Email template for this source
+    prompt

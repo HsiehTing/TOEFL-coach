@@ -10,6 +10,7 @@ from toefl_tracker.drill_generation import (
     read_completed_drill,
     retire_registered_drill_attempt_content,
     retire_registered_drill_pack,
+    summarize_item_results_by_code,
 )
 from toefl_tracker.mastery import write_mastery
 from toefl_tracker.models import ValidationError
@@ -67,6 +68,9 @@ def main() -> int:
             drill["item_results"] = item_results
             drill["correct_count"] = sum(
                 row.get("status") == "meets_target" for row in item_results if isinstance(row, dict)
+            )
+            drill["code_results"] = summarize_item_results_by_code(
+                generated_pack, item_results
             )
             metrics = attempt.setdefault("task_metrics", {})
             metrics["item_count"] = len(expected_ids)

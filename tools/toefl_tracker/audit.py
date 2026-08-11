@@ -83,8 +83,7 @@ def _response_name(attempt: dict) -> str:
 
 def _is_result_only_targeted_drill(attempt: dict) -> bool:
     return (
-        attempt.get("modality") == "writing"
-        and attempt.get("record_type") == "targeted_drill"
+        attempt.get("record_type") == "targeted_drill"
         and isinstance(attempt.get("drill"), dict)
         and attempt["drill"].get("artifact_retention") == "result_only"
     )
@@ -223,6 +222,15 @@ def audit_workspace(root: Path) -> list[str]:
                 continue
             try:
                 validate_attempt(attempt, manifest)
+                if (
+                    attempt["modality"] == "speaking"
+                    and _is_result_only_targeted_drill(attempt)
+                ):
+                    from toefl_tracker.speaking_practice import validate_persisted_transcript_drill
+
+                    validate_persisted_transcript_drill(
+                        root, attempt["task_type"], attempt["drill"]
+                    )
                 if attempt["attempt_id"] != directory.name or attempt["modality"] != modality:
                     raise ValidationError("attempt directory, modality, or attempt_id mismatch")
                 if attempt["attempt_id"] in attempts:
@@ -256,7 +264,7 @@ def audit_workspace(root: Path) -> list[str]:
                 required.extend([directory / "prompt.md", directory / _response_name(attempt)])
             if result_only_drill and any(
                 (directory / name).exists()
-                for name in ("prompt.md", "response-original.md")
+                for name in ("prompt.md", "response-original.md", "transcript-original.md")
             ):
                 problems.append(f"{attempt['attempt_id']}: result-only drill retains learner content")
                 invalid_data = True
@@ -276,12 +284,23 @@ def audit_workspace(root: Path) -> list[str]:
                     if canonical_source_hash(prompt, response) != attempt["source_hash"]:
                         problems.append(f"{attempt['attempt_id']}: source_hash mismatch")
                         invalid_data = True
-            if modality == "speaking" and attempt["record_type"] != "re_evaluation":
+            if (
+                modality == "speaking"
+                and attempt["record_type"] != "re_evaluation"
+                and not result_only_drill
+                and attempt["record_type"] != "revision"
+            ):
                 context = _audit_speaking_artifacts(directory, attempt, sidecars[attempt["attempt_id"]], problems)
                 if context is None:
                     invalid_data = True
                 else:
                     speaking_contexts[attempt["attempt_id"]] = context
+            if modality == "speaking" and attempt["record_type"] == "revision":
+                rerecording_path = directory / "re-recording.yaml"
+                rerecording = _load_yaml(rerecording_path, problems)
+                if rerecording is None or rerecording != attempt.get("speaking_revision"):
+                    problems.append(f"{attempt['attempt_id']}: missing or mismatched speaking re-recording artifact")
+                    invalid_data = True
 
         ledger = base / "error-events.jsonl"
         if ledger.exists():
@@ -305,6 +324,32 @@ def audit_workspace(root: Path) -> list[str]:
                     continue
                 problems.append(f"{modality}: {attempt_id}: {reason}")
             invalid_data = True
+
+        if modality == "speaking":
+            from toefl_tracker.speaking_revision import validate_transcript_rerecording
+
+            for attempt in attempts.values():
+                if attempt.get("record_type") != "revision":
+                    continue
+                revision = attempt.get("speaking_revision")
+                try:
+                    validate_transcript_rerecording(root, attempt["task_type"], revision)
+                    assert isinstance(revision, dict)
+                    parent = attempts.get(revision["parent_attempt_id"])
+                    if parent is None or parent.get("record_type") != "formal_original":
+                        raise ValidationError("speaking re-recording parent must be a formal session")
+                    selected = [
+                        event for event in sidecars.get(parent["attempt_id"], [])
+                        if event.get("event_id") in revision["source_event_ids"]
+                    ]
+                    if len(selected) != len(revision["source_event_ids"]) or not all(
+                        any(event.get("code") == code for event in selected)
+                        for code in revision["target_codes"]
+                    ):
+                        raise ValidationError("speaking re-recording source events do not cover target codes")
+                except _PARSE_ERRORS as error:
+                    problems.append(f"{directories[attempt['attempt_id']]}: {error}")
+                    invalid_data = True
 
         # Validate the complete revision graph separately from the registration
         # checks.  Registration protects parent existence/type/order, while

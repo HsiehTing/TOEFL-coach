@@ -93,6 +93,7 @@ def validate_attempt(data: dict, manifest: dict) -> None:
             optional_drill = {
                 "drill_pack_id", "recommendation_id", "item_results",
                 "minimum_accuracy", "source_prompt_hash", "pack_version", "artifact_retention",
+                "code_results",
             }
             if not required_drill <= set(drill) <= required_drill | optional_drill:
                 raise ValidationError("targeted_drill metadata fields are invalid")
@@ -110,6 +111,8 @@ def validate_attempt(data: dict, manifest: dict) -> None:
                 raise ValidationError("targeted_drill inline transfer lineage is incomplete")
             if inline_lineage <= set(drill) and "drill_pack_id" not in drill:
                 raise ValidationError("targeted_drill inline transfer lineage requires a generated pack ID")
+            if inline_lineage <= set(drill) and "code_results" not in drill:
+                raise ValidationError("targeted_drill result-only drill requires per-code results")
             if inline_lineage <= set(drill) and (
                 type(drill["minimum_accuracy"]) not in {int, float}
                 or not 0 < drill["minimum_accuracy"] <= 1
@@ -153,6 +156,44 @@ def validate_attempt(data: dict, manifest: dict) -> None:
                     meets_target += status == "meets_target"
                 if drill["correct_count"] != meets_target:
                     raise ValidationError("targeted_drill correct_count must match meets_target item results")
+            code_results = drill.get("code_results")
+            if code_results is not None:
+                if not isinstance(code_results, list) or len(code_results) != len(codes):
+                    raise ValidationError("targeted_drill code_results must cover every target code")
+                seen_codes = set()
+                total_items = total_correct = total_partial = 0
+                for result in code_results:
+                    if not isinstance(result, dict) or set(result) != {
+                        "code", "item_count", "correct_count", "partial_count"
+                    }:
+                        raise ValidationError("targeted_drill code result fields are invalid")
+                    code = result["code"]
+                    item_count = result["item_count"]
+                    correct_count = result["correct_count"]
+                    partial_count = result["partial_count"]
+                    if (
+                        not isinstance(code, str)
+                        or code not in codes
+                        or code in seen_codes
+                        or type(item_count) is not int
+                        or item_count <= 0
+                        or type(correct_count) is not int
+                        or type(partial_count) is not int
+                        or correct_count < 0
+                        or partial_count < 0
+                        or correct_count + partial_count > item_count
+                    ):
+                        raise ValidationError("targeted_drill code result is invalid")
+                    seen_codes.add(code)
+                    total_items += item_count
+                    total_correct += correct_count
+                    total_partial += partial_count
+                if total_items != drill["item_count"] or total_correct != drill["correct_count"]:
+                    raise ValidationError("targeted_drill code results do not reconcile")
+                if item_results is not None and total_partial != sum(
+                    item["status"] == "partially_meets_target" for item in item_results
+                ):
+                    raise ValidationError("targeted_drill code partial results do not reconcile")
             source_attempt_ids = drill["source_attempt_ids"]
             if not isinstance(source_attempt_ids, list) or any(
                 not isinstance(value, str) or not value.strip() for value in source_attempt_ids
@@ -177,13 +218,70 @@ def validate_attempt(data: dict, manifest: dict) -> None:
                 raise ValidationError("transfer target_codes are invalid")
             if transfer["opportunity_confirmation"] != opportunities:
                 raise ValidationError("transfer opportunity confirmation must match opportunities")
-    if data["modality"] == "speaking" and data.get("result_type") != "diagnostic_only":
-        raise ValidationError("speaking result_type must be diagnostic_only")
+    if data["modality"] == "speaking":
+        if data.get("result_type") != "diagnostic_only":
+            raise ValidationError("speaking result_type must be diagnostic_only")
+        if data["record_type"] == "targeted_drill":
+            drill = data.get("drill")
+            if not isinstance(drill, dict) or drill.get("artifact_retention") != "result_only":
+                raise ValidationError("speaking targeted_drill requires result-only metadata")
+        elif data.get("drill") is not None:
+            raise ValidationError("drill metadata is only valid for targeted_drill")
+        transfer = data.get("transfer")
+        if transfer is not None:
+            required_transfer = {
+                "drill_attempt_id", "source_attempt_id", "target_codes",
+                "opportunity_confirmation", "source_prompt_hash", "transfer_prompt_hash", "outcomes",
+            }
+            if (
+                data["record_type"] != "formal_original"
+                or not isinstance(transfer, dict)
+                or set(transfer) != required_transfer
+            ):
+                raise ValidationError("speaking transfer metadata is invalid")
+            if not all(
+                isinstance(transfer[field], str) and transfer[field].strip()
+                for field in {"drill_attempt_id", "source_attempt_id", "source_prompt_hash", "transfer_prompt_hash"}
+            ) or not all(
+                transfer[field].startswith("sha256:")
+                for field in {"source_prompt_hash", "transfer_prompt_hash"}
+            ):
+                raise ValidationError("speaking transfer metadata IDs are invalid")
+            targets = transfer["target_codes"]
+            if (
+                not isinstance(targets, list) or not targets or len(set(targets)) != len(targets)
+                or any(not isinstance(code, str) or not code.strip() for code in targets)
+                or transfer["opportunity_confirmation"] != opportunities
+            ):
+                raise ValidationError("speaking transfer target metadata is invalid")
+            outcomes = transfer["outcomes"]
+            if not isinstance(outcomes, list) or len(outcomes) != len(targets):
+                raise ValidationError("speaking transfer outcomes are invalid")
+            seen_codes = set()
+            for outcome in outcomes:
+                if (
+                    not isinstance(outcome, dict)
+                    or set(outcome) != {"code", "status", "reason", "evidence_excerpt"}
+                    or outcome.get("code") not in targets
+                    or outcome["code"] in seen_codes
+                    or outcome.get("status") not in {"meets_target", "partially_meets_target", "needs_revision"}
+                    or not isinstance(outcome.get("reason"), str) or not outcome["reason"].strip()
+                    or not isinstance(outcome.get("evidence_excerpt"), str) or not outcome["evidence_excerpt"].strip()
+                ):
+                    raise ValidationError("speaking transfer outcome metadata is invalid")
+                seen_codes.add(outcome["code"])
     if data["record_type"] in {"revision", "re_evaluation"} and not isinstance(data["parent_attempt_id"], str):
         raise ValidationError("revision or re_evaluation requires parent_attempt_id")
     if data["record_type"] not in {"revision", "re_evaluation"} and data["parent_attempt_id"] is not None:
         raise ValidationError("only revisions or re_evaluations may have parent_attempt_id")
     outcomes = data["revision_outcomes"]
+    if data["modality"] == "speaking" and data["record_type"] == "revision":
+        revision = data.get("speaking_revision")
+        if not isinstance(revision, dict):
+            raise ValidationError("speaking revision requires re-recording metadata")
+        if outcomes is not None:
+            raise ValidationError("speaking revision does not use writing revision_outcomes")
+        return
     if data["record_type"] != "revision" and outcomes is not None:
         raise ValidationError("only revisions may have revision_outcomes")
     if data["record_type"] == "revision":

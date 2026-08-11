@@ -62,8 +62,60 @@ def test_overview_renders_actionable_dashboard_details(tmp_path: Path) -> None:
 
     assert "Errors / 100 words" in text
     assert "## Route coverage" in text
+    assert "## Atomic-code and skill-family trend signals" in text
+    assert "trend signal:" in text
+    assert "## Drill, mastery, and transfer evidence" in text
     assert "## Revision chains" in text
     assert "## Data quality" in text
+
+
+def test_overview_renders_revision_outcomes_and_transfer_evidence(tmp_path: Path) -> None:
+    write_attempt(tmp_path, "W-AD-1", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-2", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-2-R1", "academic_discussion", "revision")
+    write_attempt(tmp_path, "W-AD-3", "academic_discussion", "formal_original")
+    drill = {
+        "attempt_id": "W-DRILL-1",
+        "modality": "writing",
+        "task_type": "academic_discussion",
+        "record_type": "targeted_drill",
+        "submitted_at": "2026-07-14T10:00:00+08:00",
+        "drill": {
+            "set_id": "set-1",
+            "target_codes": ["GRAM-CLAUSE"],
+            "item_count": 4,
+            "correct_count": 3,
+            "source_attempt_ids": ["W-AD-2"],
+        },
+    }
+    drill_dir = tmp_path / "tracker/writing/attempts/W-DRILL-1"
+    drill_dir.mkdir()
+    (drill_dir / "attempt.yaml").write_text(yaml.safe_dump(drill), encoding="utf-8")
+    (drill_dir / "events.jsonl").write_text("", encoding="utf-8")
+    transfer_path = tmp_path / "tracker/writing/attempts/W-AD-3/attempt.yaml"
+    transfer = yaml.safe_load(transfer_path.read_text(encoding="utf-8"))
+    transfer["opportunities"] = {"GRAM-CLAUSE": 3}
+    transfer["transfer"] = {
+        "drill_attempt_id": "W-DRILL-1",
+        "drill_pack_id": "WD-0000000000000001",
+        "source_attempt_id": "W-AD-2",
+        "target_codes": ["GRAM-CLAUSE"],
+        "opportunity_confirmation": {"GRAM-CLAUSE": 3},
+        "source_prompt_hash": "sha256:" + "0" * 64,
+        "transfer_prompt_hash": "sha256:" + "1" * 64,
+    }
+    transfer_path.write_text(yaml.safe_dump(transfer), encoding="utf-8")
+
+    overview = build_progress_overview(tmp_path)
+    path = write_progress_overview(tmp_path)
+    text = path.read_text(encoding="utf-8")
+
+    assert overview["mastery"]["GRAM-CLAUSE"]["drill_attempt_ids"] == ["W-DRILL-1"]
+    assert overview["mastery"]["GRAM-CLAUSE"]["transfer_attempt_ids"] == ["W-AD-3"]
+    assert "latest resolution: 50.0%" in text
+    assert "latest new errors: 0" in text
+    assert "Drill evidence: `W-DRILL-1`" in text
+    assert "Transfer evidence: `W-AD-3`" in text
 
 
 def test_overview_uses_declared_legacy_lineage_order_for_recent_records(tmp_path: Path) -> None:

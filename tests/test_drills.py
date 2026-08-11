@@ -67,6 +67,14 @@ def test_targeted_drill_requires_complete_inline_transfer_lineage() -> None:
             "source_prompt_hash": "sha256:" + "0" * 64,
             "pack_version": 9,
             "artifact_retention": "result_only",
+            "code_results": [
+                {
+                    "code": "GRAM-CLAUSE",
+                    "item_count": 8,
+                    "correct_count": 7,
+                    "partial_count": 0,
+                }
+            ],
         }
     )
     validate_attempt(attempt, MANIFEST)
@@ -106,6 +114,32 @@ def test_targeted_drill_registration_persists_without_formal_score(tmp_path: Pat
     assert persisted["record_type"] == "targeted_drill"
     assert persisted["task_score"] is None
     assert not list((tmp_path / "tracker/writing/reports").glob("*.md"))
+
+
+def test_mastery_uses_per_code_drill_accuracy_when_available(tmp_path: Path) -> None:
+    import yaml
+
+    attempt = drill_attempt("W-DRILL-PER-CODE")
+    attempt["drill"] = {
+        "set_id": "mixed-set",
+        "target_codes": ["GRAM-CLAUSE", "GRAM-AGREEMENT"],
+        "item_count": 10,
+        "correct_count": 8,
+        "source_attempt_ids": ["W-AD-20260805-001"],
+        "code_results": [
+            {"code": "GRAM-CLAUSE", "item_count": 8, "correct_count": 8, "partial_count": 0},
+            {"code": "GRAM-AGREEMENT", "item_count": 2, "correct_count": 0, "partial_count": 0},
+        ],
+    }
+    directory = tmp_path / "tracker/writing/attempts/W-DRILL-PER-CODE"
+    directory.mkdir(parents=True)
+    (directory / "attempt.yaml").write_text(yaml.safe_dump(attempt), encoding="utf-8")
+    (directory / "events.jsonl").write_text("", encoding="utf-8")
+
+    mastery = derive_mastery(tmp_path)
+
+    assert mastery["GRAM-CLAUSE"]["drill_accuracy"] == 1.0
+    assert mastery["GRAM-AGREEMENT"]["drill_accuracy"] == 0.0
 
 
 def _persist_formal(root: Path, attempt_id: str, submitted_at: str, events: list[dict]) -> None:

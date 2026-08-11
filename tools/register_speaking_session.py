@@ -6,6 +6,7 @@ import yaml
 
 from toefl_tracker.io import canonical_source_hash, read_yaml
 from toefl_tracker.speaking import register_speaking_session
+from toefl_tracker.speaking_transfer import prepare_speaking_transfer_attempt
 
 
 def main() -> int:
@@ -29,10 +30,34 @@ def main() -> int:
         required=True,
         help="Explicit prompt/learner segment map supplied with the transcript",
     )
+    parser.add_argument("--transfer-drill", help="Completed speaking drill attempt ID")
+    parser.add_argument(
+        "--confirmed-opportunities",
+        type=Path,
+        help="YAML mapping of target code to confirmed opportunity count",
+    )
+    parser.add_argument(
+        "--transfer-outcomes",
+        type=Path,
+        help="YAML list of transcript-supported outcomes, one for each target code",
+    )
     args = parser.parse_args()
     prompt = args.prompt.read_text(encoding="utf-8")
     transcript = args.transcript.read_text(encoding="utf-8")
     attempt = read_yaml(args.attempt)
+    transfer_args = (args.transfer_drill, args.confirmed_opportunities, args.transfer_outcomes)
+    if any(value is None for value in transfer_args) and any(value is not None for value in transfer_args):
+        parser.error("--transfer-drill, --confirmed-opportunities, and --transfer-outcomes must be used together")
+    if args.transfer_drill is not None:
+        attempt = prepare_speaking_transfer_attempt(
+            args.root,
+            attempt,
+            prompt,
+            transcript,
+            args.transfer_drill,
+            yaml.safe_load(args.confirmed_opportunities.read_text(encoding="utf-8")),
+            yaml.safe_load(args.transfer_outcomes.read_text(encoding="utf-8")),
+        )
     attempt["source_hash"] = canonical_source_hash(prompt, transcript)
     events = [
         json.loads(line)

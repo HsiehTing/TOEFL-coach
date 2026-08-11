@@ -49,3 +49,13 @@ Diagnostic planning artifact; drills and transfers are not TOEFL section-band es
 - After meeting the drill threshold, complete one new formal prompt on this route. Confirm relevant opportunities; do not reuse the source prompt.
 - Depends on: `PQ-05-DRILL`
 - Status: `deferred_by_priority` — Finish or resolve the higher-priority plan `PLAN-W-AD-20260809-002` first.
+
+## `PQ-01-DEFERRED` — `unsupported_target`
+- Route: `email`
+- Targets: `GRAM-CLAUSE`
+- Status: `blocked_by_template` — drill generation has no context-safe Email template for this source prompt
+
+## `PQ-02-DEFERRED` — `unsupported_target`
+- Route: `email`
+- Targets: `GRAM-AGREEMENT`
+- Status: `blocked_by_template` — drill generation has no context-safe Email template for this source prompt

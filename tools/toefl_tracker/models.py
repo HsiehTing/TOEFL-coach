@@ -29,6 +29,9 @@ class ValidatedPracticeRegistration:
     # The publisher repeats contextual validation while holding its lock.
     require_contextual_validation: bool = False
     speaking_context: object | None = None
+    # Result-only drills persist assessment lineage without a reusable prompt
+    # or learner response/transcript artifact.
+    result_only: bool = False
 
 
 @dataclass(frozen=True)

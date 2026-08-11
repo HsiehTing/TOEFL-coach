@@ -190,6 +190,15 @@ def inspection(attempt_id: str) -> dict:
             "vocabulary", "reconstruction", "directness", "relevance", "elaboration", "coherence",
         ],
         "segment_quality": segment_quality,
+        "audio_dimension_observations": [
+            {
+                "segment_id": row["segment_id"], "start": row["start"], "end": row["end"],
+                "observer_type": "human_observed", "observed_at": "2026-01-01T10:00:00+08:00",
+                "dimensions": ["pronunciation", "prosody", "fluency", "intelligibility"],
+                "evidence_summary": "Fixture observer verified the audio dimensions for this learner segment.",
+            }
+            for row in segment_quality
+        ],
     }
 
 
@@ -228,6 +237,10 @@ def populated_workspace(tmp_path: Path) -> Path:
             events = [fluency_event(attempt["attempt_id"], "S-E-001", "new")]
         if index == 4:
             events = [fluency_event(attempt["attempt_id"], "S-E-002", "relapsed")]
+        inspection_artifact = inspection(attempt["attempt_id"])
+        inspection_artifact["audio_dimension_observations"] = inspection_artifact[
+            "audio_dimension_observations"
+        ][: 7 if attempt["task_type"] == "listen_and_repeat" else 4]
         register_speaking_session(
             tmp_path,
             manifest,
@@ -237,11 +250,15 @@ def populated_workspace(tmp_path: Path) -> Path:
             SPEAKING_FEEDBACK,
             events,
             speaking_segments(attempt["task_type"]),
-            inspection(attempt["attempt_id"]),
+            inspection_artifact,
         )
 
     duplicate, prompt, response = speaking_rows[0]
     with pytest.raises(ValidationError, match="attempt_id already exists"):
+        duplicate_inspection = inspection(duplicate["attempt_id"])
+        duplicate_inspection["audio_dimension_observations"] = duplicate_inspection[
+            "audio_dimension_observations"
+        ][:7]
         register_speaking_session(
             tmp_path,
             manifest,
@@ -251,7 +268,7 @@ def populated_workspace(tmp_path: Path) -> Path:
             SPEAKING_FEEDBACK,
             [],
             speaking_segments(duplicate["task_type"]),
-            inspection(duplicate["attempt_id"]),
+            duplicate_inspection,
         )
 
     return tmp_path

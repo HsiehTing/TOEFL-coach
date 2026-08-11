@@ -36,6 +36,14 @@ def _setup_lineage(root: Path, *, task_type: str = "email") -> dict:
             "source_prompt_hash": prompt_hash("Original prompt"),
             "pack_version": 9,
             "artifact_retention": "result_only",
+            "code_results": [
+                {
+                    "code": "GRAM-CLAUSE",
+                    "item_count": 8,
+                    "correct_count": 7,
+                    "partial_count": 0,
+                }
+            ],
         },
     }), encoding="utf-8")
     pack = root / "tracker/writing/drill-packs" / pack_id
@@ -83,6 +91,42 @@ def test_transfer_rejects_drill_below_accuracy_threshold(tmp_path: Path) -> None
             "A new prompt",
             lineage["drill_id"],
             {"GRAM-CLAUSE": 1},
+        )
+
+
+def test_transfer_rejects_a_target_code_below_threshold_even_when_total_passes(
+    tmp_path: Path,
+) -> None:
+    lineage = _setup_lineage(tmp_path)
+    drill_path = tmp_path / "tracker/writing/attempts" / lineage["drill_id"] / "attempt.yaml"
+    drill = yaml.safe_load(drill_path.read_text(encoding="utf-8"))
+    drill["drill"].update(
+        {
+            "target_codes": ["GRAM-CLAUSE", "GRAM-AGREEMENT"],
+            "item_count": 10,
+            "correct_count": 8,
+            "code_results": [
+                {"code": "GRAM-CLAUSE", "item_count": 8, "correct_count": 8, "partial_count": 0},
+                {"code": "GRAM-AGREEMENT", "item_count": 2, "correct_count": 0, "partial_count": 0},
+            ],
+        }
+    )
+    drill_path.write_text(yaml.safe_dump(drill), encoding="utf-8")
+    attempt = {
+        "attempt_id": "W-TRANSFER-001",
+        "modality": "writing",
+        "task_type": "email",
+        "record_type": "formal_original",
+        "opportunities": {"GRAM-CLAUSE": 1, "GRAM-AGREEMENT": 1},
+    }
+
+    with pytest.raises(ValidationError, match="GRAM-AGREEMENT"):
+        prepare_transfer_attempt(
+            tmp_path,
+            attempt,
+            "A new prompt",
+            lineage["drill_id"],
+            {"GRAM-CLAUSE": 1, "GRAM-AGREEMENT": 1},
         )
 
 
