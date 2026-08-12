@@ -48,11 +48,44 @@ def test_email_requires_email_rubric() -> None:
     validate_writing_assessment(row, [], VALID_FEEDBACK)
 
 
-def test_revision_requires_naturalness_follow_up() -> None:
+def test_completed_revision_requires_naturalness_follow_up() -> None:
     row = attempt("email", "ets-writing-email-2025-applicable-2026")
     row["record_type"] = "revision"
+    row["revision_outcomes"] = {
+        "assigned": 1,
+        "resolved": 1,
+        "partly_resolved": 0,
+        "unresolved": 0,
+        "new_errors": 0,
+        "resolution_rate": 1.0,
+    }
+    feedback = VALID_FEEDBACK + """# Targeted drill
+Drill status: `skipped`.
+Reason: All targets were resolved before the third revision.
+"""
     with pytest.raises(ValidationError, match="requires naturalness follow-up"):
-        validate_writing_assessment(row, [], VALID_FEEDBACK)
+        validate_writing_assessment(row, [], feedback)
+
+
+def test_incomplete_revision_must_not_enter_follow_up() -> None:
+    row = attempt("email", "ets-writing-email-2025-applicable-2026")
+    row["record_type"] = "revision"
+    row["revision_outcomes"] = {
+        "assigned": 2,
+        "resolved": 1,
+        "partly_resolved": 1,
+        "unresolved": 0,
+        "new_errors": 0,
+        "resolution_rate": 0.5,
+    }
+    feedback = VALID_FEEDBACK + """# Targeted drill
+Drill status: `not_required_yet`.
+Reason: The third revision gate has not been reached.
+# Naturalness and precision follow-up
+No naturalness or precision issue to flag.
+"""
+    with pytest.raises(ValidationError, match="must not enter"):
+        validate_writing_assessment(row, [], feedback)
 
 
 def test_email_cannot_use_discussion_rubric() -> None:

@@ -1,4 +1,4 @@
 interface:
   display_name: "TOEFL Writing Coach"
   short_description: "Score and track TOEFL 2026 writing practice"
-  default_prompt: "Evaluate this TOEFL 2026 writing response, track recurring errors, and give me a revision task."
+  default_prompt: "Use $toefl-writing-coach to evaluate this TOEFL 2026 writing response, apply the revision/drill/follow-up gates, and track recurring errors."

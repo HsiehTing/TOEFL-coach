@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-12T05:48:52+00:00",
+  "runtime": {
+    "python": "3.13.14",
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O"
+  },
+  "repository": {
+    "repository_identity": "sha256:256d0df3d39c581a264f085d869c23f0587a1d9a0731868f5182f892661a9c6d",
+    "branch": "codex/python-cli-skill-packaging",
+    "head": "5237ab88b3bb006b1fc638643a3b43a637688b6c",
+    "status_porcelain": [
+      " M .agents/skills/bug-capture/SKILL.md",
+      " M .agents/skills/bug-capture/references/bug-capture-cli.md",
+      " M .agents/skills/toefl-speaking-coach/SKILL.md",
+      " M .agents/skills/toefl-writing-coach/SKILL.md",
+      " M tests/test_bug_capture_skill.py",
+      " M tests/test_speaking_skill_contract.py",
+      " M tests/test_writing_skill_contract.py",
+      " M tracker/writing/error-events.jsonl",
+      " M tracker/writing/progress-overview.md",
+      " M tracker/writing/progress-overview.yaml",
+      " M tracker/writing/reports/writing-academic-discussion-0003.md",
+      " M tracker/writing/reports/writing-common-0006.md",
+      " M tracker/writing/revision-learning.md",
+      " M tracker/writing/revision-learning.yaml",
+      "?? .agents/skills/bug-resolution/",
+      "?? .agents/skills/legacy-tracker-migration/",
+      "?? .agents/skills/tracker-maintenance/",
+      "?? .agents/skills/writing-drill-lifecycle/",
+      "?? tests/test_bug_resolution_skill.py",
+      "?? tests/test_python_cli_skills.py",
+      "?? tracker/writing/attempts/W-AD-20260812-001/",
+      "?? tracker/writing/attempts/W-AD-20260812-002/"
+    ]
+  },
+  "attachment_checksums": []
+}

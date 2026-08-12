@@ -959,3 +959,101 @@ comparisons:
   revision_evidence: []
   note: Only opportunity-confirmed comparisons can show an issue was not observed
     in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260812-001
+  parent_attempt_id: W-AD-20260809-001
+  retained_codes:
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  opportunity_confirmed_no_longer_observed_codes: []
+  not_comparable_without_opportunity_codes:
+  - DISCUSSION-ELABORATION
+  - DISCUSSION-POSITION
+  - GRAM-AGREEMENT
+  - LEX-WORDFORM
+  new_codes:
+  - GRAM-ARTICLE
+  parent_evidence:
+  - event_id: ERR-20260809-0042
+    code: DISCUSSION-POSITION
+    source_excerpt: Overall, I think that a better way is providing free modern technologies
+      training programs while giving them partial financial aid.
+  - event_id: ERR-20260809-0043
+    code: GRAM-CLAUSE
+    source_excerpt: modern training programs are usually costly, many people could
+      not afford it without the financial help from the government
+  - event_id: ERR-20260809-0044
+    code: GRAM-AGREEMENT
+    source_excerpt: government should only gives them money
+  - event_id: ERR-20260809-0045
+    code: LEX-WORDFORM
+    source_excerpt: financial aids
+  - event_id: ERR-20260809-0046
+    code: LEX-COLLOCATION
+    source_excerpt: break their comfort zone
+  - event_id: ERR-20260809-0047
+    code: DISCUSSION-ELABORATION
+    source_excerpt: a great incentive for them to break their comfort zone
+  revision_evidence:
+  - event_id: ERR-20260812-0001
+    code: GRAM-CLAUSE
+    source_excerpt: modern training programs are usually costly, many people could
+      not afford them without the financial help from the government
+  - event_id: ERR-20260812-0002
+    code: GRAM-ARTICLE
+    source_excerpt: in digital inventory arrangement course
+  - event_id: ERR-20260812-0003
+    code: LEX-COLLOCATION
+    source_excerpt: digital inventory arrangement course
+  - event_id: ERR-20260812-0004
+    code: GRAM-ARTICLE
+    source_excerpt: I don't think that government should only give them money
+  - event_id: ERR-20260812-0005
+    code: GRAM-CLAUSE
+    source_excerpt: Because bringing them money does not directly guide them for a
+      better job opportunity comparing to providing training programs.
+  - event_id: ERR-20260812-0006
+    code: LEX-COLLOCATION
+    source_excerpt: guide them for a better job opportunity comparing to providing
+      training programs
+  - event_id: ERR-20260812-0007
+    code: LEX-COLLOCATION
+    source_excerpt: does not bring the incentive of learning new technologies
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.
+- revision_attempt_id: W-AD-20260812-002
+  parent_attempt_id: W-AD-20260812-001
+  retained_codes: []
+  opportunity_confirmed_no_longer_observed_codes:
+  - GRAM-ARTICLE
+  - GRAM-CLAUSE
+  - LEX-COLLOCATION
+  not_comparable_without_opportunity_codes: []
+  new_codes: []
+  parent_evidence:
+  - event_id: ERR-20260812-0001
+    code: GRAM-CLAUSE
+    source_excerpt: modern training programs are usually costly, many people could
+      not afford them without the financial help from the government
+  - event_id: ERR-20260812-0002
+    code: GRAM-ARTICLE
+    source_excerpt: in digital inventory arrangement course
+  - event_id: ERR-20260812-0003
+    code: LEX-COLLOCATION
+    source_excerpt: digital inventory arrangement course
+  - event_id: ERR-20260812-0004
+    code: GRAM-ARTICLE
+    source_excerpt: I don't think that government should only give them money
+  - event_id: ERR-20260812-0005
+    code: GRAM-CLAUSE
+    source_excerpt: Because bringing them money does not directly guide them for a
+      better job opportunity comparing to providing training programs.
+  - event_id: ERR-20260812-0006
+    code: LEX-COLLOCATION
+    source_excerpt: guide them for a better job opportunity comparing to providing
+      training programs
+  - event_id: ERR-20260812-0007
+    code: LEX-COLLOCATION
+    source_excerpt: does not bring the incentive of learning new technologies
+  revision_evidence: []
+  note: Only opportunity-confirmed comparisons can show an issue was not observed
+    in a revision; neither result proves mastery, which requires a fresh formal prompt.

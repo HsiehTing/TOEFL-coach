@@ -56,6 +56,14 @@ def test_speaking_skill_does_not_transcribe_or_infer_audio_evidence() -> None:
     assert "voiceprint" not in text.lower()
 
 
+def test_speaking_skill_uses_dedicated_persistence_commands() -> None:
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    assert "tools/register_speaking_session.py" in text
+    assert "tools/register_speaking_rerecording.py" in text
+    assert "tools/register_speaking_drill.py" in text
+    assert "tools/validate_tracker.py" in text
+
+
 def test_routes_are_not_mixed() -> None:
     repeat = (SKILL / "references/listen-and-repeat.md").read_text()
     interview = (SKILL / "references/take-an-interview.md").read_text()

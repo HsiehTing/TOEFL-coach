@@ -52,25 +52,46 @@ For every counted sentence-level issue, give only the minimal correction in the 
 
 Compare only against the assigned priorities. Report resolved, partly resolved, unresolved, and newly introduced issues; calculate target-resolution rate. A revision never increases the formal-attempt count. Provide a high-scoring model only after the learner has attempted the revision.
 
-After the priority comparison, add `# Naturalness and precision follow-up`. This is a non-scoring revision-completion artifact, not a targeted drill and not a new error table: it must not change task score, formal count, counted events, error rates, historical status, mastery, training plan, or transfer gates.
+Follow this state machine in order: `revision_targets → targeted_drill_gate → naturalness_follow_up → transfer`.
+
+After `# Rewrite task`, always add `# Targeted drill` and one exact status line:
+
+- Revision round 1 incomplete: set `Drill status` to `not_required_yet`. Explain that the third-revision gate has not been reached. Do not add follow-up.
+- Revision round 1 or 2 fully resolves all assigned priorities: set `Drill status` to `skipped`. Explain that the third revision was not triggered, then add follow-up in the same output.
+- Revision round 2 remains partly resolved or unresolved: set `Drill status` to `required`. List `Source`, `Targets`, `Items`, and `Completion`; use `writing-drill-lifecycle` to generate, assess, and register the bounded drill. Do not add follow-up.
+- A later revision after the required persisted drill: set `Drill status` to `completed`. Cite the `Drill attempt`; reject a third revision without that drill. Add follow-up only when all assigned priorities are now resolved.
+
+A targeted drill does not itself resolve revision priorities. After the learner completes it, require a bounded revision check for the remaining targets. Do not create a drill when the first or second revision has already resolved every target.
+
+Add `# Naturalness and precision follow-up` only after all assigned priorities are fully resolved and any required drill is completed or legally skipped. This follow-up is mandatory at completion; never show it while a scored revision target remains partly resolved or unresolved. It is a non-scoring revision-completion artifact, not a targeted drill and not a new error table: it must not change task score, formal count, counted events, error rates, historical status, mastery, training plan, or transfer gates.
+
+When follow-up is blocked, do not emit the follow-up heading or a placeholder follow-up status. Explain the block inside `# Targeted drill`. Likewise, do not emit a transfer heading or suggestion until after a completed follow-up.
 
 - Treat the follow-up as a final-step quality pass for moving a stable 4-level response closer to 5, not as a second list of basic corrections. It must identify one to three previously unaddressed, non-scoring opportunities in precision, concise flow, causal logic, register, or controlled variety.
 - Do not repeat a source excerpt, correction, diagnosis, or priority already given in the current scored assessment or its parent feedback.
 - When task completion and the core causal/logic relationship are already clear, prioritize sentence flow or reference, then natural grammar/collocation, precise wording, and unnecessary repetition; do not ask for extra ideas merely to fill this follow-up. If one of those core elements blocks reader understanding or the score ceiling, treat it through the existing must-fix/should-fix route instead.
 - If there are issues, give one to three numbered entries in the form `Excerpt: \`exact learner text\``. Each entry identifies either nearby repeated meaning/structure, unclear flow/reference, an overly broad or imprecise word, or an understandable but non-idiomatic construction; explain the reader effect and give one single-sentence option that preserves the learner's meaning. Never combine options into a complete model post.
 - Then add `## Mini-practice` with two to four numbered, answer-hidden five-minute prompts. Reuse the learner's route and original scenario; ask for a rewrite of the learner's own sentence or a more precise choice. Do not give a key, sample answer, or ETS score.
-- If no genuine issue exists, write exactly `No naturalness or precision issue to flag.` and give one non-scoring new-prompt transfer suggestion. Do not invent feedback to fill the section.
+- If no genuine issue exists, write exactly `No naturalness or precision issue to flag.` only after a documented audit of one to three plausible candidate excerpts. Add `## Naturalness audit`; format each numbered row with `Candidate:`, the exact learner text in backticks, an em dash, and the reason it needs no action. Then add `## Transfer suggestion` with one non-scoring new-prompt transfer suggestion. Do not invent feedback to fill the section or use the zero-item result to skip a real issue.
+
+Transfer is available only after the follow-up. Never jump from resolved priorities or a completed drill directly to a transfer suggestion.
 
 For remaining or newly introduced counted errors, give only the minimal correction and one short diagnosis.
 
 ## Recurrence and progress output
 
 For a recurrence or progress request, classify each counted code from ordered `formal_original` records with the deterministic tracker status rules. Explicitly output the resulting `historical_status`; revisions and targeted drills do not change it.
-For Discussion, also read `standards/ets-2026/writing-skill-families.yaml` when available and show derived family signals without replacing atomic codes. After two unresolved revision rounds, recommend a bounded targeted drill and a new-prompt transfer check.
-Targeted drills use `record_type: targeted_drill`: they are non-scored practice records, never formal attempts, and must include bounded `drill` metadata (`set_id`, target codes, item/correct counts, and source attempt IDs). After registration, read `tracker/writing/mastery.md`; treat its state as derived coaching evidence, not a replacement for each event's `historical_status`.
+For Discussion, also read `standards/ets-2026/writing-skill-families.yaml` when available and show derived family signals without replacing atomic codes. After two unresolved revision rounds, require a bounded targeted drill before a third revision; do not recommend a transfer check until the later revision completes its targets and the mandatory follow-up is delivered.
+Targeted drills use `record_type: targeted_drill`: they are non-scored practice records, never formal attempts, and must include bounded `drill` metadata (`set_id`, target codes, item/correct counts, and source attempt IDs). Use `writing-drill-lifecycle` for generation, review, registration, and transfer; after registration, read `tracker/writing/mastery.md` as derived coaching evidence, not a replacement for each event's `historical_status`.
 When `tracker/writing/training-plan.md` contains a recommendation, follow its route, target codes, bounded item count, and new-prompt transfer check; do not skip directly to another revision.
 Generate the learner drill with `tools/generate_writing_drill.py`; show `drill.md` first and keep `answer-key.md` separate until the learner has attempted it. Register a transfer only through `tools/register_writing_transfer.py`, with a new prompt and explicit confirmed opportunities for every target code.
 
 ## Persist
 
-Write immutable attempt and event inputs, run `tools/register_writing_attempt.py`, rebuild reports, then run `tools/validate_tracker.py`. Report the attempt ID and any common or task-specific three-practice report that was generated.
+Use only the project CLIs for writing persistence; never edit tracker attempts, events, reports, or derived views by hand.
+
+- Original or revision: `tools/register_writing_attempt.py`.
+- Targeted drill and new-prompt transfer: use `writing-drill-lifecycle`, which owns pack generation, review, registration, and transfer gates.
+- `tools/register_attempt.py` is a shared internal compatibility entry point; do not call it from this learner-facing skill.
+
+After every state-changing CLI, run `tools/validate_tracker.py`; report the immutable attempt or drill ID and any common or task-specific three-practice report generated. Use `tools/validate_writing_calibration.py` only for maintainer-requested rubric calibration, not learner feedback.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Writing Drill Lifecycle"
+  short_description: "Generate, assess, and register writing drills"
+  default_prompt: "Use $writing-drill-lifecycle to generate or register a writing drill."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Legacy Tracker Migration"
+  short_description: "Review and migrate legacy TOEFL tracker records"
+  default_prompt: "Use $legacy-tracker-migration to review or migrate legacy tracker records."

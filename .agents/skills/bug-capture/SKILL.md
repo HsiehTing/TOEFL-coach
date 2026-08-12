@@ -5,37 +5,61 @@ description: Capture a reproducible, immutable bug record for a defect the learn
 
 # Bug Capture
 
-Use `tools/capture_bug_report.py` as the only creation path for a normal-use bug record. Do not begin a code fix, alter tracker data, or write a speculative diagnosis before the user context is complete and the roadmap record succeeds.
+Create a normal-use bug record only through `tools/capture_bug_report.py`. Before executing it, read [the executable CLI playbook](references/bug-capture-cli.md) in full. It defines the intake-to-argument mapping, receipt checks, recovery path, and stop conditions.
 
-## Scope gate
+## 1. Classify before collecting or changing anything
 
-Use this skill only when the learner encounters unexpected behavior while normally using the coach. Do not use it for planned feature work, a developer's implementation-time test failure, roadmap status cleanup, or an unsupported capability that intentionally fails closed. Record those items in the relevant development roadmap without creating a Bug Capture.
+Capture only unexpected behavior encountered while using the coach. Treat a user-declared learning test environment as normal use; do not reclassify it as an implementation-time failure merely because the learner is testing a newly developed feature. Do not begin a code fix before a successful capture.
 
-## Required intake
+Do not use it for planned feature work, a developer-only test failure, roadmap cleanup, or an intended fail-closed capability gap. Do **not** create a Bug ID for those cases; record them in the relevant development roadmap instead. Do not investigate, diagnose, alter code, alter tracker data, or change a test before a successful capture.
 
-Collect only facts that are known:
+## 2. Build a complete capture packet
 
-1. Intended purpose or learner outcome, expected behavior, and observed behavior.
-2. The operations immediately before the error, in order, plus the affected learner/system flow.
-3. Timing or trigger, reproducibility, impact, and available evidence, when known.
+Extract facts without filling gaps. The packet must contain:
 
-If intended purpose, expected behavior, observed behavior, or at least one preceding operation is unknown, ask for the missing fact. Do not invent reproduction steps. Mark timing, impact, or flow as unspecified only when they are genuinely unavailable.
+| Capture field | Required content | CLI argument |
+| --- | --- | --- |
+| Title | Short, observable failure label | `--title` |
+| Purpose | The intended purpose: learner outcome the flow is meant to provide | `--purpose` |
+| Expected | What should happen | `--expected` |
+| Observed | What actually happened | `--observed` |
+| Steps | One or more operations immediately before the failure, in order | one `--step` per operation |
+| Context | Affected flow, timing/trigger, reproducibility, impact when known | optional context arguments |
+| Evidence | Safe, relevant user-provided artifacts only | repeatable `--attach` |
 
-## Capture workflow
+If purpose, expected behavior, observed behavior, or every preceding operation is unknown, ask only for the missing fact and do not run the CLI. Use `unspecified` only for genuinely unavailable optional context, never for a required field. Preserve learner wording in evidence and distinguish facts from later hypotheses.
 
-1. Turn the confirmed purpose, expected behavior, observed behavior, context, reproduction, impact, and evidence into the capture inputs. Do not alter product code or test behavior before the roadmap record exists.
-2. Preserve user-provided logs, screenshots, command output, or relevant artifacts as explicit `--attach` inputs. Do not attach raw audio, credentials, or unrelated learner data.
-3. Run `python3 tools/capture_bug_report.py --format json` from the repository root with `--title`, `--expected`, `--observed`, and one or more `--step` values. Include `--affected-flow` and `--timing` whenever known; read the receipt and stop if its validation is not passed.
-4. Use both `--include-git-diff` and `--confirm-safe-git-diff` only when the uncommitted diff is necessary to reproduce the failure and contains no unrelated or sensitive content. The default snapshot already records branch, commit, and worktree status.
-5. Confirm that `tracker/bug-reports/<BUG-ID>/report.yaml`, `snapshot.json`, `reproduction.md`, and `.ready` exist. Run `python3 tools/verify_bug_reports.py --format json` to confirm the artifact hash and the single roadmap link.
-6. If capture reports a roadmap-write interruption after publishing the artifact, do not edit the ledger by hand. Run `python3 tools/recover_bug_reports.py`, then rerun `python3 tools/verify_bug_reports.py`.
-7. Read the captured `reproduction.md` before investigating. Treat it as the source of truth; record later hypotheses separately and do not rewrite the captured facts.
+## 3. Preflight the evidence and retention decision
+
+1. Attach only relevant `.txt`, `.log`, `.md`, `.json`, `.yaml`, `.yml`, `.csv`, `.png`, `.jpg`, `.jpeg`, or `.webp` files that are at most 10 MiB.
+2. Exclude raw audio, credentials, keys, `.env` files, secrets, tokens, passwords, and unrelated learner records. The CLI copies approved attachments into the immutable report and stores their checksums.
+3. Default to the repository snapshot without a diff. Add **both** `--include-git-diff` and `--confirm-safe-git-diff` only after confirming that the current staged/unstaged diff is necessary for reproduction and contains no sensitive or unrelated content.
+
+## 4. Capture and Read the Receipt
+
+Run the capture command from the repository root with `--format json`, using the exact template in the playbook. Treat its JSON output as the machine receipt, not merely terminal text.
+
+Continue only if all of these are true:
+
+1. The command exits successfully.
+2. The receipt contains a `bug_id`, a `report_path`, and the expected `ledger_path`.
+3. `validation.passed` is `true` and `validation.problems` is empty.
+4. The reported `attachment_count` and `privacy_flags.git_diff_retained` match the requested inputs.
+
+Then confirm the report directory contains `report.yaml`, `snapshot.json`, `reproduction.md`, and `.ready`; run `python3 tools/verify_bug_reports.py --format json`; require its `passed` value to be `true` and `problems` to be empty. Read the captured `reproduction.md` before any later investigation; it is the immutable source of truth.
+
+## 5. Handle failure without corrupting the record
+
+- If intake or attachment validation fails before publication, correct only the rejected capture input and rerun; do not create files by hand.
+- If the capture fails after publishing the artifact because its roadmap link was interrupted, run `python3 tools/recover_bug_reports.py`, then rerun `python3 tools/verify_bug_reports.py --format json`. Do not edit the ledger or artifact manually.
+- If verification still fails, report the exact JSON problems and stop. Do not begin diagnosis or a fix.
+
+## 6. Report and stop
+
+Report the Bug ID, immutable report path, roadmap link confirmation, retained-evidence summary, and verification result. Do not claim a cause or a fix. Stop after capture and verification; use `bug-resolution` only if the user explicitly authorizes investigation or a fix.
 
 ## Boundaries
 
-- Keep the full artifact under `tracker/bug-reports/`; roadmap entries contain only ID, status, summary, and a link.
-- Do not overwrite a captured report or copy its full snapshot into the roadmap.
-- Do not claim a fix is verified merely because it builds. Add regression coverage and run the relevant validation before reporting a resolution.
-- The capture command creates `reported` records. After a fix, use `tools/resolve_bug_report.py` to append evidence; never edit `report.yaml`, `snapshot.json`, `reproduction.md`, or the ledger status by hand. `fixed_verified` requires a fix reference and validation command/result.
-
-Read [the CLI contract](references/bug-capture-cli.md) only when a field, attachment, or privacy decision is unclear.
+- Keep the full artifact under `tracker/bug-reports/`; the roadmap stores only ID, status, summary, and link.
+- Never overwrite `report.yaml`, `snapshot.json`, `reproduction.md`, `.ready`, attachments, or the roadmap ledger status by hand.
+- The capture skill owns only `reported` records. `bug-resolution` owns diagnosis, code changes, `tools/resolve_bug_report.py`, and all closure validation.

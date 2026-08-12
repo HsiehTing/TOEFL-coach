@@ -199,6 +199,7 @@ def test_machine_receipt_resolution_and_operational_index(tmp_path: Path) -> Non
         steps=["Open the current plan."],
         affected_flow="practice queue",
         reproducibility="always",
+        reported_at=datetime(2026, 8, 11, 9, 30, tzinfo=timezone.utc),
         roadmap=roadmap,
     )
     receipt = bug_capture_receipt(tmp_path, report, roadmap=roadmap)

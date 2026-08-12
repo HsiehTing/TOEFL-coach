@@ -47,4 +47,11 @@ Compare the assigned segments and priorities only. Report resolved, partly resol
 
 ## Persist
 
-Store only the learner-provided transcript, its explicit prompt/learner segments, assessment, and exact-excerpt events through `tools/register_speaking_session.py`. Register only a complete 7-item or 4-question formal original. Rebuild reports and run `tools/validate_tracker.py`.
+Use only the project CLIs for speaking persistence; never edit transcripts, events, attempts, or derived views by hand.
+
+- Complete original session or transfer: `tools/register_speaking_session.py`; store only the learner-provided transcript, explicit prompt/learner segments, assessment, and exact-excerpt events.
+- Re-recording: `tools/validate_speaking_rerecording.py` before `tools/register_speaking_rerecording.py`.
+- Targeted drill: `tools/validate_speaking_drill.py` before `tools/register_speaking_drill.py`.
+- `tools/register_attempt.py` is a shared internal compatibility entry point; do not call it from this learner-facing skill.
+
+Register a formal original only for a complete 7-item or 4-question set. After every state-changing CLI, run `tools/validate_tracker.py` and report the session or drill ID. Do not persist raw audio or audio-derived artifacts.

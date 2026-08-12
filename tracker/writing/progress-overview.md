@@ -100,6 +100,7 @@ Skill families:
 - `W-EM-20260805-001`: 1 rounds; latest revision `W-EM-20260805-001-R1`; latest resolution: 100.0%; latest new errors: 0; total new errors: 0; first full resolution: round 1
 - `W-EM-20260805-002`: 5 rounds; latest revision `W-EM-20260805-002-R5`; latest resolution: 66.7%; latest new errors: 0; total new errors: 5; first full resolution: round not reached
 - `W-EM-20260808-001`: 4 rounds; latest revision `W-EM-20260808-001-R4`; latest resolution: 0.0%; latest new errors: 0; total new errors: 4; first full resolution: round not reached
+- `W-AD-20260809-001`: 2 rounds; latest revision `W-AD-20260812-002`; latest resolution: 100.0%; latest new errors: 0; total new errors: 5; first full resolution: round 2
 - `W-AD-20260809-002`: 2 rounds; latest revision `W-AD-20260809-002-R2`; latest resolution: 0.0%; latest new errors: 0; total new errors: 2; first full resolution: round not reached
 - `W-EM-20260811-001`: 3 rounds; latest revision `W-EM-20260811-001-R3`; latest resolution: 100.0%; latest new errors: 0; total new errors: 9; first full resolution: round 2
 

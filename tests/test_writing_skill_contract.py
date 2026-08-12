@@ -58,6 +58,20 @@ def test_skill_routes_references_and_enforces_iteration() -> None:
 def test_writing_skill_uses_dedicated_registration_gate() -> None:
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     assert "tools/register_writing_attempt.py" in text
+    assert "tools/generate_writing_drill.py" in text
+    assert "tools/register_writing_transfer.py" in text
+    assert "tools/validate_tracker.py" in text
+
+
+def test_revision_skill_declares_drill_and_follow_up_state_machine() -> None:
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    assert "revision_targets → targeted_drill_gate → naturalness_follow_up → transfer" in text
+    assert all(
+        f"`{status}`" in text
+        for status in ("not_required_yet", "skipped", "required", "completed")
+    )
+    assert "do not emit the follow-up heading" in text
+    assert "Transfer is available only after the follow-up" in text
 
 
 def test_task_contracts_have_distinct_required_fields() -> None:

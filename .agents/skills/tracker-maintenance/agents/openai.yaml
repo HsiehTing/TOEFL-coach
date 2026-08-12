@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tracker Maintenance"
+  short_description: "Validate and rebuild TOEFL tracker views"
+  default_prompt: "Use $tracker-maintenance to validate or rebuild TOEFL tracker reports."

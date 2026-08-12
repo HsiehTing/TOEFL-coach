@@ -155,3 +155,17 @@ Derived code-level comparison; not proof of mastery or a TOEFL score.
 - Not comparable (no recorded opportunity): `GRAM-AGREEMENT`, `GRAM-CLAUSE`, `LEX-COLLOCATION`, `LEX-WORDFORM`, `MECH-SPELLING`
 - New codes: none
 - Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-AD-20260812-001` from `W-AD-20260809-001`
+- Retained codes: `GRAM-CLAUSE`, `LEX-COLLOCATION`
+- Opportunity-confirmed, no longer observed: none
+- Not comparable (no recorded opportunity): `DISCUSSION-ELABORATION`, `DISCUSSION-POSITION`, `GRAM-AGREEMENT`, `LEX-WORDFORM`
+- New codes: `GRAM-ARTICLE`
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.
+
+## `W-AD-20260812-002` from `W-AD-20260812-001`
+- Retained codes: none
+- Opportunity-confirmed, no longer observed: `GRAM-ARTICLE`, `GRAM-CLAUSE`, `LEX-COLLOCATION`
+- Not comparable (no recorded opportunity): none
+- New codes: none
+- Only opportunity-confirmed comparisons can show an issue was not observed in a revision; neither result proves mastery, which requires a fresh formal prompt.

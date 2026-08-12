@@ -59,6 +59,62 @@ Learner 明確要求：在每一輪 Writing revision 中，當必要的題目要
 - 有問題時，gate 會要求 1–3 則 response 中的 distinct exact excerpts，以及 2–4 題未揭露答案的 mini-practice；零項結果可明確寫出固定的 no-issue 訊息。
 - Writing coach skill 已規定用字重複、語意不精確或慣用法不自然的界線，以及保持 route/context 的限制；契約測試會拒絕臆測 excerpt、過量練習與答案洩漏。
 
+## Learner clarification — Writing revision → conditional drill → mandatory follow-up（2026-08-12）
+
+此流程取代「每一輪 revision 都直接附上 follow-up」的舊順序。Writing coaching 必須依序通過三個階段：修訂目標、條件式 targeted drill、自然度與精確度 follow-up。Follow-up 是完成修訂流程後的必觸發階段；drill 則只在流程進入第三輪修訂前成為必做。
+
+### 階段與閘門
+
+| 階段 | 觸發條件 | 必要輸出／動作 | 下一步 |
+| --- | --- | --- | --- |
+| 1. 修訂目標 | learner 提交 revision | 比對 assigned priorities，列出 `resolved`、`partly_resolved`、`unresolved`、`newly introduced` 與 resolution rate | 目標未完成時繼續 revision gate；全部完成時檢查 drill gate |
+| 2. Targeted drill gate | 第二輪 revision 後仍有未完成目標，原流程將要求第三輪 revision | 在 learner-facing output 明確列出 drill、來源 attempt、target codes、有限題數與完成條件；drill 完成前不得進入 follow-up | 完成 drill 後，回到必要的 revision 驗證；所有修訂目標完成後進入 follow-up |
+| 2a. Drill skipped | learner 在需要第三輪 revision 之前已完成全部修訂目標 | 明確標示 drill 為 `skipped`，原因為「未觸發第三輪修訂」；不得為了完成流程而強迫產生或作答 drill | 直接進入 follow-up |
+| 3. Naturalness and precision follow-up | 所有修訂目標已完成，且任何 required drill 也已完成 | 必須輸出 actionable follow-up；依既有契約提供 1–3 則未處理過的 exact-excerpt 精修與 2–4 題 mini-practice | 完成後才可建議 new-prompt transfer |
+
+### Skill 修改模式
+
+- 將 `toefl-writing-coach` 的 revision workflow 改為明確 state machine：`revision_targets → drill_gate → follow_up → transfer`，不得只靠段落順序或 coach 自由判斷跳階段。
+- 每次 revision feedback 都要計算目前 revision round。只有「第二輪 revision 後仍未完成、下一步原本會進入第三輪」才把 drill 設為 `required`；第一輪或第二輪已完成時設為 `skipped`。
+- `required` drill 必須交由 `writing-drill-lifecycle` 產生、評量與登錄，沿用來源 route、target codes、有限 item count、answer-key 隔離與 immutable lineage 契約；普通 mini-practice 不得冒充 targeted drill。
+- Drill 不是每條 revision lineage 的強制產物。未觸發第三輪 revision 時，不要求 learner 先完成 drill，也不得因缺少 drill record 阻塞 follow-up。
+- Follow-up 是完成閘門，不是可選潤飾。只要修訂目標已完成，且必要 drill 已完成或合法 skipped，就必須執行 follow-up；前述條件未滿足時不得提前顯示 follow-up。
+- `No naturalness or precision issue to flag.` 只能在完成真實的自然度／精確度檢查且確實沒有可操作問題時使用；不得把它當成跳過 follow-up 的捷徑。存在 genuine issue 時必須提供 actionable follow-up。
+- Follow-up 不重複 scored evidence、parent feedback、targeted drill 或已完成 priority；不建立 counted events、不改變 task score、formal count、error rate、historical status、mastery 或 transfer gate。
+- Transfer 只能出現在 follow-up 之後；不得由「修訂目標完成」或「drill 完成」直接跳到 transfer。
+
+### 狀態範例
+
+```text
+R1 全部完成 → drill: skipped → follow-up: required → transfer suggestion
+
+R1 未完成 → R2 全部完成 → drill: skipped → follow-up: required → transfer suggestion
+
+R1 未完成 → R2 仍未完成 → drill: required → 完成 drill
+    → 完成必要 revision 驗證 → follow-up: required → transfer suggestion
+```
+
+### 驗收條件
+
+1. R1 或 R2 已解決全部 assigned priorities 時，輸出明確顯示 `drill: skipped`，並在同次完成流程中提供 actionable follow-up。
+2. R2 後仍有 unresolved 或 partly resolved priority 時，輸出 required drill；未完成 drill 前，系統拒絕進入 follow-up。
+3. Required drill 完成後仍須確認修訂目標已完成；drill 結果不能自動冒充 revision resolution。
+4. 所有修訂目標完成且 drill 為 completed 或合法 skipped 時，follow-up 必須出現；若 response 尚有 genuine naturalness／precision issue，零項訊息必須被拒絕。
+5. Follow-up 之前不得產生 new-prompt transfer suggestion；follow-up 完成後才開放 transfer。
+6. 回歸測試至少涵蓋三條路徑：R1 完成、R2 完成、R2 未完成而觸發 required drill；並確認三條路徑最後都只有在合法閘門後進入 follow-up。
+
+### 實作進度（2026-08-12）
+
+已完成：
+
+- Writing registration gate 會依 persisted revision lineage 計算輪次，強制 `not_required_yet`、`skipped`、`required`、`completed` 四種 drill 狀態，並在發布鎖內重驗。
+- R1／R2 完成目標時合法略過 drill 並強制 follow-up；R2 未完成時要求列出 source、1–2 個 lineage target codes、1–8 題與完成條件，且禁止提前輸出 follow-up。
+- 未存在 R2 後登錄、回連同一 formal root 的 targeted drill 時，第三輪 revision 會 fail closed；drill 完成後仍需獨立驗證 revision targets，不能以 drill 結果自動標為 resolved。
+- 完成 revision 的 follow-up 為必要 heading；零項結果必須附 1–3 個實際 learner excerpt 的 naturalness audit 與 transfer suggestion，不能只輸出固定句跳過檢查。
+- Writing coach skill 與 UI default prompt 已同步此 state machine；獨立 forward test 確認 R2 未完成時只顯示 required drill，不產生 follow-up／transfer heading。
+- 回歸測試涵蓋 R1 完成、R2 完成、R2 未完成 required drill、缺 drill 的 R3 被拒絕、完成 drill 後的 R3、未完成時禁止 follow-up，以及 no-issue audit gate。
+- Learner-like 端到端測試使用政府免費職訓情境，實際走 dedicated registration 的 `formal → R1 未完成 → R2 完成`：R1 保存 `drill: not_required_yet` 且沒有 follow-up；R2 保存 `drill: skipped`，其後緊接 actionable follow-up 與 bounded mini-practice，formal count 維持 1。
+
 ## Incident-driven optimization requirements（2026-08-10）
 
 本節將 `W-AD-20260809-002` 的 drill 產出問題轉成 Milestone 1 的必要開發需求。原始失敗案例為：Academic Discussion 的品牌行銷／世界盃題目，卻產生公共運輸、大學政策與新設施題目；同一 pack 含多組重複題；recommendation 要求 causal-chain items，輸出卻是無關的通用文法模板；並將 causal chain 的四個語意元素誤呈現為每題四個完整句子的硬性要求。
@@ -229,6 +285,8 @@ Learner 明確要求：在每一輪 Writing revision 中，當必要的題目要
 | Bug ID | Status | Summary | Evidence | Artifact |
 | --- | --- | --- | --- |
 <!-- BUG-CAPTURE-LEDGER -->
+| `BUG-20260812-002` | reported | Completed writing revision skips mandatory actionable follow-up | [reproduction](tracker/bug-reports/BUG-20260812-002/reproduction.md) | `v1` `sha256:5c385393e2f072c3dbe9ed1a65af2d751e850adc8ded629901858d4e5dd75186` |
+
 | `BUG-20260812-001` | fixed_verified | Revision follow-up repeats prior scored advice instead of advancing toward score 5 | [reproduction](tracker/bug-reports/BUG-20260812-001/reproduction.md) | `v1` `sha256:912c8e0a35ded5dbe4ae0ff7de00f3e9da6df43c85ba7410a1fec5b8fd3ee0a4` |
 
 

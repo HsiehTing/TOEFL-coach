@@ -1,6 +1,7 @@
 import re
 from collections.abc import Mapping
 from collections.abc import Sequence
+from datetime import datetime
 from pathlib import Path
 from re import Match
 
@@ -13,8 +14,10 @@ from toefl_tracker.canonical import write_aggregate_events
 from toefl_tracker.register import (
     _registration_lock,
     publish_registration,
-    validate_practice_events,
+    validate_practice_context,
 )
+from toefl_tracker.io import read_yaml
+from toefl_tracker.lineage import revision_chain, root_formal_attempt
 from toefl_tracker.validation import validate_attempt, validate_reevaluation_metadata
 from toefl_tracker.training_plan import write_training_plan
 from toefl_tracker.progress import write_progress_overview
@@ -36,24 +39,83 @@ REQUIRED_HEADINGS = (
     "# Rewrite task",
 )
 FOLLOW_UP_HEADING = "# Naturalness and precision follow-up"
+DRILL_HEADING = "# Targeted drill"
+NO_ISSUE_MESSAGE = "No naturalness or precision issue to flag."
+DRILL_STATUSES = {"not_required_yet", "skipped", "required", "completed"}
 
 
 def _ordered_heading_matches(
-    feedback: str, *, require_revision_follow_up: bool = False
+    feedback: str, *, revision: bool = False
 ) -> list[Match[str]]:
     matches = list(
         re.finditer(r"(?m)^(# [^\r\n]+?)[ \t]*\r?$", feedback)
     )
     headings = tuple(match.group(1) for match in matches)
-    expected = REQUIRED_HEADINGS + (FOLLOW_UP_HEADING,)
-    if require_revision_follow_up and headings == REQUIRED_HEADINGS:
-        raise ValidationError("revision feedback requires naturalness follow-up")
-    allowed = expected if require_revision_follow_up else REQUIRED_HEADINGS
-    if headings != allowed:
+    allowed = (
+        (
+            REQUIRED_HEADINGS + (DRILL_HEADING,),
+            REQUIRED_HEADINGS + (DRILL_HEADING, FOLLOW_UP_HEADING),
+        )
+        if revision
+        else (REQUIRED_HEADINGS,)
+    )
+    if headings not in allowed:
         raise ValidationError(
             "first-round feedback headings are missing, duplicated, or out of order"
         )
     return matches
+
+
+def _full_resolution(outcomes: object) -> bool:
+    return bool(
+        isinstance(outcomes, Mapping)
+        and outcomes.get("assigned", 0) > 0
+        and outcomes.get("resolved") == outcomes.get("assigned")
+        and outcomes.get("partly_resolved") == 0
+        and outcomes.get("unresolved") == 0
+    )
+
+
+def _section(feedback: str, heading: str) -> str:
+    matches = list(re.finditer(r"(?m)^(# [^\r\n]+?)[ \t]*\r?$", feedback))
+    for index, match in enumerate(matches):
+        if match.group(1) != heading:
+            continue
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(feedback)
+        return feedback[match.end():end].strip()
+    return ""
+
+
+def _drill_status(feedback: str) -> str:
+    block = _section(feedback, DRILL_HEADING)
+    match = re.search(r"(?m)^Drill status:\s*`([^`]+)`\.\s*$", block)
+    if match is None or match.group(1) not in DRILL_STATUSES:
+        raise ValidationError("revision feedback requires a valid targeted drill status")
+    return match.group(1)
+
+
+def _validate_no_issue_audit(follow_up: str, response: str) -> None:
+    audit = re.search(
+        r"(?ms)^## Naturalness audit\s*$\n(.*?)(?=^## |\Z)", follow_up
+    )
+    transfer = re.search(
+        r"(?ms)^## Transfer suggestion\s*$\n(.*?)(?=^## |\Z)", follow_up
+    )
+    if audit is None or transfer is None or not transfer.group(1).strip():
+        raise ValidationError(
+            "no-issue follow-up requires a naturalness audit and transfer suggestion"
+        )
+    candidates = re.findall(
+        r"(?m)^\d+\.\s+Candidate:\s*`([^`]+)`\s*[—-]\s*(.+)$",
+        audit.group(1),
+    )
+    if not 1 <= len(candidates) <= 3:
+        raise ValidationError("no-issue follow-up requires one to three audited candidates")
+    excerpts = [excerpt for excerpt, _ in candidates]
+    if len(set(excerpts)) != len(excerpts) or any(
+        excerpt not in response for excerpt in excerpts
+    ):
+        raise ValidationError("no-issue audit candidates must be distinct learner text")
 
 
 def _validate_revision_follow_up(
@@ -71,7 +133,8 @@ def _validate_revision_follow_up(
     follow_up = feedback.split(FOLLOW_UP_HEADING, 1)[1].strip()
     if not follow_up:
         raise ValidationError("revision naturalness follow-up is empty")
-    if "No naturalness or precision issue to flag." in follow_up:
+    if re.search(rf"(?m)^{re.escape(NO_ISSUE_MESSAGE)}\s*$", follow_up):
+        _validate_no_issue_audit(follow_up, response)
         return
 
     suggestions = re.findall(r"(?m)^\d+\.\s+Excerpt:\s*`([^`]+)`", follow_up)
@@ -79,10 +142,7 @@ def _validate_revision_follow_up(
         raise ValidationError("revision naturalness follow-up requires one to three excerpt suggestions")
     if len(set(suggestions)) != len(suggestions) or any(excerpt not in response for excerpt in suggestions):
         raise ValidationError("revision naturalness follow-up excerpts must be distinct learner text")
-    heading_matches = _ordered_heading_matches(
-        feedback, require_revision_follow_up=True
-    )
-    evidence_block = feedback[heading_matches[3].end():heading_matches[4].start()]
+    evidence_block = _section(feedback, "# Evidence")
     if any(excerpt in evidence_block for excerpt in suggestions):
         raise ValidationError(
             "revision naturalness follow-up must not repeat scored evidence"
@@ -103,6 +163,133 @@ def _validate_revision_follow_up(
         raise ValidationError("revision naturalness mini-practice requires two to four items")
     if re.search(r"(?im)^\s*(answer|sample answer|suggested answer)\s*[:：]", practice_match.group(1)):
         raise ValidationError("revision naturalness mini-practice must not reveal answers")
+
+
+def _historical_attempts(root: Path) -> list[dict]:
+    base = root / "tracker" / "writing" / "attempts"
+    rows = [
+        read_yaml(path / "attempt.yaml")
+        for path in base.glob("*")
+        if path.is_dir() and not path.name.startswith(".")
+    ] if base.exists() else []
+    rows.sort(key=lambda row: (str(row.get("submitted_at", "")), str(row.get("attempt_id", ""))))
+    return rows
+
+
+def _completed_drill_after_second_revision(
+    root_attempt_id: str, prior_revisions: Sequence[dict], attempts: Sequence[dict]
+) -> dict | None:
+    if len(prior_revisions) < 2:
+        return None
+    second_submitted = datetime.fromisoformat(prior_revisions[1]["submitted_at"])
+    candidates = []
+    for row in attempts:
+        drill = row.get("drill")
+        if (
+            row.get("record_type") != "targeted_drill"
+            or not isinstance(drill, Mapping)
+            or root_attempt_id not in drill.get("source_attempt_ids", [])
+            or type(drill.get("item_count")) is not int
+            or type(drill.get("correct_count")) is not int
+        ):
+            continue
+        submitted = datetime.fromisoformat(row["submitted_at"])
+        if submitted > second_submitted:
+            candidates.append(row)
+    return max(candidates, key=lambda row: row["submitted_at"], default=None)
+
+
+def validate_writing_revision_context(
+    root: Path, registration: ValidatedPracticeRegistration
+) -> None:
+    """Validate revision → conditional drill → follow-up while state is locked."""
+    attempt = registration.attempt
+    if attempt.get("record_type") != "revision":
+        return
+
+    historical = _historical_attempts(root)
+    lineage_rows = [*historical, attempt]
+    root_attempt = root_formal_attempt(attempt["attempt_id"], lineage_rows)
+    root_id = root_attempt["attempt_id"]
+    prior_revisions = revision_chain(root_id, historical)
+    round_number = len(prior_revisions) + 1
+    completed = _full_resolution(attempt.get("revision_outcomes"))
+    completed_drill = _completed_drill_after_second_revision(
+        root_id, prior_revisions, historical
+    )
+
+    if round_number >= 3 and completed_drill is None:
+        raise ValidationError(
+            "third revision requires a completed targeted drill after revision round 2"
+        )
+
+    expected_status = (
+        "completed"
+        if round_number >= 3
+        else "skipped"
+        if completed
+        else "required"
+        if round_number == 2
+        else "not_required_yet"
+    )
+    actual_status = _drill_status(registration.feedback)
+    if actual_status != expected_status:
+        raise ValidationError(
+            f"targeted drill status must be {expected_status} for revision round {round_number}"
+        )
+
+    drill_block = _section(registration.feedback, DRILL_HEADING)
+    if expected_status == "required":
+        source = re.search(r"(?m)^Source:\s*`([^`]+)`\s*$", drill_block)
+        targets = re.search(r"(?m)^Targets:\s*(.+)$", drill_block)
+        items = re.search(r"(?m)^Items:\s*([1-9][0-9]*)\s*$", drill_block)
+        completion = re.search(r"(?m)^Completion:\s*(.+)$", drill_block)
+        target_codes = re.findall(r"`([^`]+)`", targets.group(1)) if targets else []
+        chain_opportunities = {
+            code
+            for row in [root_attempt, *prior_revisions, attempt]
+            for code, count in row.get("opportunities", {}).items()
+            if type(count) is int and count > 0
+        }
+        if (
+            source is None
+            or source.group(1) != root_id
+            or not 1 <= len(target_codes) <= 2
+            or len(set(target_codes)) != len(target_codes)
+            or any(code not in chain_opportunities for code in target_codes)
+            or items is None
+            or not 1 <= int(items.group(1)) <= 8
+            or completion is None
+        ):
+            raise ValidationError(
+                "required targeted drill must list a valid source, one or two lineage targets, one to eight items, and completion"
+            )
+    elif expected_status in {"skipped", "not_required_yet"}:
+        if re.search(r"(?im)^Reason:.*third revision", drill_block) is None:
+            raise ValidationError("non-required targeted drill must explain the third-revision gate")
+    else:
+        drill_attempt = re.search(r"(?m)^Drill attempt:\s*`([^`]+)`\s*$", drill_block)
+        if drill_attempt is None or drill_attempt.group(1) != completed_drill["attempt_id"]:
+            raise ValidationError("completed targeted drill must cite the persisted drill attempt")
+
+    has_follow_up = bool(_section(registration.feedback, FOLLOW_UP_HEADING))
+    if completed and not has_follow_up:
+        raise ValidationError("completed revision requires naturalness follow-up")
+    if not completed and FOLLOW_UP_HEADING in registration.feedback:
+        raise ValidationError("incomplete revision must not enter naturalness follow-up")
+    if completed:
+        parent_path = (
+            root
+            / "tracker"
+            / "writing"
+            / "attempts"
+            / attempt["parent_attempt_id"]
+            / "feedback-round-1.md"
+        )
+        parent_feedback = parent_path.read_text(encoding="utf-8") if parent_path.exists() else None
+        _validate_revision_follow_up(
+            registration.feedback, registration.response, parent_feedback
+        )
 
 
 def validate_writing_assessment(
@@ -140,9 +327,8 @@ def validate_writing_assessment(
     if not isinstance(feedback, str):
         raise ValidationError("first-round feedback is missing required headings")
 
-    heading_matches = _ordered_heading_matches(
-        feedback, require_revision_follow_up=attempt.get("record_type") == "revision"
-    )
+    is_revision = attempt.get("record_type") == "revision"
+    heading_matches = _ordered_heading_matches(feedback, revision=is_revision)
     if attempt.get("record_type") != "re_evaluation":
         result_block = feedback[heading_matches[0].end():heading_matches[1].start()]
         if (
@@ -150,11 +336,14 @@ def validate_writing_assessment(
             or re.search(rf"(?<!\d){re.escape(str(value))}\s*/\s*5\b", result_block) is None
         ):
             raise ValidationError("first-round feedback result must state the matching simulated task score")
-    if attempt.get("record_type") == "revision":
-        # ``response`` is intentionally unavailable at this layer. The
-        # contextual builder calls the fuller validator before publishing.
-        if not feedback.split(FOLLOW_UP_HEADING, 1)[1].strip():
-            raise ValidationError("revision naturalness follow-up is empty")
+    if is_revision:
+        _drill_status(feedback)
+        completed = _full_resolution(attempt.get("revision_outcomes"))
+        has_follow_up = FOLLOW_UP_HEADING in feedback
+        if completed and not has_follow_up:
+            raise ValidationError("completed revision requires naturalness follow-up")
+        if not completed and has_follow_up:
+            raise ValidationError("incomplete revision must not enter naturalness follow-up")
     for heading, start, end in (
         ("why this level", heading_matches[1].end(), heading_matches[2].start()),
         ("why not the next level", heading_matches[2].end(), heading_matches[3].start()),
@@ -222,26 +411,9 @@ def build_writing_registration(
         return build_reevaluation_registration(root, manifest, attempt, feedback)
     event_rows = tuple(events)
     validate_writing_assessment(attempt, list(event_rows), feedback)
-    if attempt["record_type"] == "revision":
-        parent_feedback_path = (
-            root
-            / "tracker"
-            / attempt["modality"]
-            / "attempts"
-            / attempt["parent_attempt_id"]
-            / "feedback-round-1.md"
-        )
-        parent_feedback = (
-            parent_feedback_path.read_text(encoding="utf-8")
-            if parent_feedback_path.exists()
-            else None
-        )
-        _validate_revision_follow_up(feedback, response, parent_feedback)
     # This preflight gives direct builder callers the same error they would see
     # during publication. publish_registration repeats it while locked.
-    with _registration_lock(root):
-        validate_practice_events(root, attempt, response, event_rows)
-    return ValidatedPracticeRegistration(
+    registration = ValidatedPracticeRegistration(
         attempt=attempt,
         prompt=prompt,
         response=response,
@@ -249,6 +421,9 @@ def build_writing_registration(
         events=event_rows,
         require_contextual_validation=True,
     )
+    with _registration_lock(root):
+        validate_practice_context(root, registration)
+    return registration
 
 
 def register_writing_attempt(

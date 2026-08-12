@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bug Resolution"
+  short_description: "Investigate and resolve captured TOEFL coach bugs"
+  default_prompt: "Use $bug-resolution to investigate and resolve BUG-YYYYMMDD-NNN."

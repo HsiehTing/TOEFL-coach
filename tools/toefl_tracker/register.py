@@ -449,6 +449,11 @@ def validate_practice_context(
     registration: ValidatedPracticeRegistration,
 ) -> None:
     """Compatibility adapter for publication of a typed registration bundle."""
+    if registration.attempt.get("modality") == "writing":
+        # Import lazily to avoid the register <-> writing module cycle.
+        from toefl_tracker.writing import validate_writing_revision_context
+
+        validate_writing_revision_context(root, registration)
     validate_practice_events(
         root,
         registration.attempt,

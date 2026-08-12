@@ -38,9 +38,11 @@ Attempt IDs: `W-AD-20260731-001`, `W-AD-20260805-001`, `W-EM-20260805-001`, `W-E
   - Latest-round resolution: 66.7%; first full resolution round: not reached; new errors across chain: 5
 - `W-EM-20260808-001`: 4 rounds; scores 3 → 3 → 3 → 3 → 3; first revision `W-EM-20260808-001-R1`; latest `W-EM-20260808-001-R4`
   - Latest-round resolution: 0.0%; first full resolution round: not reached; new errors across chain: 4
+- `W-AD-20260809-001`: 2 rounds; scores 3 → 4 → 4; first revision `W-AD-20260812-001`; latest `W-AD-20260812-002`
+  - Latest-round resolution: 100.0%; first full resolution round: 2; new errors across chain: 5
 
 ## Revision resolution
-Latest-round full resolution: 2/4 chains
+Latest-round full resolution: 3/5 chains
 
 ## Skill families
 - `SENTENCE-CONTROL`: 16 events in 6 formal records
