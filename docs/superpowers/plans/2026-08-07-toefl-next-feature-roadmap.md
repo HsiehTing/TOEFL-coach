@@ -229,6 +229,8 @@ Learner 明確要求：在每一輪 Writing revision 中，當必要的題目要
 | Bug ID | Status | Summary | Evidence | Artifact |
 | --- | --- | --- | --- |
 <!-- BUG-CAPTURE-LEDGER -->
+| `BUG-20260812-001` | reported | Revision follow-up repeats prior scored advice instead of advancing toward score 5 | [reproduction](tracker/bug-reports/BUG-20260812-001/reproduction.md) | `v1` `sha256:912c8e0a35ded5dbe4ae0ff7de00f3e9da6df43c85ba7410a1fec5b8fd3ee0a4` |
+
 
 
 ## Milestone 1 — Personalized Drill Pack Generator

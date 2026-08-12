@@ -6,6 +6,7 @@ __pycache__/
 .venv/
 tracker/**/media/
 tracker/.register.lock
+tracker/bug-reports/.capture.lock
 *.m4a
 *.wav
 *.aac
