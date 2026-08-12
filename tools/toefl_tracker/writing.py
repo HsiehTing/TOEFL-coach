@@ -38,21 +38,28 @@ REQUIRED_HEADINGS = (
 FOLLOW_UP_HEADING = "# Naturalness and precision follow-up"
 
 
-def _ordered_heading_matches(feedback: str) -> list[Match[str]]:
+def _ordered_heading_matches(
+    feedback: str, *, require_revision_follow_up: bool = False
+) -> list[Match[str]]:
     matches = list(
         re.finditer(r"(?m)^(# [^\r\n]+?)[ \t]*\r?$", feedback)
     )
     headings = tuple(match.group(1) for match in matches)
-    allowed = REQUIRED_HEADINGS + (FOLLOW_UP_HEADING,)
-    if headings not in {REQUIRED_HEADINGS, allowed}:
+    expected = REQUIRED_HEADINGS + (FOLLOW_UP_HEADING,)
+    if require_revision_follow_up and headings == REQUIRED_HEADINGS:
+        raise ValidationError("revision feedback requires naturalness follow-up")
+    allowed = expected if require_revision_follow_up else REQUIRED_HEADINGS
+    if headings != allowed:
         raise ValidationError(
             "first-round feedback headings are missing, duplicated, or out of order"
         )
     return matches
 
 
-def _validate_revision_follow_up(feedback: str, response: str) -> None:
-    """Validate the optional non-scoring coaching artifact on a revision.
+def _validate_revision_follow_up(
+    feedback: str, response: str, parent_feedback: str | None = None
+) -> None:
+    """Validate the required non-scoring coaching artifact on a revision.
 
     The coach writes this prose, but the registration gate protects its key
     boundaries: it must remain after the ordinary assessment, cite the learner's
@@ -60,7 +67,7 @@ def _validate_revision_follow_up(feedback: str, response: str) -> None:
     display.  It deliberately does not create events or alter any tracker state.
     """
     if FOLLOW_UP_HEADING not in feedback:
-        return
+        raise ValidationError("revision feedback requires naturalness follow-up")
     follow_up = feedback.split(FOLLOW_UP_HEADING, 1)[1].strip()
     if not follow_up:
         raise ValidationError("revision naturalness follow-up is empty")
@@ -72,6 +79,20 @@ def _validate_revision_follow_up(feedback: str, response: str) -> None:
         raise ValidationError("revision naturalness follow-up requires one to three excerpt suggestions")
     if len(set(suggestions)) != len(suggestions) or any(excerpt not in response for excerpt in suggestions):
         raise ValidationError("revision naturalness follow-up excerpts must be distinct learner text")
+    heading_matches = _ordered_heading_matches(
+        feedback, require_revision_follow_up=True
+    )
+    evidence_block = feedback[heading_matches[3].end():heading_matches[4].start()]
+    if any(excerpt in evidence_block for excerpt in suggestions):
+        raise ValidationError(
+            "revision naturalness follow-up must not repeat scored evidence"
+        )
+    if parent_feedback is not None and any(
+        excerpt in parent_feedback for excerpt in suggestions
+    ):
+        raise ValidationError(
+            "revision naturalness follow-up must not repeat parent feedback"
+        )
     # The suggestion rows are numbered too.  Mini-practice is explicitly
     # scoped under this heading so the count cannot accidentally include prose.
     practice_match = re.search(r"(?ms)^## Mini-practice\s*$\n(.*?)(?=^## |\Z)", follow_up)
@@ -119,7 +140,9 @@ def validate_writing_assessment(
     if not isinstance(feedback, str):
         raise ValidationError("first-round feedback is missing required headings")
 
-    heading_matches = _ordered_heading_matches(feedback)
+    heading_matches = _ordered_heading_matches(
+        feedback, require_revision_follow_up=attempt.get("record_type") == "revision"
+    )
     if attempt.get("record_type") != "re_evaluation":
         result_block = feedback[heading_matches[0].end():heading_matches[1].start()]
         if (
@@ -128,9 +151,9 @@ def validate_writing_assessment(
         ):
             raise ValidationError("first-round feedback result must state the matching simulated task score")
     if attempt.get("record_type") == "revision":
-        # ``response`` is intentionally unavailable at this layer.  The
+        # ``response`` is intentionally unavailable at this layer. The
         # contextual builder calls the fuller validator before publishing.
-        if FOLLOW_UP_HEADING in feedback and not feedback.split(FOLLOW_UP_HEADING, 1)[1].strip():
+        if not feedback.split(FOLLOW_UP_HEADING, 1)[1].strip():
             raise ValidationError("revision naturalness follow-up is empty")
     for heading, start, end in (
         ("why this level", heading_matches[1].end(), heading_matches[2].start()),
@@ -200,7 +223,20 @@ def build_writing_registration(
     event_rows = tuple(events)
     validate_writing_assessment(attempt, list(event_rows), feedback)
     if attempt["record_type"] == "revision":
-        _validate_revision_follow_up(feedback, response)
+        parent_feedback_path = (
+            root
+            / "tracker"
+            / attempt["modality"]
+            / "attempts"
+            / attempt["parent_attempt_id"]
+            / "feedback-round-1.md"
+        )
+        parent_feedback = (
+            parent_feedback_path.read_text(encoding="utf-8")
+            if parent_feedback_path.exists()
+            else None
+        )
+        _validate_revision_follow_up(feedback, response, parent_feedback)
     # This preflight gives direct builder callers the same error they would see
     # during publication. publish_registration repeats it while locked.
     with _registration_lock(root):

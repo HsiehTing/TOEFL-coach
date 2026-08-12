@@ -13,7 +13,7 @@ Some wording can be more idiomatic.
 # Evidence
 | Evidence | Level |
 | --- | --- |
-| `Students urgently need quieter study space` | polish |
+| `The request is clear.` | polish |
 # Priorities
 1. Use direct, specific requests.
 # Rewrite task
@@ -34,6 +34,45 @@ def test_revision_follow_up_is_bounded_and_non_scoring(tmp_path: Path) -> None:
     # validate assessment-level feedback here.
     from toefl_tracker.writing import _validate_revision_follow_up
     _validate_revision_follow_up(feedback, response)
+
+
+def test_revision_follow_up_is_required() -> None:
+    from toefl_tracker.writing import _validate_revision_follow_up
+
+    with pytest.raises(ValidationError, match="requires naturalness follow-up"):
+        _validate_revision_follow_up(_feedback(""), "Learner text.")
+
+
+def test_revision_follow_up_cannot_repeat_scored_evidence() -> None:
+    from toefl_tracker.writing import _validate_revision_follow_up
+
+    feedback = _feedback("""# Naturalness and precision follow-up
+1. Excerpt: `The request is clear.`
+   Reader effect: This repeats a scored issue rather than adding new guidance. Option: Use a clearer request.
+## Mini-practice
+1. Rewrite the request.
+2. Add a specific action.
+""")
+    with pytest.raises(ValidationError, match="must not repeat scored evidence"):
+        _validate_revision_follow_up(feedback, "The request is clear.")
+
+
+def test_revision_follow_up_cannot_repeat_parent_feedback() -> None:
+    from toefl_tracker.writing import _validate_revision_follow_up
+
+    feedback = _feedback("""# Naturalness and precision follow-up
+1. Excerpt: `The committee name is unclear.`
+   Reader effect: This repeats prior feedback rather than adding new guidance. Option: Use a precise committee name.
+## Mini-practice
+1. Rewrite the committee name.
+2. Add a more specific institutional detail.
+""")
+    with pytest.raises(ValidationError, match="must not repeat parent feedback"):
+        _validate_revision_follow_up(
+            feedback,
+            "The committee name is unclear.",
+            parent_feedback="Prior evidence: The committee name is unclear.",
+        )
 
 
 @pytest.mark.parametrize("section, message", [

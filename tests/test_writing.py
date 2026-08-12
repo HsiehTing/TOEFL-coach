@@ -48,6 +48,13 @@ def test_email_requires_email_rubric() -> None:
     validate_writing_assessment(row, [], VALID_FEEDBACK)
 
 
+def test_revision_requires_naturalness_follow_up() -> None:
+    row = attempt("email", "ets-writing-email-2025-applicable-2026")
+    row["record_type"] = "revision"
+    with pytest.raises(ValidationError, match="requires naturalness follow-up"):
+        validate_writing_assessment(row, [], VALID_FEEDBACK)
+
+
 def test_email_cannot_use_discussion_rubric() -> None:
     row = attempt(
         "email",
