@@ -125,14 +125,19 @@ def _validate_revision_follow_up(
 
     The coach writes this prose, but the registration gate protects its key
     boundaries: it must remain after the ordinary assessment, cite the learner's
-    actual revision, stay bounded, and not leak a mini-practice answer on first
-    display.  It deliberately does not create events or alter any tracker state.
+    actual revision, and stay bounded. It deliberately does not create events,
+    learner exercises, or any tracker state.
     """
     if FOLLOW_UP_HEADING not in feedback:
         raise ValidationError("revision feedback requires naturalness follow-up")
     follow_up = feedback.split(FOLLOW_UP_HEADING, 1)[1].strip()
     if not follow_up:
         raise ValidationError("revision naturalness follow-up is empty")
+    if re.search(r"(?m)^## Mini-practice\s*$", follow_up):
+        raise ValidationError(
+            "revision naturalness follow-up must not contain mini-practice; "
+            "learner exercises belong to targeted drills"
+        )
     if re.search(rf"(?m)^{re.escape(NO_ISSUE_MESSAGE)}\s*$", follow_up):
         _validate_no_issue_audit(follow_up, response)
         return
@@ -153,16 +158,6 @@ def _validate_revision_follow_up(
         raise ValidationError(
             "revision naturalness follow-up must not repeat parent feedback"
         )
-    # The suggestion rows are numbered too.  Mini-practice is explicitly
-    # scoped under this heading so the count cannot accidentally include prose.
-    practice_match = re.search(r"(?ms)^## Mini-practice\s*$\n(.*?)(?=^## |\Z)", follow_up)
-    if practice_match is None:
-        raise ValidationError("revision naturalness follow-up requires mini-practice")
-    practice_rows = re.findall(r"(?m)^\d+\.\s+(.+)$", practice_match.group(1))
-    if not 2 <= len(practice_rows) <= 4:
-        raise ValidationError("revision naturalness mini-practice requires two to four items")
-    if re.search(r"(?im)^\s*(answer|sample answer|suggested answer)\s*[:：]", practice_match.group(1)):
-        raise ValidationError("revision naturalness mini-practice must not reveal answers")
 
 
 def _historical_attempts(root: Path) -> list[dict]:
