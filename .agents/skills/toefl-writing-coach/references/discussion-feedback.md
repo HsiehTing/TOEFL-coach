@@ -20,6 +20,10 @@ State which rubric features are consistently successful, generally successful, p
 
 Require the learner to correct any altered thesis first, then independently develop one reason with a concrete explanation or example. Do not supply a full replacement post before revision.
 
+## Constructive revision explanation
+
+When a Discussion sentence is understandable but still less natural or precise, label it as an `acceptable-but-less-natural` choice instead of presenting it as a hard grammar error. Briefly contrast the learner's intended meaning with the specific improvement that carries it more clearly. Common high-value explanations include parallel verbs after `able to`, redundant combinations such as a verb that repeats the meaning of its object, repeated nouns across a contrast, and whether the intended agent is actively limiting something or is being constrained by it. Give a reusable direction or one bounded sentence-level option, not a complete response. Use this expanded explanation only for one or two high-leverage revision points.
+
 ## Skill-family drill
 
 When `DISCUSSION-ELABORATION` and `DISCUSSION-SUPPORT` recur across formal originals, report the derived family `IDEA-DEVELOPMENT` while preserving both atomic codes and exact excerpts. Assign a bounded causal-chain drill:

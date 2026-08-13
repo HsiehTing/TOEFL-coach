@@ -68,8 +68,17 @@ def test_revision_skill_declares_drill_and_follow_up_state_machine() -> None:
     assert "revision_targets → targeted_drill_gate → naturalness_follow_up → transfer" in text
     assert all(
         f"`{status}`" in text
-        for status in ("not_required_yet", "skipped", "required", "completed")
+        for status in ("not_required_yet", "skipped", "required", "declined", "completed")
     )
+    assert "learner explicitly opts in" in text
+    assert "learner declines the drill" in text
+    assert "Invitation: After reviewing the exact-excerpt feedback" in text
+    assert "## New issues (not assigned targets)" in text
+    assert "never lower the target-resolution rate" in text
+    assert "Do not add a new issue to `# Priorities`" in text
+    assert "Make revision feedback constructive, not merely corrective." in text
+    assert "For at most two high-leverage items" in text
+    assert "Distinguish a hard error from an acceptable-but-less-natural choice" in text
     assert "do not emit the follow-up heading" in text
     assert "Transfer is available only after the follow-up" in text
 
@@ -89,3 +98,10 @@ def test_discussion_skill_defines_causal_chain_drill_without_full_model() -> Non
     assert "claim" in discussion.lower()
     assert "mechanism" in discussion.lower()
     assert "不提供完整範文" in discussion
+
+
+def test_discussion_skill_requires_compact_constructive_revision_explanations() -> None:
+    discussion = (SKILL / "references/discussion-feedback.md").read_text(encoding="utf-8")
+    assert "Constructive revision explanation" in discussion
+    assert "parallel verbs after `able to`" in discussion
+    assert "acceptable-but-less-natural" in discussion

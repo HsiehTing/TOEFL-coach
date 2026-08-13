@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import yaml
+
 import toefl_tracker.practice_queue as queue_module
 
 from test_reports import report_event, write_attempt, write_events
@@ -88,6 +90,106 @@ def test_queue_shows_all_training_plans_and_defers_lower_priority(
     assert queue["actions"][0]["status"] == "ready"
     assert queue["actions"][2]["recommendation_id"] == "PLAN-W-EMAIL-1"
     assert queue["actions"][2]["status"] == "deferred_by_priority"
+
+
+def test_queue_requires_recorded_learner_choice_before_generating_r2_drill(
+    tmp_path: Path, monkeypatch
+) -> None:
+    write_attempt(tmp_path, "W-AD-1", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-1-R1", "academic_discussion", "revision")
+    write_attempt(tmp_path, "W-AD-1-R2", "academic_discussion", "revision")
+    attempts_root = tmp_path / "tracker/writing/attempts"
+    for attempt_id, parent_id in (("W-AD-1-R1", "W-AD-1"), ("W-AD-1-R2", "W-AD-1-R1")):
+        path = attempts_root / attempt_id / "attempt.yaml"
+        row = yaml.safe_load(path.read_text(encoding="utf-8"))
+        row["parent_attempt_id"] = parent_id
+        path.write_text(yaml.safe_dump(row), encoding="utf-8")
+    feedback_path = attempts_root / "W-AD-1-R2/feedback-round-1.md"
+    feedback_path.write_text(
+        "# Targeted drill\n\nDrill status: `required`.\n",
+        encoding="utf-8",
+    )
+    write_events(tmp_path, [])
+    plans = {
+        "version": 1,
+        "recommendations": [{
+            "recommendation_id": "PLAN-W-AD-1",
+            "source_attempt_id": "W-AD-1",
+            "task_type": "academic_discussion",
+            "target_codes": ["GRAM-CLAUSE"],
+            "drill": {"item_count": 8, "minimum_accuracy": 0.8},
+        }],
+    }
+    monkeypatch.setattr(queue_module, "build_training_plan", lambda root: plans)
+
+    waiting = build_practice_queue(tmp_path)
+
+    assert waiting["actions"][0]["status"] == "awaiting_learner_choice"
+    assert "ask whether" in waiting["actions"][0]["instruction"].lower()
+    assert waiting["actions"][1]["status"] == "blocked_by_learner_choice"
+
+    feedback_path.write_text(
+        "# Targeted drill\n\nDrill status: `required`.\nDecision: learner opted in after reviewing the rewrite direction.\n",
+        encoding="utf-8",
+    )
+    opted_in = build_practice_queue(tmp_path)
+
+    assert opted_in["actions"][0]["status"] == "ready"
+    assert opted_in["actions"][1]["status"] == "blocked_by_drill"
+
+    feedback_path.write_text(
+        "# Targeted drill\n\nDrill status: `declined`.\nDecision: learner declined after reviewing the rewrite direction.\n",
+        encoding="utf-8",
+    )
+    declined = build_practice_queue(tmp_path)
+
+    assert declined["actions"][0]["status"] == "closed_by_learner_choice"
+    assert declined["actions"][1]["status"] == "not_available_after_decline"
+
+
+def test_declined_plan_does_not_block_the_next_actionable_plan(tmp_path: Path, monkeypatch) -> None:
+    write_attempt(tmp_path, "W-EMAIL-1", "email", "formal_original")
+    write_attempt(tmp_path, "W-AD-3", "academic_discussion", "formal_original")
+    write_attempt(tmp_path, "W-AD-3-R1", "academic_discussion", "revision")
+    write_attempt(tmp_path, "W-AD-3-R2", "academic_discussion", "revision")
+    attempts_root = tmp_path / "tracker/writing/attempts"
+    for attempt_id, parent_id in (("W-AD-3-R1", "W-AD-3"), ("W-AD-3-R2", "W-AD-3-R1")):
+        path = attempts_root / attempt_id / "attempt.yaml"
+        row = yaml.safe_load(path.read_text(encoding="utf-8"))
+        row["parent_attempt_id"] = parent_id
+        path.write_text(yaml.safe_dump(row), encoding="utf-8")
+    (attempts_root / "W-AD-3-R2/feedback-round-1.md").write_text(
+        "# Targeted drill\n\nDrill status: `declined`.\nDecision: learner declined after reviewing the rewrite direction.\n",
+        encoding="utf-8",
+    )
+    write_events(tmp_path, [])
+    plans = {
+        "version": 1,
+        "recommendations": [
+            {
+                "recommendation_id": "PLAN-W-EMAIL-1",
+                "source_attempt_id": "W-EMAIL-1",
+                "task_type": "email",
+                "target_codes": ["GRAM-CLAUSE"],
+                "drill": {"item_count": 8, "minimum_accuracy": 0.8},
+            },
+            {
+                "recommendation_id": "PLAN-W-AD-3",
+                "source_attempt_id": "W-AD-3",
+                "task_type": "academic_discussion",
+                "target_codes": ["GRAM-CLAUSE"],
+                "drill": {"item_count": 8, "minimum_accuracy": 0.8},
+            },
+        ],
+    }
+    monkeypatch.setattr(queue_module, "build_training_plan", lambda root: plans)
+
+    queue = build_practice_queue(tmp_path)
+
+    assert queue["actions"][0]["recommendation_id"] == "PLAN-W-AD-3"
+    assert queue["actions"][0]["status"] == "closed_by_learner_choice"
+    assert queue["actions"][2]["recommendation_id"] == "PLAN-W-EMAIL-1"
+    assert queue["actions"][2]["status"] == "ready"
 
 
 def test_queue_blocks_a_plan_when_its_source_prompt_has_no_safe_template(

@@ -140,6 +140,26 @@ def test_discussion_idea_pack_requires_one_bounded_causal_chain_response(tmp_pat
     assert all("public transportation" not in item["prompt"].lower() for item in pack["items"])
 
 
+def test_project_learning_discussion_uses_its_own_context_safe_templates(tmp_path: Path) -> None:
+    source, _ = _source_attempt(
+        tmp_path,
+        task_type="academic_discussion",
+        code="GRAM-CLAUSE",
+        prompt_override=(
+            "We have been discussing the impact of different teaching methods on student learning. "
+            "Do you think project-based learning is beneficial for students? "
+            "Some students prefer traditional teaching methods like lectures and exams."
+        ),
+    )
+    pack = build_drill_pack(tmp_path, _recommendation(source, "GRAM-CLAUSE"), seed=0)
+
+    assert pack["template_family"] == "academic_project_learning"
+    assert pack["context_summary"] == "project-based learning, practical skills, and workplace readiness"
+    assert all("project-based learning" in item["prompt"] for item in pack["items"])
+    assert all("brand" not in item["prompt"].lower() for item in pack["items"])
+    assert "team project" in pack["answer_key_markdown"]
+
+
 def test_multi_code_pack_gives_every_target_code_a_practice_item(tmp_path: Path) -> None:
     source, event = _source_attempt(tmp_path, task_type="email", code="GRAM-CLAUSE")
     agreement_event = {**event, "event_id": "E-SOURCE-002", "code": "GRAM-AGREEMENT"}
@@ -314,6 +334,43 @@ def test_printing_problem_email_uses_its_own_context_safe_templates(tmp_path: Pa
     assert all("incorrect printed file" in item["prompt"] for item in pack["items"])
     assert all("laboratory" not in item["prompt"].lower() for item in pack["items"])
     assert "incorrect copies need to be replaced" in pack["answer_key_markdown"]
+
+
+def test_defective_textbook_email_uses_its_own_context_safe_templates(tmp_path: Path) -> None:
+    source, _ = _source_attempt(
+        tmp_path,
+        task_type="email",
+        code="GRAM-CLAUSE",
+        prompt_override=(
+            "You purchased an academic textbook from the university bookstore, but several pages are missing. "
+            "Write an email requesting an exchange for the defective book as soon as possible."
+        ),
+    )
+    pack = build_drill_pack(tmp_path, _recommendation(source, "GRAM-CLAUSE"), seed=0)
+
+    assert pack["template_family"] == "email_defective_textbook_exchange"
+    assert pack["context_summary"] == "a defective academic textbook and an urgent exchange request"
+    assert all("defective academic textbook" in item["prompt"] for item in pack["items"])
+    assert all("laboratory" not in item["prompt"].lower() for item in pack["items"])
+    assert "replacement" in pack["answer_key_markdown"]
+
+
+def test_defective_textbook_email_has_a_safe_agreement_template(tmp_path: Path) -> None:
+    source, _ = _source_attempt(
+        tmp_path,
+        task_type="email",
+        code="GRAM-AGREEMENT",
+        prompt_override=(
+            "You purchased an academic textbook from the university bookstore, but several pages are missing. "
+            "Write an email requesting an exchange for the defective book as soon as possible."
+        ),
+    )
+
+    pack = build_drill_pack(tmp_path, _recommendation(source, "GRAM-AGREEMENT"), seed=0)
+
+    assert pack["template_family"] == "email_defective_textbook_exchange"
+    assert all(item["kind"] == "agreement_control" for item in pack["items"])
+    assert all("defective academic textbook" in item["prompt"] for item in pack["items"])
 
 
 def test_completed_pack_can_be_retired_after_its_minimum_lineage_is_copied(tmp_path: Path) -> None:

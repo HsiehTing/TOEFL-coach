@@ -88,6 +88,32 @@ No naturalness or precision issue to flag.
         validate_writing_assessment(row, [], feedback)
 
 
+def test_revision_with_new_errors_must_separate_them_from_assigned_targets() -> None:
+    row = attempt("email", "ets-writing-email-2025-applicable-2026")
+    row["record_type"] = "revision"
+    row["revision_outcomes"] = {
+        "assigned": 2,
+        "resolved": 1,
+        "partly_resolved": 1,
+        "unresolved": 0,
+        "new_errors": 1,
+        "resolution_rate": 0.5,
+    }
+    feedback = VALID_FEEDBACK + """# Targeted drill
+Drill status: `not_required_yet`.
+Reason: The third revision gate has not been reached.
+"""
+
+    with pytest.raises(ValidationError, match="separate new issues"):
+        validate_writing_assessment(row, [], feedback)
+
+    separated = feedback.replace(
+        "# Priorities",
+        "## New issues (not assigned targets)\n- `a new issue` is recorded separately.\n# Priorities",
+    )
+    validate_writing_assessment(row, [], separated)
+
+
 def test_email_cannot_use_discussion_rubric() -> None:
     row = attempt(
         "email",
