@@ -23,14 +23,11 @@ Use this control in a new prompt.
 """ + section
 
 
-def test_revision_follow_up_is_bounded_and_non_scoring(tmp_path: Path) -> None:
+def test_revision_follow_up_is_bounded_feedback_and_non_scoring(tmp_path: Path) -> None:
     response = "Students urgently need quieter study space. Students urgently need a quiet place before exams."
     feedback = _feedback("""# Naturalness and precision follow-up
 1. Excerpt: `Students urgently need quieter study space`
    Reader effect: The repeated urgency can sound insistent rather than specific. Option: Students need a quieter place to study before final exams.
-## Mini-practice
-1. Rewrite your second sentence so it adds a different concrete effect.
-2. Replace one general word with a more precise word for the study setting.
 """)
     # The parent is not relevant to this focused artifact contract, so only
     # validate assessment-level feedback here.
@@ -72,15 +69,31 @@ Use the same control on a new prompt.
     _validate_revision_follow_up(feedback, response)
 
 
+def test_no_issue_follow_up_rejects_mini_practice() -> None:
+    from toefl_tracker.writing import _validate_revision_follow_up
+
+    response = "The request is clear and direct. The deadline is specific."
+    feedback = _feedback("""# Naturalness and precision follow-up
+No naturalness or precision issue to flag.
+## Naturalness audit
+1. Candidate: `The request is clear and direct.` — The wording is concise and idiomatic.
+2. Candidate: `The deadline is specific.` — The reference is precise and needs no change.
+## Transfer suggestion
+Use the same control on a new prompt.
+## Mini-practice
+1. Rewrite the request.
+""")
+
+    with pytest.raises(ValidationError, match="must not contain mini-practice"):
+        _validate_revision_follow_up(feedback, response)
+
+
 def test_revision_follow_up_cannot_repeat_scored_evidence() -> None:
     from toefl_tracker.writing import _validate_revision_follow_up
 
     feedback = _feedback("""# Naturalness and precision follow-up
 1. Excerpt: `The request is clear.`
    Reader effect: This repeats a scored issue rather than adding new guidance. Option: Use a clearer request.
-## Mini-practice
-1. Rewrite the request.
-2. Add a specific action.
 """)
     with pytest.raises(ValidationError, match="must not repeat scored evidence"):
         _validate_revision_follow_up(feedback, "The request is clear.")
@@ -92,9 +105,6 @@ def test_revision_follow_up_cannot_repeat_parent_feedback() -> None:
     feedback = _feedback("""# Naturalness and precision follow-up
 1. Excerpt: `The committee name is unclear.`
    Reader effect: This repeats prior feedback rather than adding new guidance. Option: Use a precise committee name.
-## Mini-practice
-1. Rewrite the committee name.
-2. Add a more specific institutional detail.
 """)
     with pytest.raises(ValidationError, match="must not repeat parent feedback"):
         _validate_revision_follow_up(
@@ -105,11 +115,10 @@ def test_revision_follow_up_cannot_repeat_parent_feedback() -> None:
 
 
 @pytest.mark.parametrize("section, message", [
-    ("# Naturalness and precision follow-up\n1. Excerpt: `missing text`\n## Mini-practice\n1. One\n2. Two\n", "learner text"),
-    ("# Naturalness and precision follow-up\n1. Excerpt: `Students urgently need quieter study space`\n## Mini-practice\n1. One\n", "two to four"),
-    ("# Naturalness and precision follow-up\n1. Excerpt: `Students urgently need quieter study space`\n## Mini-practice\n1. One\n2. Two\nAnswer: An answer\n", "must not reveal"),
+    ("# Naturalness and precision follow-up\n1. Excerpt: `missing text`\n", "learner text"),
+    ("# Naturalness and precision follow-up\n1. Excerpt: `Students urgently need quieter study space`\n## Mini-practice\n1. One\n2. Two\n", "must not contain mini-practice"),
 ])
-def test_revision_follow_up_rejects_unbounded_or_leaked_content(section: str, message: str) -> None:
+def test_revision_follow_up_rejects_invalid_excerpt_or_practice_prompt(section: str, message: str) -> None:
     from toefl_tracker.writing import _validate_revision_follow_up
     with pytest.raises(ValidationError, match=message):
         _validate_revision_follow_up(_feedback(section), "Students urgently need quieter study space.")
@@ -171,9 +180,6 @@ def _actionable_follow_up(excerpt: str) -> str:
     return f"""# Naturalness and precision follow-up
 1. Excerpt: `{excerpt}`
    Reader effect: The phrase is understandable but indirect. Option: Workers need direct support.
-## Mini-practice
-1. Rewrite the sentence more directly.
-2. Replace one general noun with a precise noun.
 """
 
 

@@ -81,6 +81,7 @@ def test_revision_skill_declares_drill_and_follow_up_state_machine() -> None:
     assert "Distinguish a hard error from an acceptable-but-less-natural choice" in text
     assert "do not emit the follow-up heading" in text
     assert "Transfer is available only after the follow-up" in text
+    assert "Learner questions and assessed practice belong only to a learner-approved targeted drill" in text
 
 
 def test_task_contracts_have_distinct_required_fields() -> None:

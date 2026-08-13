@@ -1,0 +1,26 @@
+schema_version: 1
+bug_id: BUG-20260813-001
+status: reported
+reported_at: '2026-08-13T08:48:09+00:00'
+title: Naturalness follow-up did not provide a concrete next follow-up
+purpose: Help the learner complete the Email naturalness-and-precision follow-up flow
+  after submitting the assigned mini-practice.
+affected_flow: TOEFL Writing Email naturalness-and-precision follow-up
+timing: 2026-08-13 after the learner submitted the mini-practice response
+reproducibility: Observed once in this normal-use coaching session
+impact: The learner did not receive the expected next follow-up activity after completing
+  the assigned practice.
+expected: After the learner submits the two assigned mini-practice rewrites, the coach
+  should provide the promised follow-up outcome, including a concrete next transfer
+  activity when the follow-up is complete.
+observed: After the learner submitted the revised full email containing both mini-practice
+  rewrites, the coach said the exercises were completed and only suggested that the
+  learner could try a new Email situation; it did not provide a concrete follow-up
+  transfer activity.
+steps:
+- Learner submitted an Email revision that fully resolved the assigned priorities.
+- Coach provided a naturalness-and-precision follow-up with two mini-practice rewrites.
+- Learner submitted a revised full email containing both requested rewrites.
+- Coach confirmed the two rewrites but did not provide a concrete follow-up transfer
+  activity.
+attachments: []

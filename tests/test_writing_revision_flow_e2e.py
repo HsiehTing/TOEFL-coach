@@ -99,7 +99,7 @@ No new counted must-fix or should-fix issue appears.
 
 # Rewrite task
 
-Complete the bounded naturalness mini-practice below.
+No further rewrite is required for this revision.
 
 # Targeted drill
 
@@ -114,10 +114,6 @@ Reason: All assigned targets were resolved before the third revision was trigger
 2. Excerpt: `Overall, free training in modern technologies is the better option.`
    Reader effect: The conclusion repeats the opening without emphasizing the lasting employment benefit. Option: Overall, free technology training offers a more durable path back to employment.
 
-## Mini-practice
-
-1. Rewrite the opening so it names both policies in no more than 18 words.
-2. Rewrite the conclusion so it emphasizes the long-term employment outcome without adding a new idea.
 """
 
 
@@ -223,7 +219,7 @@ def test_government_training_session_reaches_skipped_drill_then_follow_up(
     assert "# Targeted drill" in completed_feedback
     assert "Drill status: `skipped`." in completed_feedback
     assert "# Naturalness and precision follow-up" in completed_feedback
-    assert "## Mini-practice" in completed_feedback
+    assert "## Mini-practice" not in completed_feedback
     assert completed_feedback.index("# Targeted drill") < completed_feedback.index(
         "# Naturalness and precision follow-up"
     )

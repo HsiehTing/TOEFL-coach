@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-13T08:48:09+00:00",
+  "runtime": {
+    "python": "3.13.14",
+    "platform": "macOS-26.4.1-arm64-arm-64bit-Mach-O"
+  },
+  "repository": {
+    "repository_identity": "sha256:256d0df3d39c581a264f085d869c23f0587a1d9a0731868f5182f892661a9c6d",
+    "branch": "codex/python-cli-skill-packaging",
+    "head": "8c997958795753c57963103f817cce4aa148f07a",
+    "status_porcelain": [
+      " M .agents/skills/toefl-writing-coach/SKILL.md",
+      " M .agents/skills/toefl-writing-coach/references/discussion-feedback.md",
+      " M README.md",
+      " M docs/superpowers/plans/2026-08-07-toefl-next-feature-roadmap.md",
+      " M tests/test_drill_generation.py",
+      " M tests/test_practice_queue.py",
+      " M tests/test_revision_followup.py",
+      " M tests/test_writing.py",
+      " M tests/test_writing_skill_contract.py",
+      " M tools/toefl_tracker/drill_generation.py",
+      " M tools/toefl_tracker/practice_queue.py",
+      " M tools/toefl_tracker/writing.py",
+      " M tracker/writing/dashboard.csv",
+      " M tracker/writing/error-events.jsonl",
+      " M tracker/writing/practice-queue.md",
+      " M tracker/writing/practice-queue.yaml",
+      " M tracker/writing/profile.md",
+      " M tracker/writing/progress-overview.md",
+      " M tracker/writing/progress-overview.yaml",
+      " M tracker/writing/revision-learning.md",
+      " M tracker/writing/revision-learning.yaml",
+      " M tracker/writing/training-plan.md",
+      "?? tracker/bug-reports/BUG-20260812-003/",
+      "?? tracker/bug-reports/BUG-20260812-004/",
+      "?? tracker/bug-reports/BUG-20260812-005/",
+      "?? tracker/writing/attempts/W-AD-20260812-003-R1/",
+      "?? tracker/writing/attempts/W-AD-20260812-003-R2/",
+      "?? tracker/writing/attempts/W-AD-20260812-003/",
+      "?? tracker/writing/attempts/W-EM-20260812-001-R1/",
+      "?? tracker/writing/attempts/W-EM-20260812-001-R2/",
+      "?? tracker/writing/attempts/W-EM-20260812-001/",
+      "?? tracker/writing/attempts/W-EM-20260813-001-R1/",
+      "?? tracker/writing/attempts/W-EM-20260813-001/",
+      "?? tracker/writing/reports/writing-common-0009.md",
+      "?? tracker/writing/reports/writing-email-0006.md"
+    ]
+  },
+  "attachment_checksums": []
+}
