@@ -40,9 +40,10 @@ Give these parts in order:
 2. Simulated 0–5 task score, confidence, and one-sentence verdict.
 3. Why this level.
 4. Why not the next level.
-5. Evidence table with exact excerpts and must-fix, should-fix, or polish.
-6. 最多三個 priorities.
-7. A bounded rewrite task.
+5. Evidence table with every material issue found in the submitted response, using exact excerpts and must-fix, should-fix, or polish. Do not withhold a material issue merely because it is not one of the current priorities.
+6. When more than three material issues exist, add a clearly labelled `Deferred issues (not current rewrite targets)` subsection after the evidence table. These items are disclosed for diagnosis only: they do not enter the current target-resolution rate and must not be repaired in the bounded rewrite task.
+7. 最多三個 priorities, selected from the disclosed issues.
+8. A bounded rewrite task.
 
 第一輪不提供完整範文。Do not convert the task result to a Writing section band.
 

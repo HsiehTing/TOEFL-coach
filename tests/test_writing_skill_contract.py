@@ -52,6 +52,9 @@ def test_skill_routes_references_and_enforces_iteration() -> None:
     assert "references/writing-error-taxonomy.md" in text
     assert "第一輪不提供完整範文" in text
     assert "最多三個" in text
+    assert "every material issue found in the submitted response" in text
+    assert "Deferred issues (not current rewrite targets)" in text
+    assert "do not present an issue first in a later revision" in text
     assert "tools/validate_tracker.py" in text
 
 
