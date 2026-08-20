@@ -140,6 +140,26 @@ def test_discussion_idea_pack_requires_one_bounded_causal_chain_response(tmp_pat
     assert all("public transportation" not in item["prompt"].lower() for item in pack["items"])
 
 
+def test_project_learning_discussion_uses_its_own_context_safe_templates(tmp_path: Path) -> None:
+    source, _ = _source_attempt(
+        tmp_path,
+        task_type="academic_discussion",
+        code="GRAM-CLAUSE",
+        prompt_override=(
+            "We have been discussing the impact of different teaching methods on student learning. "
+            "Do you think project-based learning is beneficial for students? "
+            "Some students prefer traditional teaching methods like lectures and exams."
+        ),
+    )
+    pack = build_drill_pack(tmp_path, _recommendation(source, "GRAM-CLAUSE"), seed=0)
+
+    assert pack["template_family"] == "academic_project_learning"
+    assert pack["context_summary"] == "project-based learning, practical skills, and workplace readiness"
+    assert all("project-based learning" in item["prompt"] for item in pack["items"])
+    assert all("brand" not in item["prompt"].lower() for item in pack["items"])
+    assert "team project" in pack["answer_key_markdown"]
+
+
 def test_multi_code_pack_gives_every_target_code_a_practice_item(tmp_path: Path) -> None:
     source, event = _source_attempt(tmp_path, task_type="email", code="GRAM-CLAUSE")
     agreement_event = {**event, "event_id": "E-SOURCE-002", "code": "GRAM-AGREEMENT"}

@@ -55,6 +55,8 @@ For every counted sentence-level issue, give only the minimal correction in the 
 
 Compare only against the assigned priorities. Report resolved, partly resolved, unresolved, and newly introduced issues; calculate target-resolution rate. A revision never increases the formal-attempt count. Provide a high-scoring model only after the learner has attempted the revision.
 
+Lock the assigned priorities to the parent feedback before assessing the revision. New issues never increase `revision_outcomes.assigned`, never lower the target-resolution rate, and never retroactively make a resolved parent target unresolved. When `new_errors > 0`, add `## New issues (not assigned targets)` inside `# Evidence`; keep each exact excerpt there. Do not add a new issue to `# Priorities`, `# Rewrite task`, or drill targets in the same round. It may become a focus only when it is explicitly assigned in a later feedback scope.
+
 Follow this state machine in order: `revision_targets → targeted_drill_gate → naturalness_follow_up → transfer`.
 
 After `# Rewrite task`, always add `# Targeted drill` and one exact status line. A drill is learner-directed practice, never a penalty: before finalizing an incomplete second revision, first give exact-excerpt feedback and a bounded rewrite direction, then ask whether the learner wants the drill. Do not generate or register a drill unless the learner explicitly opts in.

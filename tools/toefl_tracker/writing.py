@@ -41,6 +41,7 @@ REQUIRED_HEADINGS = (
 FOLLOW_UP_HEADING = "# Naturalness and precision follow-up"
 DRILL_HEADING = "# Targeted drill"
 NO_ISSUE_MESSAGE = "No naturalness or precision issue to flag."
+NEW_ISSUES_HEADING = "## New issues (not assigned targets)"
 DRILL_STATUSES = {"not_required_yet", "skipped", "required", "declined", "completed"}
 
 
@@ -418,6 +419,11 @@ def validate_writing_assessment(
     priority_block = feedback[
         heading_matches[4].end():heading_matches[5].start()
     ]
+    if is_revision and attempt["revision_outcomes"].get("new_errors", 0) > 0:
+        if NEW_ISSUES_HEADING not in evidence_block:
+            raise ValidationError(
+                "revision feedback must separate new issues from assigned targets"
+            )
     if len(re.findall(r"(?m)^\d+\.\s", priority_block)) > 3:
         raise ValidationError("first-round feedback exceeds three priorities")
 

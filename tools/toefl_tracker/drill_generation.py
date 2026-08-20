@@ -22,7 +22,10 @@ _SUPPORTED_CODES = {
 _PACK_FORMAT_VERSION = 11
 _DEFAULT_MINIMUM_ACCURACY = 0.8
 _CONTEXT_TEMPLATE_FAMILIES = {
-    "academic_discussion": {"academic_brand_identity"},
+    "academic_discussion": {
+        "academic_brand_identity",
+        "academic_project_learning",
+    },
     "email": {
         "email_campus_facility",
         "email_career_decision_advice",
@@ -109,6 +112,13 @@ def _source_context(root: Path, source_attempt_id: str, task_type: str) -> dict[
         if "brand" in lower or "advertis" in lower or "marketing" in lower:
             summary = "brand identity, advertising updates, and customer reactions"
             template_family = "academic_brand_identity"
+        elif "project-based learning" in lower and (
+            "teaching method" in lower
+            or "traditional teaching" in lower
+            or "traditional learning" in lower
+        ):
+            summary = "project-based learning, practical skills, and workplace readiness"
+            template_family = "academic_project_learning"
         else:
             raise ValidationError(
                 "drill generation has no context-safe Academic Discussion template for this source prompt"
@@ -260,6 +270,52 @@ _CLAUSE_VARIANTS = {
     ],
 }
 
+_ACADEMIC_CLAUSE_VARIANTS = {
+    "academic_brand_identity": _CLAUSE_VARIANTS["academic_discussion"],
+    "academic_project_learning": [
+        (
+            "rewrite_fragment",
+            "Rewrite this fragment as one complete sentence: `Because project-based learning gives students practice solving realistic problems.`",
+            "The answer attaches the dependent clause to a complete main clause and states a concrete learning benefit.",
+        ),
+        (
+            "combine",
+            "Combine these ideas into one sentence using `because` or `therefore`: `Students coordinate roles in a project. They learn to collaborate under pressure.`",
+            "The answer is one complete sentence and makes the project-to-skill relationship explicit.",
+        ),
+        (
+            "rewrite_fragment",
+            "Repair this sentence boundary: `Although lectures can introduce key concepts. Projects let students apply them to a realistic task.`",
+            "The `Although` clause is attached to a complete main clause; do not leave it as a fragment.",
+        ),
+        (
+            "produce",
+            "Write one sentence beginning with `When students divide tasks in a long-term project, ...` and finish it with a workplace-relevant result.",
+            "The sentence has a complete main clause and names a specific collaboration or problem-solving result.",
+        ),
+        (
+            "combine",
+            "Combine these ideas into one Academic Discussion sentence with `because`: `A team must solve an unexpected problem. Each member explains a possible solution.`",
+            "The answer has one complete sentence and clearly links the project task to a practiced behavior.",
+        ),
+        (
+            "rewrite_fragment",
+            "Repair this fragment as one complete sentence: `Since students can test their ideas in a realistic project.`",
+            "The dependent `Since` clause is attached to a complete main clause and states a clear outcome.",
+        ),
+        (
+            "produce",
+            "Write one sentence beginning with `If students present a project solution to a group, ...` and finish it with an interview or workplace benefit.",
+            "The conditional clause is followed by a complete main clause and a specific practical benefit.",
+        ),
+        (
+            "combine",
+            "Combine these ideas into one Academic Discussion sentence with `so`: `Students receive feedback on a project draft. They revise their plan before the final presentation.`",
+            "The answer has one complete sentence and shows a realistic learning process.",
+        ),
+    ],
+}
+
 _EMAIL_CLAUSE_VARIANTS = {
     "email_campus_facility": _CLAUSE_VARIANTS["email"],
     "email_career_decision_advice": [
@@ -291,7 +347,7 @@ def _clause_item(
     variants = (
         _EMAIL_CLAUSE_VARIANTS[template_family]
         if task_type == "email"
-        else _CLAUSE_VARIANTS[task_type]
+        else _ACADEMIC_CLAUSE_VARIANTS[template_family]
     )
     kind, task, guidance = variants[(number - 1) % len(variants)]
     task = f"Using the source context about {context_summary}, {task[0].lower() + task[1:]}"
@@ -640,6 +696,49 @@ def _specialized_item(
                 ("word_form", f"Using the source context about {context_summary}, choose the correct form: `The design is easily recognize by customers.`"),
             ],
         }
+        if template_family == "academic_project_learning":
+            academic_templates = {
+                "GRAM-ARTICLE": [
+                    ("article_choice", f"Using the source context about {context_summary}, rewrite this phrase with the correct article: `a effective project plan`."),
+                    ("article_choice", f"Using the source context about {context_summary}, rewrite this phrase with the correct article: `an practical team task`."),
+                    ("article_choice", f"Using the source context about {context_summary}, rewrite this phrase with the correct article: `a unexpected problem`."),
+                    ("article_choice", f"Using the source context about {context_summary}, rewrite this phrase with the correct article: `an useful presentation skill`."),
+                    ("article_choice", f"Using the source context about {context_summary}, rewrite this phrase with the correct article: `a realistic workplace challenge`."),
+                    ("article_choice", f"Using the source context about {context_summary}, rewrite this phrase with the correct article: `an interview question`."),
+                    ("article_choice", f"Using the source context about {context_summary}, rewrite this phrase with the correct article: `a collaborative solution`."),
+                    ("article_choice", f"Using the source context about {context_summary}, rewrite this phrase with the correct article: `an extended project`."),
+                ],
+                "GRAM-AGREEMENT": [
+                    ("agreement_control", f"Using the source context about {context_summary}, correct the verb: `Project-based learning help students apply ideas.`"),
+                    ("agreement_control", f"Using the source context about {context_summary}, correct the verb: `A team project teach students to divide responsibilities.`"),
+                    ("agreement_control", f"Using the source context about {context_summary}, correct the verb: `Students who solve setbacks develops confidence.`"),
+                    ("agreement_control", f"Using the source context about {context_summary}, correct the verb: `Practical skills prepares learners for workplace tasks.`"),
+                    ("agreement_control", f"Using the source context about {context_summary}, correct the verb: `A final presentation show how students explain solutions.`"),
+                    ("agreement_control", f"Using the source context about {context_summary}, correct the verb: `Feedback from teammates improve a project plan.`"),
+                    ("agreement_control", f"Using the source context about {context_summary}, correct the verb: `The project tasks requires students to make decisions.`"),
+                    ("agreement_control", f"Using the source context about {context_summary}, correct the verb: `Collaboration and problem solving gives students useful evidence for interviews.`"),
+                ],
+                "LEX-COLLOCATION": [
+                    ("collocation", f"Using the source context about {context_summary}, rewrite naturally: `Projects give students practical doing skills.`"),
+                    ("collocation", f"Using the source context about {context_summary}, rewrite naturally: `A team task makes students a chance to collaborate.`"),
+                    ("collocation", f"Using the source context about {context_summary}, rewrite naturally: `Students can do a solution to an unexpected problem.`"),
+                    ("collocation", f"Using the source context about {context_summary}, rewrite naturally: `The project has a positive influence to workplace readiness.`"),
+                    ("collocation", f"Using the source context about {context_summary}, rewrite naturally: `Learners can take experience from planning a presentation.`"),
+                    ("collocation", f"Using the source context about {context_summary}, rewrite naturally: `The project lets students improve their communication ability.`"),
+                    ("collocation", f"Using the source context about {context_summary}, rewrite naturally: `Team feedback can make an effect on a student’s final plan.`"),
+                    ("collocation", f"Using the source context about {context_summary}, rewrite naturally: `Students can show their skills to solve real-life problems.`"),
+                ],
+                "LEX-WORDFORM": [
+                    ("word_form", f"Using the source context about {context_summary}, choose the correct form: `A long-term project gives students practical experience.`"),
+                    ("word_form", f"Using the source context about {context_summary}, choose the correct form: `Students learn to collaborate effective with teammates.`"),
+                    ("word_form", f"Using the source context about {context_summary}, choose the correct form: `The group must make a decide when its first plan fails.`"),
+                    ("word_form", f"Using the source context about {context_summary}, choose the correct form: `Project work makes classroom learning more apply.`"),
+                    ("word_form", f"Using the source context about {context_summary}, choose the correct form: `A presentation is a useful prepare for an interview.`"),
+                    ("word_form", f"Using the source context about {context_summary}, choose the correct form: `Students gain confident when they solve a difficult task.`"),
+                    ("word_form", f"Using the source context about {context_summary}, choose the correct form: `The project asks for a clear explain of each role.`"),
+                    ("word_form", f"Using the source context about {context_summary}, choose the correct form: `Working with teammates builds problem-solving able.`"),
+                ],
+            }
         if code in academic_templates:
             variants = academic_templates[code]
             guidance = "The correction must preserve the source context and satisfy the target grammar or collocation condition."
@@ -687,6 +786,18 @@ def _sample_answer(item: dict, context_summary: str, template_family: str) -> st
             "email_action": "Please reprint the correct file immediately and confirm when it will be ready.",
         }
         return samples.get(kind, "A polite, urgent request that identifies the correction is acceptable.")
+    if template_family == "academic_project_learning":
+        samples = {
+            "rewrite_fragment": "Because project-based learning lets students solve realistic problems, it helps them develop practical skills for future work.",
+            "combine": "Students learn to collaborate under pressure because they must coordinate roles in a team project.",
+            "produce": "If students present a project solution to a group, they can explain their reasoning more confidently in an interview.",
+            "causal_chain": "When students divide roles and solve a setback in a project, they practice collaboration, demonstrate that behavior in an interview, and become better prepared for workplace tasks.",
+            "article_choice": "An effective project plan helps a team organize its responsibilities.",
+            "agreement_control": "Project-based learning helps students apply ideas to realistic problems.",
+            "word_form": "Students learn to collaborate effectively with teammates.",
+            "collocation": "Projects help students develop practical problem-solving skills.",
+        }
+        return samples.get(kind, "A response that links a concrete project task to a practical learning or workplace outcome is acceptable.")
     if kind in {"rewrite_fragment", "combine", "produce"}:
         return (
             "Because customer preferences change, companies should update their advertising to keep the brand relevant."
