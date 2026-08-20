@@ -291,7 +291,7 @@ R1 未完成 → R2 仍未完成 → drill: required → 完成 drill
 
 | `BUG-20260813-001` | fixed_verified | Naturalness follow-up did not provide a concrete next follow-up | [reproduction](tracker/bug-reports/BUG-20260813-001/reproduction.md) | `v1` `sha256:d85ad6d0ba31e0f37062f9ebd18948dd04648c14ebe65460f4c244b561859fb3` |
 
-| `BUG-20260812-005` | reported | Required drill begins without learner choice or causal-chain guidance | [reproduction](tracker/bug-reports/BUG-20260812-005/reproduction.md) | `v1` `sha256:45137d0a8c569781fec2bf044ccf1c0ef76ae994b151a3d14ec3df21bd8c68bf` |
+| `BUG-20260812-005` | fixed_verified | Required drill begins without learner choice or causal-chain guidance | [reproduction](tracker/bug-reports/BUG-20260812-005/reproduction.md) | `v1` `sha256:45137d0a8c569781fec2bf044ccf1c0ef76ae994b151a3d14ec3df21bd8c68bf` |
 
 | `BUG-20260812-004` | reported | Revision feedback mixes newly found issues with prior target tracking | [reproduction](tracker/bug-reports/BUG-20260812-004/reproduction.md) | `v1` `sha256:10c171de59e5a9d4e0f14698eef48571602cf7ab4147ae630d64c13750bfa860` |
 

@@ -1,0 +1,16 @@
+schema_version: 1
+resolution_id: RES-001
+bug_id: BUG-20260812-005
+recorded_at: '2026-08-20T01:31:28+00:00'
+outcome: fixed_verified
+diagnosis: The revision gate previously forced every incomplete second revision into
+  required drill. The fix records a learner-directed invitation after exact-excerpt
+  guidance and bounded rewrite direction, requires explicit opt-in for required drills,
+  supports explicit declined closure with follow-up, and makes the practice queue
+  wait for or close on the learner decision.
+fix_reference: 07adaac
+validation_command: python3 -m pytest && python3 tools/verify_bug_reports.py --format
+  json
+validation_result: 'passed: full suite 431 tests; focused practice-queue and revision-gate
+  tests 36 passed; bug report verification passed'
+initial_report_digest: sha256:45137d0a8c569781fec2bf044ccf1c0ef76ae994b151a3d14ec3df21bd8c68bf
