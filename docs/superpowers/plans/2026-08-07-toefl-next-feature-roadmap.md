@@ -285,7 +285,18 @@ R1 未完成 → R2 仍未完成 → drill: required → 完成 drill
 | Bug ID | Status | Summary | Evidence | Artifact |
 | --- | --- | --- | --- |
 <!-- BUG-CAPTURE-LEDGER -->
+| `BUG-20260819-001` | fixed_verified | 縮減回覆未產出目標字數版本 | [reproduction](tracker/bug-reports/BUG-20260819-001/reproduction.md) | `v1` `sha256:e1d6a86b328169ed1d355acd996dbdb3bb9f1d8109d6a09f6b9e7d1a66bf6725` |
+
+| `BUG-20260816-001` | reported | Initial writing feedback omits material issues later disclosed | [reproduction](tracker/bug-reports/BUG-20260816-001/reproduction.md) | `v1` `sha256:e1af79635c4231c826365627baecf9b94d203dc43b4cc84d9be5a102698b499a` |
+
 | `BUG-20260813-001` | reported | Naturalness follow-up did not provide a concrete next follow-up | [reproduction](tracker/bug-reports/BUG-20260813-001/reproduction.md) | `v1` `sha256:d85ad6d0ba31e0f37062f9ebd18948dd04648c14ebe65460f4c244b561859fb3` |
+
+| `BUG-20260812-005` | reported | Required drill begins without learner choice or causal-chain guidance | [reproduction](tracker/bug-reports/BUG-20260812-005/reproduction.md) | `v1` `sha256:45137d0a8c569781fec2bf044ccf1c0ef76ae994b151a3d14ec3df21bd8c68bf` |
+
+| `BUG-20260812-004` | reported | Revision feedback mixes newly found issues with prior target tracking | [reproduction](tracker/bug-reports/BUG-20260812-004/reproduction.md) | `v1` `sha256:10c171de59e5a9d4e0f14698eef48571602cf7ab4147ae630d64c13750bfa860` |
+
+| `BUG-20260812-003` | reported | Targeted drill generation rejects education discussion prompt | [reproduction](tracker/bug-reports/BUG-20260812-003/reproduction.md) | `v1` `sha256:abb66306450edddfd400e2fd2056bca69d740a9d32a9f99fe79f1e5a6989848f` |
+
 | `BUG-20260812-002` | reported | Completed writing revision skips mandatory actionable follow-up | [reproduction](tracker/bug-reports/BUG-20260812-002/reproduction.md) | `v1` `sha256:5c385393e2f072c3dbe9ed1a65af2d751e850adc8ded629901858d4e5dd75186` |
 
 | `BUG-20260812-001` | fixed_verified | Revision follow-up repeats prior scored advice instead of advancing toward score 5 | [reproduction](tracker/bug-reports/BUG-20260812-001/reproduction.md) | `v1` `sha256:912c8e0a35ded5dbe4ae0ff7de00f3e9da6df43c85ba7410a1fec5b8fd3ee0a4` |

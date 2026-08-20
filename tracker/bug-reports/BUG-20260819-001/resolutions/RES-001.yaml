@@ -1,0 +1,17 @@
+schema_version: 1
+resolution_id: RES-001
+bug_id: BUG-20260819-001
+recorded_at: '2026-08-20T01:06:31+00:00'
+outcome: fixed_verified
+diagnosis: The Academic Discussion skill had no explicit branch for a learner-requested
+  shortening artifact, so the coach stopped at deletion advice and never required
+  a target-length version, verified word count, or reusable redundancy/verbosity audit.
+  The fix adds that non-scoring contract and regression coverage while preserving
+  the no-model rule for ordinary first-round feedback.
+fix_reference: e4352fd
+validation_command: python3 -m pytest tests/test_writing_skill_contract.py tests/test_writing.py
+  tests/test_revision_followup.py tests/test_writing_revision_flow_e2e.py && python3
+  -m pytest && python3 tools/verify_bug_reports.py --format json
+validation_result: 'passed: focused 56 tests; full suite 429 tests; bug report verification
+  passed with {"passed": true, "problems": []}'
+initial_report_digest: sha256:e1d6a86b328169ed1d355acd996dbdb3bb9f1d8109d6a09f6b9e7d1a66bf6725
