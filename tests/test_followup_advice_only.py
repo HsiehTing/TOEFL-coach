@@ -27,6 +27,8 @@ def test_follow_up_accepts_advice_without_learner_exercise() -> None:
     feedback = _feedback("""# Naturalness and precision follow-up
 1. Excerpt: `Students urgently need quieter study space`
    Reader effect: The wording is understandable but indirect. Option: Students need a quieter place to study.
+## Transfer suggestion
+Activity: Write a response to a new prompt about a study-space request.
 """)
 
     _validate_revision_follow_up(feedback, response)
@@ -40,7 +42,7 @@ No naturalness or precision issue to flag.
 1. Candidate: `The request is clear and direct.` — The wording is concise and idiomatic.
 2. Candidate: `The deadline is specific.` — The reference is precise and needs no change.
 ## Transfer suggestion
-Use the same control on a new prompt.
+Activity: Write a response to a new prompt using the same control.
 ## Mini-practice
 1. Rewrite the request.
 """)

@@ -20,6 +20,8 @@ State which rubric features are consistently successful, generally successful, p
 
 The first-round `# Evidence` section must include `## Material issue audit`, `Status: complete`, and `Scope: all material issues in the submitted response are disclosed`. List every material exact-excerpt issue there, then choose no more than three as priorities; deferred issues remain visible for diagnosis and must not first appear in a later broad-improvement request.
 
+After the naturalness-and-precision suggestions, include `## Transfer suggestion` with `Activity:`, naming a new Email prompt and the learner's writing action. Do not substitute a vague invitation or a mini-practice.
+
 ## Revision assignment
 
 Require the learner to repair missing communicative content before stylistic polishing. Give a target audience, action, and tone constraint without supplying a full replacement email.

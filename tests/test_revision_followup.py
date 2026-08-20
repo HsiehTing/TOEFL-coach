@@ -45,13 +45,26 @@ def test_revision_follow_up_is_required() -> None:
         _validate_revision_follow_up(_feedback(""), "Learner text.")
 
 
+def test_actionable_follow_up_requires_concrete_transfer_activity() -> None:
+    from toefl_tracker.writing import _validate_revision_follow_up
+
+    feedback = _feedback("""# Naturalness and precision follow-up
+1. Excerpt: `The request is clear today.`
+   Reader effect: The wording is understandable but generic. Option: State the requested action directly.
+## Transfer suggestion
+Try a new Email situation.
+""")
+    with pytest.raises(ValidationError, match="concrete Activity"):
+        _validate_revision_follow_up(feedback, "The request is clear today.")
+
+
 def test_no_issue_follow_up_requires_audited_candidates() -> None:
     from toefl_tracker.writing import _validate_revision_follow_up
 
     feedback = _feedback("""# Naturalness and precision follow-up
 No naturalness or precision issue to flag.
 ## Transfer suggestion
-Use the same control on a new prompt.
+Activity: Write a response to a new prompt using the same control.
 """)
     with pytest.raises(ValidationError, match="naturalness audit"):
         _validate_revision_follow_up(feedback, "The request is clear and direct.")
@@ -67,7 +80,7 @@ No naturalness or precision issue to flag.
 1. Candidate: `The request is clear and direct.` — The wording is concise and idiomatic.
 2. Candidate: `The deadline is specific.` — The reference is precise and needs no change.
 ## Transfer suggestion
-Use the same control on a new prompt.
+Activity: Write a response to a new prompt using the same control.
 """)
     _validate_revision_follow_up(feedback, response)
 
@@ -171,9 +184,8 @@ def _actionable_follow_up(excerpt: str) -> str:
     return f"""# Naturalness and precision follow-up
 1. Excerpt: `{excerpt}`
    Reader effect: The phrase is understandable but indirect. Option: Workers need direct support.
-## Mini-practice
-1. Rewrite the sentence more directly.
-2. Replace one general noun with a precise noun.
+## Transfer suggestion
+Activity: Write a response to a new prompt about support after job automation.
 """
 
 

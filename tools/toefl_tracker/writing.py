@@ -136,6 +136,27 @@ def _validate_material_issue_audit(evidence_block: str) -> None:
         )
 
 
+def _validate_concrete_transfer_suggestion(follow_up: str) -> None:
+    transfer = re.search(
+        r"(?ms)^## Transfer suggestion\s*$\n(.*?)(?=^## |\Z)",
+        follow_up,
+    )
+    if transfer is None or not transfer.group(1).strip():
+        raise ValidationError(
+            "naturalness follow-up requires a concrete transfer suggestion"
+        )
+    activity = re.search(r"(?im)^Activity:\s*(.+)$", transfer.group(1))
+    if activity is None or not activity.group(1).strip():
+        raise ValidationError("transfer suggestion must include a concrete Activity")
+    activity_text = activity.group(1).lower()
+    if not re.search(r"\bnew\b.*\bprompt\b", activity_text) or not re.search(
+        r"\b(write|respond|answer)\b", activity_text
+    ):
+        raise ValidationError(
+            "transfer Activity must name a new prompt and learner action"
+        )
+
+
 def _validate_revision_follow_up(
     feedback: str, response: str, parent_feedback: str | None = None
 ) -> None:
@@ -158,6 +179,7 @@ def _validate_revision_follow_up(
         )
     if re.search(rf"(?m)^{re.escape(NO_ISSUE_MESSAGE)}\s*$", follow_up):
         _validate_no_issue_audit(follow_up, response)
+        _validate_concrete_transfer_suggestion(follow_up)
         return
 
     suggestions = re.findall(r"(?m)^\d+\.\s+Excerpt:\s*`([^`]+)`", follow_up)
@@ -176,8 +198,7 @@ def _validate_revision_follow_up(
         raise ValidationError(
             "revision naturalness follow-up must not repeat parent feedback"
         )
-
-
+    _validate_concrete_transfer_suggestion(follow_up)
 def _historical_attempts(root: Path) -> list[dict]:
     base = root / "tracker" / "writing" / "attempts"
     rows = [
