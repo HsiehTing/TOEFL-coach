@@ -1,0 +1,16 @@
+schema_version: 1
+resolution_id: RES-001
+bug_id: BUG-20260816-001
+recorded_at: '2026-08-20T01:13:35+00:00'
+outcome: fixed_verified
+diagnosis: 'The writing registration gate validated counted excerpts and priority
+  count but had no persisted contract requiring first-round feedback to declare a
+  complete material-issue audit. The fix adds a formal-original-only audit section
+  with Status: complete and a full submitted-response scope statement, while leaving
+  revisions and immutable historical records unchanged.'
+fix_reference: abb6d15
+validation_command: python3 -m pytest && python3 tools/verify_bug_reports.py --format
+  json
+validation_result: 'passed: full suite 430 tests; bug report verification passed with
+  {"passed": true, "problems": []}'
+initial_report_digest: sha256:e1af79635c4231c826365627baecf9b94d203dc43b4cc84d9be5a102698b499a
