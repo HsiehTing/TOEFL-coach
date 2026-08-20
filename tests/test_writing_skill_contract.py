@@ -58,6 +58,21 @@ def test_skill_routes_references_and_enforces_iteration() -> None:
     assert "tools/validate_tracker.py" in text
 
 
+def test_skill_defines_explicit_discussion_shortening_contract() -> None:
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    discussion = (SKILL / "references/discussion-feedback.md").read_text(encoding="utf-8")
+    for contract in (text, discussion):
+        assert "shortening" in contract.lower()
+        assert "100–130 words" in contract
+        assert "non-scoring" in contract
+        assert "word count" in contract or "Count the words" in contract
+        assert "repeated meaning" in contract
+        assert "removable" in contract
+        assert "redundant" in contract
+    assert "does not create a score" in discussion
+    assert "do not register" in text.lower()
+
+
 def test_writing_skill_uses_dedicated_registration_gate() -> None:
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     assert "tools/register_writing_attempt.py" in text

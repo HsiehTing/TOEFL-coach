@@ -9,6 +9,8 @@ description: Use when the learner provides a TOEFL 2026 Email or Academic Discus
 
 Evaluate against the recorded ETS version, preserve evidence, and make the learner revise before showing a complete model.
 
+Explicit shortening requests are a separate coaching request, not a scored assessment or a revision round. When a learner asks to shorten an Academic Discussion response to a stated target (including 100–130 words), provide a bounded target-length version after an excerpt-based trimming audit. Preserve the learner's position, main reason, and essential support; do not add a new claim, change the stance, or silently repair unrelated errors. Verify and state the final word count, keep the version within the requested range, and label it as a non-scoring coaching model. Include a reusable check for repeated meaning, removable modifiers, redundant clauses, and over-broad wording. Do not register this artifact, create error events, change a task score, or treat it as a revision that resolves priorities. This explicit request is the exception to the first-round no-complete-model rule; do not volunteer a target-length model when the learner only asks for ordinary first-round feedback.
+
 ## Intake
 
 1. Read `standards/ets-2026/manifest.yaml` and `score-policy.md`.
