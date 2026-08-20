@@ -289,7 +289,7 @@ R1 未完成 → R2 仍未完成 → drill: required → 完成 drill
 
 | `BUG-20260816-001` | fixed_verified | Initial writing feedback omits material issues later disclosed | [reproduction](tracker/bug-reports/BUG-20260816-001/reproduction.md) | `v1` `sha256:e1af79635c4231c826365627baecf9b94d203dc43b4cc84d9be5a102698b499a` |
 
-| `BUG-20260813-001` | reported | Naturalness follow-up did not provide a concrete next follow-up | [reproduction](tracker/bug-reports/BUG-20260813-001/reproduction.md) | `v1` `sha256:d85ad6d0ba31e0f37062f9ebd18948dd04648c14ebe65460f4c244b561859fb3` |
+| `BUG-20260813-001` | fixed_verified | Naturalness follow-up did not provide a concrete next follow-up | [reproduction](tracker/bug-reports/BUG-20260813-001/reproduction.md) | `v1` `sha256:d85ad6d0ba31e0f37062f9ebd18948dd04648c14ebe65460f4c244b561859fb3` |
 
 | `BUG-20260812-005` | reported | Required drill begins without learner choice or causal-chain guidance | [reproduction](tracker/bug-reports/BUG-20260812-005/reproduction.md) | `v1` `sha256:45137d0a8c569781fec2bf044ccf1c0ef76ae994b151a3d14ec3df21bd8c68bf` |
 

@@ -1,0 +1,15 @@
+schema_version: 1
+resolution_id: RES-001
+bug_id: BUG-20260813-001
+recorded_at: '2026-08-20T01:25:48+00:00'
+outcome: fixed_verified
+diagnosis: 'The revision follow-up validator accepted actionable excerpts without
+  requiring a concrete transfer activity, so vague invitations could complete the
+  flow. The fix requires a non-scoring ## Transfer suggestion with Activity naming
+  a new prompt and learner action, with regression coverage.'
+fix_reference: 18271d9
+validation_command: python3 -m pytest && python3 tools/verify_bug_reports.py --format
+  json
+validation_result: 'passed: full suite 431 tests; focused follow-up and revision-flow
+  tests 22 passed; bug report verification passed'
+initial_report_digest: sha256:d85ad6d0ba31e0f37062f9ebd18948dd04648c14ebe65460f4c244b561859fb3
