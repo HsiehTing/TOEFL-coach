@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from pathlib import Path
+import re
 
 import yaml
 
@@ -9,6 +10,7 @@ from toefl_tracker.canonical import load_canonical_events
 from toefl_tracker.drill_generation import writing_drill_support_status
 from toefl_tracker.io import atomic_write_text, read_yaml
 from toefl_tracker.legacy_migration import load_legacy_compatibility, synthetic_sort_key
+from toefl_tracker.lineage import revision_chain
 from toefl_tracker.progress import build_progress_overview
 from toefl_tracker.training_plan import build_training_plan
 
@@ -25,6 +27,53 @@ def _formals(root: Path) -> list[dict]:
         for attempt in sorted(attempts, key=lambda row: synthetic_sort_key(compatibility, row))
         if attempt.get("record_type") == "formal_original"
     ]
+
+
+def _writing_attempts(root: Path) -> list[dict]:
+    attempts_root = root / "tracker/writing/attempts"
+    rows = [read_yaml(path) for path in attempts_root.glob("*/attempt.yaml")] if attempts_root.exists() else []
+    compatibility = load_legacy_compatibility(root, "writing")
+    return sorted(rows, key=lambda row: synthetic_sort_key(compatibility, row))
+
+
+def _is_fully_resolved(outcomes: object) -> bool:
+    return bool(
+        isinstance(outcomes, dict)
+        and outcomes.get("assigned", 0) > 0
+        and outcomes.get("resolved") == outcomes.get("assigned")
+        and outcomes.get("partly_resolved") == 0
+        and outcomes.get("unresolved") == 0
+    )
+
+
+def _learner_drill_choice(root: Path, source_attempt_id: str) -> str | None:
+    """Return the recorded R2 decision, without inferring consent from silence.
+
+    A training plan can be derived from older records that predate learner-choice
+    tracking.  Those records stay intact, but a queue may only offer generation
+    after it finds an explicit opt-in in the latest incomplete second revision.
+    """
+    attempts = _writing_attempts(root)
+    compatibility = load_legacy_compatibility(root, "writing")
+    revisions = revision_chain(source_attempt_id, attempts, compatibility=compatibility)
+    if len(revisions) < 2 or _is_fully_resolved(revisions[-1].get("revision_outcomes")):
+        return None
+
+    feedback_path = (
+        root / "tracker/writing/attempts" / revisions[-1]["attempt_id"] / "feedback-round-1.md"
+    )
+    if not feedback_path.exists():
+        return "awaiting"
+    feedback = feedback_path.read_text(encoding="utf-8")
+    if re.search(r"(?im)^Drill status:\s*`declined`\.\s*$", feedback):
+        if re.search(r"(?im)^Decision:\s*learner declined", feedback):
+            return "declined"
+        return "awaiting"
+    if re.search(r"(?im)^Drill status:\s*`required`\.\s*$", feedback):
+        if re.search(r"(?im)^Decision:\s*learner opted in", feedback):
+            return "opted_in"
+        return "awaiting"
+    return "awaiting"
 
 
 def _latest_matching_drill(
@@ -209,17 +258,62 @@ def build_practice_queue(root: Path) -> dict:
                 "minimum_accuracy": 0.8,
             })
 
+    for entry in entries:
+        matching_drill = _latest_matching_drill(
+            root, entry["source_attempt_id"], entry["task_type"], entry["target_codes"]
+        )
+        entry["_matching_drill"] = matching_drill
+        entry["_learner_drill_choice"] = (
+            _learner_drill_choice(root, entry["source_attempt_id"])
+            if matching_drill is None
+            else None
+        )
+    priority_entry = next(
+        (entry for entry in entries if entry["_learner_drill_choice"] != "declined"),
+        None,
+    )
+
     actions: list[dict] = []
-    for priority, entry in enumerate(entries):
+    for entry in entries:
         source_id = entry["source_attempt_id"]
         task_type = entry["task_type"]
         target_codes = entry["target_codes"]
         drill_id = f"PQ-{len(actions) + 1:02d}-DRILL"
-        matching_drill = _latest_matching_drill(root, source_id, task_type, target_codes)
+        matching_drill = entry["_matching_drill"]
         drill_status, drill_reason = _drill_status(matching_drill)
-        if recommendations and priority > 0:
+        drill_instruction = (
+            "Generate an evidence-linked drill, complete it without viewing the answer key, "
+            "then record the result as a targeted drill."
+        )
+        transfer_status = "blocked_by_drill"
+        transfer_reason = "Complete the targeted drill before starting transfer."
+        transfer_instruction = (
+            "After meeting the drill threshold, complete one new formal prompt on this route. "
+            "Confirm relevant opportunities; do not reuse the source prompt."
+        )
+        choice = entry["_learner_drill_choice"]
+        if choice == "awaiting":
+            drill_status = "awaiting_learner_choice"
+            drill_reason = (
+                "The latest incomplete second revision has no recorded learner opt-in. "
+                "Ask whether the learner wants this targeted drill before generating it."
+            )
+            drill_instruction = (
+                "Give the learner the exact-excerpt guidance and bounded rewrite direction, "
+                "then ask whether they want this targeted drill."
+            )
+            transfer_status = "blocked_by_learner_choice"
+            transfer_reason = "Transfer is unavailable until the learner opts in to the drill or declines it."
+        elif choice == "declined":
+            drill_status = "closed_by_learner_choice"
+            drill_reason = "The learner declined the targeted drill after the incomplete second revision."
+            drill_instruction = "Do not generate a drill; complete the required naturalness and precision follow-up."
+            transfer_status = "not_available_after_decline"
+            transfer_reason = "The declined-drill path concludes this revision chain without a transfer."
+            transfer_instruction = "Do not offer a transfer from a revision chain closed by the learner's drill decision."
+        if recommendations and entry is not priority_entry and choice != "declined":
             drill_status = "deferred_by_priority"
-            drill_reason = f"Finish or resolve the higher-priority plan `{entries[0]['recommendation_id']}` first."
+            drill_reason = f"Finish or resolve the higher-priority plan `{priority_entry['recommendation_id']}` first."
         actions.append({
             "action_id": drill_id,
             "kind": "targeted_drill",
@@ -231,15 +325,13 @@ def build_practice_queue(root: Path) -> dict:
             "minimum_accuracy": entry["minimum_accuracy"],
             "status": drill_status,
             "status_reason": drill_reason,
-            "instruction": "Generate an evidence-linked drill, complete it without viewing the answer key, then record the result as a targeted drill.",
+            "instruction": drill_instruction,
         })
-        transfer_status = "blocked_by_drill"
-        transfer_reason = "Complete the targeted drill before starting transfer."
         if matching_drill is not None:
             transfer_status, transfer_reason = _transfer_status(matching_drill)
-        if recommendations and priority > 0:
+        if recommendations and entry is not priority_entry and choice != "declined":
             transfer_status = "deferred_by_priority"
-            transfer_reason = f"Finish or resolve the higher-priority plan `{entries[0]['recommendation_id']}` first."
+            transfer_reason = f"Finish or resolve the higher-priority plan `{priority_entry['recommendation_id']}` first."
         actions.append({
             "action_id": f"PQ-{len(actions) + 1:02d}-TRANSFER",
             "kind": "fresh_transfer_check",
@@ -249,7 +341,7 @@ def build_practice_queue(root: Path) -> dict:
             "target_codes": target_codes,
             "status": transfer_status,
             "status_reason": transfer_reason,
-            "instruction": "After meeting the drill threshold, complete one new formal prompt on this route. Confirm relevant opportunities; do not reuse the source prompt.",
+            "instruction": transfer_instruction,
         })
     return {
         "version": 1,

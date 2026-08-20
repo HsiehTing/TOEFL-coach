@@ -245,6 +245,8 @@ def test_unresolved_round_two_requires_bounded_drill_and_blocks_follow_up(tmp_pa
         "W-AD-001-R2", "revision", "2026-08-03T10:00:00+08:00", parent_attempt_id=round_one["attempt_id"]
     )
     feedback = _base_feedback("""Drill status: `required`.
+Invitation: After reviewing the exact-excerpt feedback and bounded rewrite direction, learner was asked whether to start this targeted drill.
+Decision: learner opted in after reviewing the rewrite direction.
 Source: `W-AD-001`
 Targets: `GRAM-CLAUSE`, `GRAM-ARTICLE`
 Items: 6
@@ -253,6 +255,91 @@ Completion: Register the assessed drill before another revision.""")
     validate_writing_revision_context(
         tmp_path, _registration(round_two, feedback, "Workers need support.")
     )
+
+
+def test_required_drill_requires_recorded_learner_opt_in(tmp_path: Path) -> None:
+    root = _attempt("W-AD-001", "formal_original", "2026-08-01T10:00:00+08:00")
+    round_one = _attempt(
+        "W-AD-001-R1", "revision", "2026-08-02T10:00:00+08:00", parent_attempt_id=root["attempt_id"]
+    )
+    _persist(tmp_path, root)
+    _persist(tmp_path, round_one)
+    round_two = _attempt(
+        "W-AD-001-R2", "revision", "2026-08-03T10:00:00+08:00", parent_attempt_id=round_one["attempt_id"]
+    )
+    feedback = _base_feedback("""Drill status: `required`.
+Invitation: After reviewing the exact-excerpt feedback and bounded rewrite direction, learner was asked whether to start this targeted drill.
+Source: `W-AD-001`
+Targets: `GRAM-CLAUSE`, `GRAM-ARTICLE`
+Items: 6
+Completion: Register the assessed drill before another revision.""")
+
+    with pytest.raises(ValidationError, match="record the learner opt-in"):
+        validate_writing_revision_context(
+            tmp_path, _registration(round_two, feedback, "Workers need support.")
+        )
+
+
+def test_required_drill_requires_recorded_guidance_invitation(tmp_path: Path) -> None:
+    root = _attempt("W-AD-001", "formal_original", "2026-08-01T10:00:00+08:00")
+    round_one = _attempt(
+        "W-AD-001-R1", "revision", "2026-08-02T10:00:00+08:00", parent_attempt_id=root["attempt_id"]
+    )
+    _persist(tmp_path, root)
+    _persist(tmp_path, round_one)
+    round_two = _attempt(
+        "W-AD-001-R2", "revision", "2026-08-03T10:00:00+08:00", parent_attempt_id=round_one["attempt_id"]
+    )
+    feedback = _base_feedback("""Drill status: `required`.
+Decision: learner opted in after reviewing the rewrite direction.
+Source: `W-AD-001`
+Targets: `GRAM-CLAUSE`, `GRAM-ARTICLE`
+Items: 6
+Completion: Register the assessed drill before another revision.""")
+
+    with pytest.raises(ValidationError, match="record the invitation"):
+        validate_writing_revision_context(
+            tmp_path, _registration(round_two, feedback, "Workers need support.")
+        )
+
+
+def test_unresolved_round_two_can_decline_drill_and_receive_follow_up(tmp_path: Path) -> None:
+    root = _attempt("W-AD-001", "formal_original", "2026-08-01T10:00:00+08:00")
+    round_one = _attempt(
+        "W-AD-001-R1", "revision", "2026-08-02T10:00:00+08:00", parent_attempt_id=root["attempt_id"]
+    )
+    _persist(tmp_path, root)
+    _persist(tmp_path, round_one)
+    round_two = _attempt(
+        "W-AD-001-R2", "revision", "2026-08-03T10:00:00+08:00", parent_attempt_id=round_one["attempt_id"]
+    )
+    response = "Workers need support after automation replaces their jobs."
+    feedback = _base_feedback(
+        "Drill status: `declined`.\nInvitation: After reviewing the exact-excerpt feedback and bounded rewrite direction, learner was asked whether to start this targeted drill.\nDecision: learner declined the targeted drill after receiving the bounded rewrite direction.",
+        _actionable_follow_up(response),
+    )
+
+    validate_writing_revision_context(tmp_path, _registration(round_two, feedback, response))
+
+
+def test_declined_drill_requires_recorded_learner_decision(tmp_path: Path) -> None:
+    root = _attempt("W-AD-001", "formal_original", "2026-08-01T10:00:00+08:00")
+    round_one = _attempt(
+        "W-AD-001-R1", "revision", "2026-08-02T10:00:00+08:00", parent_attempt_id=root["attempt_id"]
+    )
+    _persist(tmp_path, root)
+    _persist(tmp_path, round_one)
+    round_two = _attempt(
+        "W-AD-001-R2", "revision", "2026-08-03T10:00:00+08:00", parent_attempt_id=round_one["attempt_id"]
+    )
+    response = "Workers need support after automation replaces their jobs."
+    feedback = _base_feedback(
+        "Drill status: `declined`.\nInvitation: After reviewing the exact-excerpt feedback and bounded rewrite direction, learner was asked whether to start this targeted drill.",
+        _actionable_follow_up(response),
+    )
+
+    with pytest.raises(ValidationError, match="record the learner decision"):
+        validate_writing_revision_context(tmp_path, _registration(round_two, feedback, response))
 
 
 def test_third_revision_is_rejected_without_completed_drill(tmp_path: Path) -> None:

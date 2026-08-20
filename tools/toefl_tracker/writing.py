@@ -41,7 +41,7 @@ REQUIRED_HEADINGS = (
 FOLLOW_UP_HEADING = "# Naturalness and precision follow-up"
 DRILL_HEADING = "# Targeted drill"
 NO_ISSUE_MESSAGE = "No naturalness or precision issue to flag."
-DRILL_STATUSES = {"not_required_yet", "skipped", "required", "completed"}
+DRILL_STATUSES = {"not_required_yet", "skipped", "required", "declined", "completed"}
 
 
 def _ordered_heading_matches(
@@ -92,6 +92,19 @@ def _drill_status(feedback: str) -> str:
     if match is None or match.group(1) not in DRILL_STATUSES:
         raise ValidationError("revision feedback requires a valid targeted drill status")
     return match.group(1)
+
+
+def _validate_drill_invitation(drill_block: str) -> None:
+    """Require a durable record that choice followed learner-specific guidance."""
+    invitation = re.search(
+        r"(?im)^Invitation:\s*After reviewing the exact-excerpt feedback and bounded rewrite direction, "
+        r"learner was asked whether to start this targeted drill\.\s*$",
+        drill_block,
+    )
+    if invitation is None:
+        raise ValidationError(
+            "learner-directed targeted drill must record the invitation after exact-excerpt feedback and rewrite direction"
+        )
 
 
 def _validate_no_issue_audit(follow_up: str, response: str) -> None:
@@ -267,13 +280,21 @@ def validate_writing_revision_context(
         else "not_required_yet"
     )
     actual_status = _drill_status(registration.feedback)
-    if actual_status != expected_status:
+    allowed_statuses = (
+        {"required", "declined"}
+        if expected_status == "required"
+        else {expected_status}
+    )
+    if actual_status not in allowed_statuses:
         raise ValidationError(
-            f"targeted drill status must be {expected_status} for revision round {round_number}"
+            f"targeted drill status must be one of {sorted(allowed_statuses)} for revision round {round_number}"
         )
 
     drill_block = _section(registration.feedback, DRILL_HEADING)
-    if expected_status == "required":
+    if actual_status == "required":
+        _validate_drill_invitation(drill_block)
+        if re.search(r"(?im)^Decision:\s*learner opted in", drill_block) is None:
+            raise ValidationError("required targeted drill must record the learner opt-in")
         source = re.search(r"(?m)^Source:\s*`([^`]+)`\s*$", drill_block)
         targets = re.search(r"(?m)^Targets:\s*(.+)$", drill_block)
         items = re.search(r"(?m)^Items:\s*([1-9][0-9]*)\s*$", drill_block)
@@ -298,7 +319,11 @@ def validate_writing_revision_context(
             raise ValidationError(
                 "required targeted drill must list a valid source, one or two lineage targets, one to eight items, and completion"
             )
-    elif expected_status in {"skipped", "not_required_yet"}:
+    elif actual_status == "declined":
+        _validate_drill_invitation(drill_block)
+        if re.search(r"(?im)^Decision:\s*learner declined", drill_block) is None:
+            raise ValidationError("declined targeted drill must record the learner decision")
+    elif actual_status in {"skipped", "not_required_yet"}:
         if re.search(r"(?im)^Reason:.*third revision", drill_block) is None:
             raise ValidationError("non-required targeted drill must explain the third-revision gate")
     else:
@@ -307,11 +332,12 @@ def validate_writing_revision_context(
             raise ValidationError("completed targeted drill must cite the persisted drill attempt")
 
     has_follow_up = bool(_section(registration.feedback, FOLLOW_UP_HEADING))
-    if completed and not has_follow_up:
+    follow_up_required = completed or actual_status == "declined"
+    if follow_up_required and not has_follow_up:
         raise ValidationError("completed revision requires naturalness follow-up")
-    if not completed and FOLLOW_UP_HEADING in registration.feedback:
+    if not follow_up_required and FOLLOW_UP_HEADING in registration.feedback:
         raise ValidationError("incomplete revision must not enter naturalness follow-up")
-    if completed:
+    if follow_up_required:
         parent_path = (
             root
             / "tracker"
@@ -375,10 +401,12 @@ def validate_writing_assessment(
     if is_revision:
         _drill_status(feedback)
         completed = _full_resolution(attempt.get("revision_outcomes"))
+        actual_status = _drill_status(feedback)
         has_follow_up = FOLLOW_UP_HEADING in feedback
-        if completed and not has_follow_up:
+        follow_up_required = completed or actual_status == "declined"
+        if follow_up_required and not has_follow_up:
             raise ValidationError("completed revision requires naturalness follow-up")
-        if not completed and has_follow_up:
+        if not follow_up_required and has_follow_up:
             raise ValidationError("incomplete revision must not enter naturalness follow-up")
     for heading, start, end in (
         ("why this level", heading_matches[1].end(), heading_matches[2].start()),
