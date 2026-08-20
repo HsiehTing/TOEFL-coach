@@ -1,0 +1,16 @@
+schema_version: 1
+resolution_id: RES-001
+bug_id: BUG-20260812-003
+recorded_at: '2026-08-20T01:40:42+00:00'
+outcome: fixed_verified
+diagnosis: The drill generator had no context-safe Academic Discussion family for
+  the captured project-based-learning source, so it failed closed before producing
+  the learner pack. The fix adds source-context detection, project-specific clause
+  and language templates, and context-matched sample answers while preserving the
+  existing answer-key separation.
+fix_reference: ffe10d7
+validation_command: python3 -m pytest tests/test_drill_generation.py && python3 tools/generate_writing_drill.py
+  --source-attempt-id W-AD-20260812-003 --seed 0
+validation_result: 'passed: drill-generation tests passed; captured source generated
+  a learner drill pack successfully'
+initial_report_digest: sha256:abb66306450edddfd400e2fd2056bca69d740a9d32a9f99fe79f1e5a6989848f

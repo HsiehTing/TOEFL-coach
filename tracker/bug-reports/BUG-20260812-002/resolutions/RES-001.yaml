@@ -1,0 +1,16 @@
+schema_version: 1
+resolution_id: RES-001
+bug_id: BUG-20260812-002
+recorded_at: '2026-08-20T01:40:41+00:00'
+outcome: fixed_verified
+diagnosis: The revision lifecycle already had the mandatory follow-up gate and regression
+  coverage, but the captured bug remained open. The validated no-issue path now requires
+  a documented naturalness audit before any transfer suggestion, while actionable
+  follow-up remains required after resolved priorities.
+fix_reference: 8c99795
+validation_command: python3 -m pytest tests/test_revision_followup.py tests/test_writing_revision_flow_e2e.py
+  tests/test_followup_advice_only.py && python3 tools/verify_bug_reports.py --format
+  json
+validation_result: 'passed: focused follow-up and revision-flow tests 22 passed; bug
+  report verification passed'
+initial_report_digest: sha256:5c385393e2f072c3dbe9ed1a65af2d751e850adc8ded629901858d4e5dd75186
