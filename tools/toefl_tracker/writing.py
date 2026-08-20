@@ -118,6 +118,24 @@ def _validate_no_issue_audit(follow_up: str, response: str) -> None:
         raise ValidationError("no-issue audit candidates must be distinct learner text")
 
 
+def _validate_material_issue_audit(evidence_block: str) -> None:
+    audit = re.search(r"(?ms)^## Material issue audit\s*$\n(.*?)(?=^## |\Z)", evidence_block)
+    if audit is None:
+        raise ValidationError(
+            "first-round evidence requires a complete material-issue audit"
+        )
+    body = audit.group(1)
+    if re.search(r"(?im)^Status:\s*complete\s*$", body) is None:
+        raise ValidationError("material-issue audit must state Status: complete")
+    if re.search(
+        r"(?im)^Scope:\s*all material issues in the submitted response are disclosed",
+        body,
+    ) is None:
+        raise ValidationError(
+            "material-issue audit must disclose the full submitted-response scope"
+        )
+
+
 def _validate_revision_follow_up(
     feedback: str, response: str, parent_feedback: str | None = None
 ) -> None:
@@ -291,6 +309,8 @@ def validate_writing_assessment(
     attempt: dict,
     events: list[dict],
     feedback: str,
+    *,
+    require_material_issue_audit: bool = False,
 ) -> None:
     if not isinstance(attempt, Mapping):
         raise ValidationError("writing attempt must be a mapping")
@@ -368,6 +388,11 @@ def validate_writing_assessment(
             raise ValidationError(
                 f"evidence section omits counted evidence: {event.get('event_id')}"
             )
+    if (
+        require_material_issue_audit
+        and attempt.get("record_type") == "formal_original"
+    ):
+        _validate_material_issue_audit(evidence_block)
 
 
 def build_reevaluation_registration(
@@ -405,7 +430,12 @@ def build_writing_registration(
     if attempt["record_type"] == "re_evaluation":
         return build_reevaluation_registration(root, manifest, attempt, feedback)
     event_rows = tuple(events)
-    validate_writing_assessment(attempt, list(event_rows), feedback)
+    validate_writing_assessment(
+        attempt,
+        list(event_rows),
+        feedback,
+        require_material_issue_audit=True,
+    )
     # This preflight gives direct builder callers the same error they would see
     # during publication. publish_registration repeats it while locked.
     registration = ValidatedPracticeRegistration(

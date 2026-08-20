@@ -56,6 +56,9 @@ def test_skill_routes_references_and_enforces_iteration() -> None:
     assert "Deferred issues (not current rewrite targets)" in text
     assert "do not present an issue first in a later revision" in text
     assert "tools/validate_tracker.py" in text
+    assert "## Material issue audit" in text
+    assert "Status: complete" in text
+    assert "Scope: all material issues in the submitted response are disclosed" in text
 
 
 def test_skill_defines_explicit_discussion_shortening_contract() -> None:

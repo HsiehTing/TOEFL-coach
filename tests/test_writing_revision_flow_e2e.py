@@ -34,6 +34,10 @@ The conclusion adds a third policy, and the employment example is not concrete.
 
 No counted event is needed for this flow fixture.
 
+## Material issue audit
+Status: complete
+Scope: all material issues in the submitted response are disclosed.
+
 # Priorities
 
 1. Choose free training without adding cash aid.

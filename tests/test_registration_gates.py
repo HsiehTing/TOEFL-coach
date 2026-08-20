@@ -46,6 +46,9 @@ Evidence.
 Evidence.
 # Evidence
 No counted errors.
+## Material issue audit
+Status: complete
+Scope: all material issues in the submitted response are disclosed.
 # Priorities
 1. Improve article selection.
 # Rewrite task

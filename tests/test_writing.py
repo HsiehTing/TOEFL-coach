@@ -43,6 +43,31 @@ def test_discussion_requires_discussion_rubric() -> None:
     validate_writing_assessment(row, [], VALID_FEEDBACK)
 
 
+def test_formal_original_can_require_complete_material_issue_audit() -> None:
+    row = attempt(
+        "email",
+        "ets-writing-email-2025-applicable-2026",
+    )
+    row["record_type"] = "formal_original"
+    with pytest.raises(ValidationError, match="material-issue audit"):
+        validate_writing_assessment(
+            row,
+            [],
+            VALID_FEEDBACK,
+            require_material_issue_audit=True,
+        )
+    audited = VALID_FEEDBACK.replace(
+        "# Priorities",
+        "## Material issue audit\nStatus: complete\nScope: all material issues in the submitted response are disclosed.\n# Priorities",
+    )
+    validate_writing_assessment(
+        row,
+        [],
+        audited,
+        require_material_issue_audit=True,
+    )
+
+
 def test_email_requires_email_rubric() -> None:
     row = attempt("email", "ets-writing-email-2025-applicable-2026")
     validate_writing_assessment(row, [], VALID_FEEDBACK)
@@ -277,7 +302,16 @@ def test_writing_registration_refreshes_all_derived_coaching_views(tmp_path) -> 
     attempt_data["source_hash"] = canonical_source_hash("prompt", "response")
 
     register_writing_attempt(
-        tmp_path, MANIFEST, attempt_data, "prompt", "response", VALID_FEEDBACK, []
+        tmp_path,
+        MANIFEST,
+        attempt_data,
+        "prompt",
+        "response",
+        VALID_FEEDBACK.replace(
+            "# Priorities",
+            "## Material issue audit\nStatus: complete\nScope: all material issues in the submitted response are disclosed.\n# Priorities",
+        ),
+        [],
     )
 
     assert (tmp_path / "tracker/writing/dashboard.csv").exists()
