@@ -29,6 +29,7 @@ _CONTEXT_TEMPLATE_FAMILIES = {
     "email": {
         "email_campus_facility",
         "email_career_decision_advice",
+        "email_defective_textbook_exchange",
         "email_printing_problem_resolution",
     },
 }
@@ -127,6 +128,9 @@ def _source_context(root: Path, source_attempt_id: str, task_type: str) -> dict[
         if "job opportunity" in lower or "career goal" in lower or "weigh her options" in lower:
             summary = "career options, personal priorities, and practical advice"
             template_family = "email_career_decision_advice"
+        elif "textbook" in lower and ("missing" in lower or "defective" in lower or "exchange" in lower):
+            summary = "a defective academic textbook and an urgent exchange request"
+            template_family = "email_defective_textbook_exchange"
         elif "printing shop" in lower or "wrong version" in lower or "printed materials" in lower:
             summary = "an incorrect printed file and an urgent correction request"
             template_family = "email_printing_problem_resolution"
@@ -337,6 +341,16 @@ _EMAIL_CLAUSE_VARIANTS = {
         ("rewrite_fragment", "Repair this fragment as one complete email sentence: `If the shop can print the correct version before noon.`", "Complete the conditional clause with a clear result or request."),
         ("produce", "Write one sentence beginning with `When you receive the corrected file, ...` and finish it with a professional request.", "Include a complete main clause and a specific action."),
         ("combine", "Combine these ideas using `so`: `The wrong version cannot be used. Please confirm the reprint time.`", "Write one complete sentence with a logical result and professional tone."),
+    ],
+    "email_defective_textbook_exchange": [
+        ("rewrite_fragment", "Rewrite this fragment as one complete service-request sentence: `Because several pages are missing from the textbook.`", "Attach the dependent clause to a complete main clause and state the exchange request."),
+        ("combine", "Combine these ideas using `because` or `so`: `The book has blank pages. I need a replacement before tomorrow's class.`", "Write one complete sentence with a clear defect and time-sensitive request."),
+        ("rewrite_fragment", "Repair this sentence boundary: `Although I bought the textbook recently. It cannot be used for my course.`", "Attach the `Although` clause to a complete main clause."),
+        ("produce", "Write one sentence beginning with `Because I purchased the textbook on June 3, ...` and finish it with a polite exchange request.", "Include a complete main clause and a clear requested action."),
+        ("combine", "Combine these ideas using `because`: `The CD is missing. The textbook package is incomplete.`", "Write one complete sentence that clearly describes the defect."),
+        ("rewrite_fragment", "Repair this fragment as one complete email sentence: `If the bookstore can prepare a replacement before 8 AM tomorrow.`", "Complete the conditional clause with a polite request or result."),
+        ("produce", "Write one sentence beginning with `Since I need the textbook for tomorrow's lecture, ...` and finish it with a specific pickup request.", "Include a complete main clause and a specific time-sensitive action."),
+        ("combine", "Combine these ideas using `so`: `I can bring the defective book and my order number. The bookstore can confirm the exchange quickly.`", "Write one complete sentence with a practical exchange step."),
     ],
 }
 
@@ -584,6 +598,59 @@ def _email_specialized_templates(template_family: str) -> dict[str, tuple[list[t
                 "Write one professional email sentence asking the manager to ensure that the revised file, not the older version, is printed.",
             ]], "The recipient, requested correction, and urgency must be explicit."),
         }
+    if template_family == "email_defective_textbook_exchange":
+        return {
+            "GRAM-ARTICLE": ([("article_choice", prompt) for prompt in [
+                "Rewrite this phrase with the correct article: `a urgent exchange`. Then use it in one polite request sentence.",
+                "Rewrite this phrase with the correct article: `an defective textbook`. Then use it in one polite request sentence.",
+                "Rewrite this phrase with the correct article: `a incomplete copy`. Then use it in one polite request sentence.",
+                "Rewrite this phrase with the correct article: `an replacement book`. Then use it in one polite request sentence.",
+                "Rewrite this phrase with the correct article: `a important course reading`. Then use it in one polite request sentence.",
+                "Rewrite this phrase with the correct article: `an immediate solution`. Then use it in one polite request sentence.",
+                "Rewrite this phrase with the correct article: `a available replacement`. Then use it in one polite request sentence.",
+                "Rewrite this phrase with the correct article: `an order confirmation`. Then use it in one polite request sentence.",
+            ]], "The article must match the noun phrase and the exchange request must be complete."),
+            "GRAM-AGREEMENT": ([("agreement_control", prompt) for prompt in [
+                "Correct the verb and rewrite: `Several pages in the textbook is missing.`",
+                "Correct the verb and rewrite: `The defective book need to be exchanged before class.`",
+                "Correct the verb and rewrite: `My course readings requires a complete copy.`",
+                "Correct the verb and rewrite: `The blank pages makes the textbook unusable.`",
+                "Correct the verb and rewrite: `The bookstore staff have a replacement copy available.`",
+                "Correct the verb and rewrite: `These missing sections prevents me from preparing for class.`",
+                "Correct the verb and rewrite: `An exchange and a receipt confirmation is needed today.`",
+                "Correct the verb and rewrite: `The replacement textbooks arrives before tomorrow's lecture.`",
+            ]], "The subject and verb must agree while preserving the textbook-exchange request."),
+            "LEX-WORDFORM": ([("word_form", prompt) for prompt in [
+                "Choose the correct form and rewrite: `The textbook is defect because several pages are missing.`",
+                "Choose the correct form and rewrite: `I need a replace before tomorrow's lecture.`",
+                "Choose the correct form and rewrite: `The missing pages prevent my course prepare.`",
+                "Choose the correct form and rewrite: `Please confirm whether an exchange is availability.`",
+                "Choose the correct form and rewrite: `I would appreciate your quickly response.`",
+                "Choose the correct form and rewrite: `The book's incompleteness makes it use for my course.`",
+                "Choose the correct form and rewrite: `The cashier handled the problem very help.`",
+                "Choose the correct form and rewrite: `A prompt replace would solve the issue.`",
+            ]], "Choose a grammatically correct word form while keeping the request clear and professional."),
+            "LEX-COLLOCATION": ([("collocation", prompt) for prompt in [
+                "Rewrite naturally: `The textbook has some pages lost.`",
+                "Rewrite naturally: `Could you do an exchange for this defective book?`",
+                "Rewrite naturally: `I need to make a replacement before class.`",
+                "Rewrite naturally: `The missing pages give a problem for my course preparation.`",
+                "Rewrite naturally: `Please confirm me whether another copy is available.`",
+                "Rewrite naturally: `I hope the bookstore can take an exchange today.`",
+                "Rewrite naturally: `The incomplete book cannot be used for following the course.`",
+                "Rewrite naturally: `Could you give me a solution as soon as possible?`",
+            ]], "Use a natural English collocation in a polite request for a replacement."),
+            "EMAIL-ACTION": ([("email_action", prompt) for prompt in [
+                "Write one professional email sentence asking the bookstore to exchange the defective textbook promptly.",
+                "Write one professional email sentence asking the bookstore to confirm whether a replacement is available today.",
+                "Write one professional email sentence explaining that missing pages make the textbook unusable for tomorrow's class.",
+                "Write one professional email sentence offering to bring the defective copy and order receipt for the exchange.",
+                "Write one professional email sentence asking the bookstore to reserve a complete replacement copy.",
+                "Write one professional email sentence asking when you can collect the replacement before the next lecture.",
+                "Write one professional email sentence requesting an exchange because the textbook package is incomplete.",
+                "Write one professional email sentence asking the bookstore to notify you when the replacement is ready.",
+            ]], "The recipient, defective textbook, requested exchange, and practical next step must be explicit."),
+        }
     raise ValidationError("drill generation has no context-safe specialized template")
 
 
@@ -786,6 +853,18 @@ def _sample_answer(item: dict, context_summary: str, template_family: str) -> st
             "email_action": "Please reprint the correct file immediately and confirm when it will be ready.",
         }
         return samples.get(kind, "A polite, urgent request that identifies the correction is acceptable.")
+    if template_family == "email_defective_textbook_exchange":
+        samples = {
+            "rewrite_fragment": "Because several pages are missing from the textbook, I would appreciate an exchange as soon as possible.",
+            "combine": "Because the book has blank pages, I need a replacement before tomorrow's class.",
+            "produce": "Since I need the textbook for tomorrow's lecture, could I pick up a replacement at 8 AM?",
+            "agreement_control": "The missing pages make the textbook unusable for my course.",
+            "article_choice": "I would appreciate an exchange for the defective textbook.",
+            "word_form": "The incomplete book prevents me from preparing for class.",
+            "collocation": "Could the bookstore replace the defective textbook as soon as possible?",
+            "email_action": "Please prepare a replacement textbook, and I will bring the defective copy and my order number.",
+        }
+        return samples.get(kind, "A polite request that identifies the defective textbook and the needed exchange is acceptable.")
     if template_family == "academic_project_learning":
         samples = {
             "rewrite_fragment": "Because project-based learning lets students solve realistic problems, it helps them develop practical skills for future work.",

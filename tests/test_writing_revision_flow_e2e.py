@@ -34,10 +34,6 @@ The conclusion adds a third policy, and the employment example is not concrete.
 
 No counted event is needed for this flow fixture.
 
-## Material issue audit
-Status: complete
-Scope: all material issues in the submitted response are disclosed.
-
 # Priorities
 
 1. Choose free training without adding cash aid.
@@ -117,9 +113,6 @@ Reason: All assigned targets were resolved before the third revision was trigger
 
 2. Excerpt: `Overall, free training in modern technologies is the better option.`
    Reader effect: The conclusion repeats the opening without emphasizing the lasting employment benefit. Option: Overall, free technology training offers a more durable path back to employment.
-
-## Transfer suggestion
-Activity: Write a response to a new Academic Discussion prompt about training or financial support.
 
 """
 

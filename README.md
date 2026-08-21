@@ -79,7 +79,7 @@ My response:
 
 修訂可以接續前一版形成完整 lineage。階段報告會顯示分數軌跡、最新一輪解決率、首次完全解決的輪次，以及修訂過程中新產生的錯誤。
 
-如果同一條修訂鏈經過兩輪仍未完全解決，系統會建議先切換至 targeted drill，再用全新題目檢查 transfer，避免只在同一篇文章上反覆局部修補。
+如果同一條修訂鏈經過兩輪仍未完全解決，系統會先根據你實際寫出的句子給具體建議與限定改寫方向，再問你是否要做 targeted drill。你同意後才會產生練習；若你拒絕，系統會直接提供自然度與精確度 follow-up，並結束這條修訂鏈，不會強迫 drill、第三次修訂或 transfer。
 
 ## Targeted drill 與 mastery
 
@@ -88,7 +88,7 @@ Targeted drill 是針對一至數個錯誤碼的限定練習，不是 TOEFL 正�
 - drill set ID 與目標錯誤碼
 - 題目數、答對數與正確率
 - 提供問題證據的正式 attempt ID
-- 練習內容、作答與回饋
+- 練習結果、逐題判定與回饋；新完成的 drill 登錄後會只保留最小 lineage，避免把可重複使用的題目或作答當成題庫保存
 
 Mastery 是獨立的衍生狀態，不會改寫既有 error event 的 `historical_status`：
 

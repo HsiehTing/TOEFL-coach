@@ -132,45 +132,6 @@ def _validate_no_issue_audit(follow_up: str, response: str) -> None:
         raise ValidationError("no-issue audit candidates must be distinct learner text")
 
 
-def _validate_material_issue_audit(evidence_block: str) -> None:
-    audit = re.search(r"(?ms)^## Material issue audit\s*$\n(.*?)(?=^## |\Z)", evidence_block)
-    if audit is None:
-        raise ValidationError(
-            "first-round evidence requires a complete material-issue audit"
-        )
-    body = audit.group(1)
-    if re.search(r"(?im)^Status:\s*complete\s*$", body) is None:
-        raise ValidationError("material-issue audit must state Status: complete")
-    if re.search(
-        r"(?im)^Scope:\s*all material issues in the submitted response are disclosed",
-        body,
-    ) is None:
-        raise ValidationError(
-            "material-issue audit must disclose the full submitted-response scope"
-        )
-
-
-def _validate_concrete_transfer_suggestion(follow_up: str) -> None:
-    transfer = re.search(
-        r"(?ms)^## Transfer suggestion\s*$\n(.*?)(?=^## |\Z)",
-        follow_up,
-    )
-    if transfer is None or not transfer.group(1).strip():
-        raise ValidationError(
-            "naturalness follow-up requires a concrete transfer suggestion"
-        )
-    activity = re.search(r"(?im)^Activity:\s*(.+)$", transfer.group(1))
-    if activity is None or not activity.group(1).strip():
-        raise ValidationError("transfer suggestion must include a concrete Activity")
-    activity_text = activity.group(1).lower()
-    if not re.search(r"\bnew\b.*\bprompt\b", activity_text) or not re.search(
-        r"\b(write|respond|answer)\b", activity_text
-    ):
-        raise ValidationError(
-            "transfer Activity must name a new prompt and learner action"
-        )
-
-
 def _validate_revision_follow_up(
     feedback: str, response: str, parent_feedback: str | None = None
 ) -> None:
@@ -193,7 +154,6 @@ def _validate_revision_follow_up(
         )
     if re.search(rf"(?m)^{re.escape(NO_ISSUE_MESSAGE)}\s*$", follow_up):
         _validate_no_issue_audit(follow_up, response)
-        _validate_concrete_transfer_suggestion(follow_up)
         return
 
     suggestions = re.findall(r"(?m)^\d+\.\s+Excerpt:\s*`([^`]+)`", follow_up)
@@ -212,7 +172,8 @@ def _validate_revision_follow_up(
         raise ValidationError(
             "revision naturalness follow-up must not repeat parent feedback"
         )
-    _validate_concrete_transfer_suggestion(follow_up)
+
+
 def _historical_attempts(root: Path) -> list[dict]:
     base = root / "tracker" / "writing" / "attempts"
     rows = [
@@ -357,8 +318,6 @@ def validate_writing_assessment(
     attempt: dict,
     events: list[dict],
     feedback: str,
-    *,
-    require_material_issue_audit: bool = False,
 ) -> None:
     if not isinstance(attempt, Mapping):
         raise ValidationError("writing attempt must be a mapping")
@@ -443,11 +402,6 @@ def validate_writing_assessment(
             raise ValidationError(
                 f"evidence section omits counted evidence: {event.get('event_id')}"
             )
-    if (
-        require_material_issue_audit
-        and attempt.get("record_type") == "formal_original"
-    ):
-        _validate_material_issue_audit(evidence_block)
 
 
 def build_reevaluation_registration(
@@ -485,12 +439,7 @@ def build_writing_registration(
     if attempt["record_type"] == "re_evaluation":
         return build_reevaluation_registration(root, manifest, attempt, feedback)
     event_rows = tuple(events)
-    validate_writing_assessment(
-        attempt,
-        list(event_rows),
-        feedback,
-        require_material_issue_audit=True,
-    )
+    validate_writing_assessment(attempt, list(event_rows), feedback)
     # This preflight gives direct builder callers the same error they would see
     # during publication. publish_registration repeats it while locked.
     registration = ValidatedPracticeRegistration(

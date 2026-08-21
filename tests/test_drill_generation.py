@@ -336,6 +336,43 @@ def test_printing_problem_email_uses_its_own_context_safe_templates(tmp_path: Pa
     assert "incorrect copies need to be replaced" in pack["answer_key_markdown"]
 
 
+def test_defective_textbook_email_uses_its_own_context_safe_templates(tmp_path: Path) -> None:
+    source, _ = _source_attempt(
+        tmp_path,
+        task_type="email",
+        code="GRAM-CLAUSE",
+        prompt_override=(
+            "You purchased an academic textbook from the university bookstore, but several pages are missing. "
+            "Write an email requesting an exchange for the defective book as soon as possible."
+        ),
+    )
+    pack = build_drill_pack(tmp_path, _recommendation(source, "GRAM-CLAUSE"), seed=0)
+
+    assert pack["template_family"] == "email_defective_textbook_exchange"
+    assert pack["context_summary"] == "a defective academic textbook and an urgent exchange request"
+    assert all("defective academic textbook" in item["prompt"] for item in pack["items"])
+    assert all("laboratory" not in item["prompt"].lower() for item in pack["items"])
+    assert "replacement" in pack["answer_key_markdown"]
+
+
+def test_defective_textbook_email_has_a_safe_agreement_template(tmp_path: Path) -> None:
+    source, _ = _source_attempt(
+        tmp_path,
+        task_type="email",
+        code="GRAM-AGREEMENT",
+        prompt_override=(
+            "You purchased an academic textbook from the university bookstore, but several pages are missing. "
+            "Write an email requesting an exchange for the defective book as soon as possible."
+        ),
+    )
+
+    pack = build_drill_pack(tmp_path, _recommendation(source, "GRAM-AGREEMENT"), seed=0)
+
+    assert pack["template_family"] == "email_defective_textbook_exchange"
+    assert all(item["kind"] == "agreement_control" for item in pack["items"])
+    assert all("defective academic textbook" in item["prompt"] for item in pack["items"])
+
+
 def test_completed_pack_can_be_retired_after_its_minimum_lineage_is_copied(tmp_path: Path) -> None:
     source, _ = _source_attempt(tmp_path, task_type="email", code="GRAM-CLAUSE")
     pack = build_drill_pack(tmp_path, _recommendation(source, "GRAM-CLAUSE"), seed=0)

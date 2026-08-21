@@ -9,8 +9,6 @@ description: Use when the learner provides a TOEFL 2026 Email or Academic Discus
 
 Evaluate against the recorded ETS version, preserve evidence, and make the learner revise before showing a complete model.
 
-Explicit shortening requests are a separate coaching request, not a scored assessment or a revision round. When a learner asks to shorten an Academic Discussion response to a stated target (including 100–130 words), provide a bounded target-length version after an excerpt-based trimming audit. Preserve the learner's position, main reason, and essential support; do not add a new claim, change the stance, or silently repair unrelated errors. Verify and state the final word count, keep the version within the requested range, and label it as a non-scoring coaching model. Include a reusable check for repeated meaning, removable modifiers, redundant clauses, and over-broad wording. Do not register this artifact, create error events, change a task score, or treat it as a revision that resolves priorities. This explicit request is the exception to the first-round no-complete-model rule; do not volunteer a target-length model when the learner only asks for ordinary first-round feedback.
-
 ## Intake
 
 1. Read `standards/ets-2026/manifest.yaml` and `score-policy.md`.
@@ -42,20 +40,22 @@ Give these parts in order:
 2. Simulated 0–5 task score, confidence, and one-sentence verdict.
 3. Why this level.
 4. Why not the next level.
-5. Evidence table with every material issue found in the submitted response, using exact excerpts and must-fix, should-fix, or polish. Do not withhold a material issue merely because it is not one of the current priorities. In `# Evidence`, add `## Material issue audit`, `Status: complete`, and `Scope: all material issues in the submitted response are disclosed`; only then select the maximum three priorities.
+5. Evidence table with every material issue found in the submitted response, using exact excerpts and must-fix, should-fix, or polish. Do not withhold a material issue merely because it is not one of the current priorities.
 6. When more than three material issues exist, add a clearly labelled `Deferred issues (not current rewrite targets)` subsection after the evidence table. These items are disclosed for diagnosis only: they do not enter the current target-resolution rate and must not be repaired in the bounded rewrite task.
 7. 最多三個 priorities, selected from the disclosed issues.
 8. A bounded rewrite task.
 
 第一輪不提供完整範文。Do not convert the task result to a Writing section band.
 
-For every counted sentence-level issue, give only the minimal correction in the evidence table. Explain the error before the learner revises; do not provide a clearer alternative phrasing in first-round feedback. Keep each diagnosis to one short sentence naming the main error and rule; add a second sentence only when the correction changes the task meaning.
+For every counted sentence-level issue, give only the minimal correction in the evidence table. Explain the error before the learner revises; do not provide a clearer alternative phrasing in first-round feedback. Keep each diagnosis to one short sentence naming the main error and rule; add a second sentence only when the correction changes the task meaning. Before finalizing, audit every material issue against the evidence table or `Deferred issues (not current rewrite targets)`; do not present an issue first in a later revision or only after the learner asks for broader feedback.
 
 ## Revision output
 
 Compare only against the assigned priorities. Report resolved, partly resolved, unresolved, and newly introduced issues; calculate target-resolution rate. A revision never increases the formal-attempt count. Provide a high-scoring model only after the learner has attempted the revision.
 
 Lock the assigned priorities to the parent feedback before assessing the revision. New issues never increase `revision_outcomes.assigned`, never lower the target-resolution rate, and never retroactively make a resolved parent target unresolved. When `new_errors > 0`, add `## New issues (not assigned targets)` inside `# Evidence`; keep each exact excerpt there. Do not add a new issue to `# Priorities`, `# Rewrite task`, or drill targets in the same round. It may become a focus only when it is explicitly assigned in a later feedback scope.
+
+Make revision feedback constructive, not merely corrective. For each unresolved assigned priority, state what is already acceptable, then name the one change that improves clarity, naturalness, precision, logic, or control and why it helps the reader. For at most two high-leverage items, add a compact comparison: `Keep` (the learner's valid intention), `Adjust` (the exact structural or wording choice), and `Direction` (a reusable pattern or one bounded sentence-level option). Distinguish a hard error from an acceptable-but-less-natural choice; identify the relevant mechanism such as parallelism, redundancy, reference, collocation, specificity, or cause-and-effect. Do not turn every row into a long lecture, supply a complete post, or add unassigned issues to the current revision targets.
 
 Follow this state machine in order: `revision_targets → targeted_drill_gate → naturalness_follow_up → transfer`.
 
@@ -69,7 +69,7 @@ After `# Rewrite task`, always add `# Targeted drill` and one exact status line.
 
 A targeted drill does not itself resolve revision priorities. After the learner completes it, require a bounded revision check for the remaining targets. Do not create a drill when the first or second revision has already resolved every target. While asking for the learner's choice, hold the second-revision registration open; finalize it as `required` or `declined` only after the learner responds.
 
-Add `# Naturalness and precision follow-up` after all assigned priorities are fully resolved and any required drill is completed or legally skipped. It is also mandatory when the learner declines the drill after an incomplete second revision; in that case it concludes the chain and must not open a transfer or third revision. This follow-up is a non-scoring revision-completion feedback artifact, not a targeted drill, a new task, or a new error table: it must not change task score, formal count, counted events, error rates, historical status, mastery, training plan, or transfer gates.
+Add `# Naturalness and precision follow-up` after all assigned priorities are fully resolved and any required drill is completed or legally skipped. It is also mandatory when the learner declines the drill after an incomplete second revision; in that case it concludes the chain and must not open a transfer or third revision. This follow-up is a non-scoring revision-completion artifact, not a targeted drill and not a new error table: it must not change task score, formal count, counted events, error rates, historical status, mastery, training plan, or transfer gates.
 
 When follow-up is blocked, do not emit the follow-up heading or a placeholder follow-up status. Explain the block inside `# Targeted drill`. Likewise, do not emit a transfer heading or suggestion until after a completed follow-up; a declined drill never unlocks transfer.
 
@@ -78,7 +78,6 @@ When follow-up is blocked, do not emit the follow-up heading or a placeholder fo
 - When task completion and the core causal/logic relationship are already clear, prioritize sentence flow or reference, then natural grammar/collocation, precise wording, and unnecessary repetition; do not ask for extra ideas merely to fill this follow-up. If one of those core elements blocks reader understanding or the score ceiling, treat it through the existing must-fix/should-fix route instead.
 - If there are issues, give one to three numbered entries in the form `Excerpt: \`exact learner text\``. Each entry identifies either nearby repeated meaning/structure, unclear flow/reference, an overly broad or imprecise word, or an understandable but non-idiomatic construction; explain the reader effect and give one single-sentence option that preserves the learner's meaning. Never combine options into a complete model post.
 +- End an actionable follow-up after those suggestions. Do not add a `Mini-practice`, a rewrite request, answer-hidden questions, or an answer key. Learner questions and assessed practice belong only to a learner-approved targeted drill.
-- Every completed follow-up must end with `## Transfer suggestion` and a concrete `Activity:` that names a new prompt, the learner's route, and the learner action (`write`, `respond`, or `answer`). A vague suggestion such as “try a new situation” is insufficient; this remains non-scoring and is not a mini-practice.
 - If no genuine issue exists, write exactly `No naturalness or precision issue to flag.` only after a documented audit of one to three plausible candidate excerpts. Add `## Naturalness audit`; format each numbered row with `Candidate:`, the exact learner text in backticks, an em dash, and the reason it needs no action. Then add `## Transfer suggestion` with one non-scoring new-prompt transfer suggestion. Do not invent feedback to fill the section or use the zero-item result to skip a real issue.
 
 Transfer is available only after the follow-up. Never jump from resolved priorities or a completed drill directly to a transfer suggestion.
