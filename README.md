@@ -113,6 +113,10 @@ Item 1 — Learner: Ask info desk to help today.
 
 如果每個檔案就是一題完整的「題目＋回答」，可依題目順序批次輸入；系統會逐檔切分並獨立分析，單一檔案的 ASR 問題不會讓後續題目錯位。題目與回答之間的最大停頓會作為候選邊界，回答內的短停頓會保留在同一題。
 
+若執行環境沒有 Metal 裝置，可使用本機 whisper.cpp CPU fallback：設定 `TOEFL_WHISPER_BACKEND=whisper_cpp` 與 `TOEFL_WHISPER_CPP_MODEL` 指向本機 `ggml-*.bin` 模型；m4a 等格式會先轉成暫存 WAV，完成後自動清理。
+
+要把逐題文字與音訊動態一起輸出，可執行 `tools/analyze_speaking_audio.py <audio> --task-type listen_and_repeat --output analysis.json`。輸出會保留每題的 pause／speech-rate 診斷 proxy 與文字 reconstruction；發音、韻律與可懂度在尚未有驗證 evaluator 前會標示為 `unavailable`，不會被 ASR 辨識度取代。
+
 ## 評分與紀錄原則
 
 - Writing 單題使用 ETS 公開 rubric，提供 `0–5` 的模擬任務分數。

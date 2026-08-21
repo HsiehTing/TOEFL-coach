@@ -11,6 +11,9 @@ import importlib
 import json
 import os
 import re
+import shutil
+import subprocess
+import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from hashlib import sha256
 from math import isfinite
@@ -19,6 +22,7 @@ from typing import Any
 
 
 DEFAULT_MODEL = "mlx-community/whisper-small-mlx"
+DEFAULT_CPP_MODEL = "ggml-small.en.bin"
 SCHEMA_VERSION = 1
 _WHITESPACE = re.compile(r"\s+")
 
@@ -85,6 +89,134 @@ def _load_default_backend() -> Backend:
     if not callable(transcribe):
         raise TranscriptionError("mlx-whisper does not expose transcribe()")
     return transcribe
+
+
+def _parse_timestamp(value: object, *, offset_is_milliseconds: bool = False) -> float:
+    if type(value) in {int, float}:
+        parsed = float(value)
+        return parsed / 1000.0 if offset_is_milliseconds else parsed
+    if not isinstance(value, str):
+        raise TranscriptionError("whisper.cpp timestamp is invalid")
+    match = re.fullmatch(r"(\d+):(\d{2}):(\d{2})[,.](\d{3})", value.strip())
+    if not match:
+        raise TranscriptionError("whisper.cpp timestamp is invalid")
+    hours, minutes, seconds, millis = (int(part) for part in match.groups())
+    return hours * 3600 + minutes * 60 + seconds + millis / 1000.0
+
+
+def _normalize_whisper_cpp_result(payload: Mapping[str, object]) -> Mapping[str, object]:
+    result = payload.get("result") if isinstance(payload.get("result"), Mapping) else payload
+    raw_segments = payload.get("transcription")
+    if raw_segments is None and isinstance(result, Mapping):
+        raw_segments = result.get("transcription")
+    if raw_segments is None and isinstance(result, Mapping):
+        raw_segments = result.get("segments")
+    if not isinstance(raw_segments, Sequence) or isinstance(raw_segments, (str, bytes)):
+        raise TranscriptionError("whisper.cpp returned no transcription segments")
+    segments: list[dict[str, object]] = []
+    for index, raw in enumerate(raw_segments, start=1):
+        if not isinstance(raw, Mapping):
+            continue
+        text = raw.get("text")
+        if not isinstance(text, str) or not text.strip():
+            continue
+        timestamps = raw.get("timestamps") if isinstance(raw.get("timestamps"), Mapping) else raw
+        offsets = raw.get("offsets") if isinstance(raw.get("offsets"), Mapping) else None
+        if isinstance(offsets, Mapping) and "from" in offsets and "to" in offsets:
+            start = _parse_timestamp(offsets["from"], offset_is_milliseconds=True)
+            end = _parse_timestamp(offsets["to"], offset_is_milliseconds=True)
+        elif isinstance(timestamps, Mapping) and "from" in timestamps and "to" in timestamps:
+            start = _parse_timestamp(timestamps["from"])
+            end = _parse_timestamp(timestamps["to"])
+        elif isinstance(raw.get("start"), (int, float)) and isinstance(raw.get("end"), (int, float)):
+            start = _parse_timestamp(raw["start"])
+            end = _parse_timestamp(raw["end"])
+        else:
+            raise TranscriptionError("whisper.cpp segment has no timestamps")
+        segments.append({
+            "id": raw.get("id", index - 1),
+            "start": start,
+            "end": end,
+            "text": text,
+        })
+    if not segments:
+        raise TranscriptionError("whisper.cpp returned an empty transcript")
+    language = result.get("language") if isinstance(result, Mapping) else None
+    if language is None:
+        language = payload.get("language")
+    normalized: dict[str, object] = {"segments": segments}
+    if isinstance(language, str) and language.strip():
+        normalized["language"] = language.strip()
+    return normalized
+
+
+def _cpp_model_path() -> Path | None:
+    configured = os.environ.get("TOEFL_WHISPER_CPP_MODEL")
+    candidates = [Path(configured)] if configured else []
+    candidates.extend((
+        Path.home() / ".cache/toefl/whisper.cpp" / DEFAULT_CPP_MODEL,
+        Path("/opt/homebrew/share/whisper.cpp/models") / DEFAULT_CPP_MODEL,
+    ))
+    return next((path for path in candidates if path.is_file()), None)
+
+
+def _transcribe_with_whisper_cpp(
+    path: Path,
+    *,
+    language: str,
+    model: str | None,
+    runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> tuple[Mapping[str, object], str]:
+    executable = shutil.which(os.environ.get("TOEFL_WHISPER_CPP_BIN", "whisper-cli"))
+    if executable is None:
+        raise TranscriptionError("Metal is unavailable and whisper.cpp (whisper-cli) is not installed")
+    model_path = Path(model) if model and os.path.isabs(model) else _cpp_model_path()
+    if model_path is None or not model_path.is_file():
+        raise TranscriptionError(
+            "Metal is unavailable; set TOEFL_WHISPER_CPP_MODEL to a local whisper.cpp model file"
+        )
+    with tempfile.TemporaryDirectory(prefix="toefl-whisper-cpp-") as directory:
+        input_path = path
+        if path.suffix.casefold() not in {".wav", ".mp3", ".flac", ".ogg"}:
+            ffmpeg = shutil.which(os.environ.get("TOEFL_FFMPEG_BIN", "ffmpeg"))
+            if ffmpeg is None:
+                raise TranscriptionError("whisper.cpp fallback needs ffmpeg to decode this audio format")
+            input_path = Path(directory) / "input.wav"
+            try:
+                converted = runner([
+                    ffmpeg, "-nostdin", "-y", "-hide_banner", "-loglevel", "error",
+                    "-i", str(path), "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
+                    str(input_path),
+                ], capture_output=True, text=True, check=False)
+            except OSError as error:
+                raise TranscriptionError(f"audio conversion for whisper.cpp failed: {error}") from error
+            if converted.returncode != 0 or not input_path.is_file():
+                detail = (converted.stderr or converted.stdout or "ffmpeg failed").strip()
+                raise TranscriptionError(f"audio conversion for whisper.cpp failed: {detail}")
+        output_base = Path(directory) / "transcript"
+        command = [
+            executable, "-m", str(model_path), "-f", str(input_path),
+            "-l", language, "-ojf", "-of", str(output_base),
+            "-np", "-ng",
+        ]
+        try:
+            completed = runner(command, capture_output=True, text=True, check=False)
+        except OSError as error:
+            raise TranscriptionError(f"whisper.cpp fallback failed: {error}") from error
+        output_text = (completed.stderr or "") + "\n" + (completed.stdout or "")
+        if completed.returncode != 0 or "failed to read audio file" in output_text.casefold():
+            detail = (completed.stderr or completed.stdout or "whisper.cpp failed").strip()
+            raise TranscriptionError(f"whisper.cpp fallback failed: {detail}")
+        json_path = output_base.with_suffix(".json")
+        if not json_path.is_file():
+            raise TranscriptionError("whisper.cpp fallback produced no JSON transcript")
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise TranscriptionError("whisper.cpp fallback produced invalid JSON") from error
+    if not isinstance(payload, Mapping):
+        raise TranscriptionError("whisper.cpp fallback returned an invalid artifact")
+    return _normalize_whisper_cpp_result(payload), str(model_path)
 
 
 def _word_artifact(word: Mapping[str, Any], number: int) -> dict[str, object]:
@@ -204,7 +336,37 @@ def transcribe_audio(
     selected_model = model or os.environ.get("TOEFL_WHISPER_MODEL") or DEFAULT_MODEL
     model_identifier = _safe_model_identifier(selected_model)
     selected_language = _clean_text(language, "language")
-    transcriber = backend or _load_default_backend()
+    requested_backend = os.environ.get("TOEFL_WHISPER_BACKEND", "auto").strip().casefold()
+    if requested_backend not in {"auto", "mlx_whisper", "whisper_cpp"}:
+        raise TranscriptionError("TOEFL_WHISPER_BACKEND must be auto, mlx_whisper, or whisper_cpp")
+    if backend is None and requested_backend == "whisper_cpp":
+        cpp_result, cpp_model = _transcribe_with_whisper_cpp(
+            path,
+            language=selected_language,
+            model=selected_model if os.path.isabs(selected_model) else None,
+        )
+        return normalize_transcription(
+            cpp_result,
+            source=path,
+            backend="whisper_cpp",
+            model=cpp_model,
+        )
+    try:
+        transcriber = backend or _load_default_backend()
+    except TranscriptionError as error:
+        if backend is None and requested_backend == "auto" and "not installed" in str(error).casefold():
+            cpp_result, cpp_model = _transcribe_with_whisper_cpp(
+                path,
+                language=selected_language,
+                model=None,
+            )
+            return normalize_transcription(
+                cpp_result,
+                source=path,
+                backend="whisper_cpp",
+                model=cpp_model,
+            )
+        raise
     try:
         result = transcriber(
             str(path),
@@ -217,6 +379,22 @@ def transcribe_audio(
     except TranscriptionError:
         raise
     except (OSError, RuntimeError, ValueError, TypeError) as error:
+        error_text = str(error).casefold()
+        metal_unavailable = "metal" in error_text and (
+            "no metal device" in error_text or "metal device" in error_text
+        )
+        if backend is None and requested_backend == "auto" and metal_unavailable:
+            cpp_result, cpp_model = _transcribe_with_whisper_cpp(
+                path,
+                language=selected_language,
+                model=None,
+            )
+            return normalize_transcription(
+                cpp_result,
+                source=path,
+                backend="whisper_cpp",
+                model=cpp_model,
+            )
         raise TranscriptionError(f"local transcription failed: {error}") from error
     return normalize_transcription(
         result,

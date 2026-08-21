@@ -598,6 +598,8 @@ ASR role-mapping robustness 也已補強：Listen and Repeat 會過濾 scenario 
 
 第四個切片已完成第一階段：新增 `tools/prepare_speaking_item_batch.py`，支援「一檔一題完整 prompt→learner response」的 7／4 檔案批次。每個檔案以最大停頓作為候選題目／回答邊界，回答內的短停頓會合併；每題獨立產生 path-free transcript、mapping 與可選 segment quality，單一 item 的缺失只會標記該 item，不會讓後續 item 全部錯位。
 
+第五個切片已完成第一階段：新增 `tools/toefl_tracker/acoustic_evidence.py` 與 `tools/analyze_speaking_audio.py`，在既有逐題 mapping 上產生 segment-scoped 的停頓、停頓比例與語速 proxy，並將文字 reconstruction、技術音訊可用性與 acoustic proxy 合併成 `diagnostic_only` 結果。這些數值只描述可觀察的 speech dynamics；pronunciation、prosody、intelligibility 仍明確為 unavailable，ASR recognizability 也不會升格為發音證據。非 WAV 音檔沿用本機 whisper.cpp fallback 的暫存轉檔與清理流程。
+
 ## 建議執行順序
 
 ```text
@@ -618,4 +620,4 @@ Milestone 1 與 2 應視為同一個 P0 release：只有 drill generator 而沒�
 
 ## 下一個開發切入點
 
-目前已完成 Writing naturalness follow-up、Bug Capture P0–P3，以及 Speaking 的 transcript-supported revision、targeted drill、result-only retention、new-session transfer、progress lineage、audio-performance evidence contract、本機 audio transcription／role-mapping／segment-usability 與一檔一題批次切分。下一個開發切入點是 acoustic evidence evaluator：在逐題邊界穩定後，分開產生 pronunciation／fluency／prosody 的音訊證據，再與文字結果融合；不得把 ASR recognizability proxy 當成發音分數。
+目前已完成 Writing naturalness follow-up、Bug Capture P0–P3，以及 Speaking 的 transcript-supported revision、targeted drill、result-only retention、new-session transfer、progress lineage、audio-performance evidence contract、本機 audio transcription／role-mapping／segment-usability、一檔一題批次切分與第一階段 acoustic proxy 融合。下一個開發切入點是以人工標註／驗證資料校準 speech-dynamics proxy，並設計獨立且可審計的 pronunciation／prosody／intelligibility evaluator；在驗證完成前維持各 audio-performance 維度 unavailable，不產生 TOEFL task score 或 section band。
