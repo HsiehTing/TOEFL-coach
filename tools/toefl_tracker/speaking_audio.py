@@ -9,7 +9,10 @@ from math import isfinite
 
 from toefl_tracker.audio import AudioInspectionError, inspect_segment_quality
 from toefl_tracker.quality import quality_decision
-from toefl_tracker.role_mapping import infer_toefl_role_map_from_asr
+from toefl_tracker.role_mapping import (
+    infer_toefl_role_map_from_asr,
+    infer_toefl_role_map_from_single_item_asr,
+)
 from toefl_tracker.transcription import Backend, transcribe_audio
 
 
@@ -181,3 +184,59 @@ def prepare_speaking_session(
             ffmpeg=ffmpeg,
         )
     return artifact
+
+
+def prepare_speaking_item_batch(
+    paths: Sequence[Path],
+    task_type: str,
+    *,
+    model: str | None = None,
+    language: str = "en",
+    backend: Backend | None = None,
+    include_segment_quality: bool = False,
+    quality_runner: Callable = subprocess.run,
+    ffmpeg: str = "ffmpeg",
+) -> dict[str, object]:
+    """Prepare a batch where each local recording contains exactly one item.
+
+    File order is the item order; every item is mapped independently so one
+    weak or missing recording cannot shift the remaining items.
+    """
+    if isinstance(paths, (str, bytes)) or not isinstance(paths, Sequence) or not paths:
+        raise ValueError("audio item paths are required")
+    expected = 7 if task_type == "listen_and_repeat" else 4 if task_type == "take_an_interview" else 0
+    if expected == 0:
+        raise ValueError("unknown speaking task")
+    if len(paths) != expected:
+        raise ValueError(f"expected exactly {expected} item recordings")
+    items: list[dict[str, object]] = []
+    all_ready = True
+    for item_number, raw_path in enumerate(paths, start=1):
+        path = Path(raw_path)
+        transcript = transcribe_audio(path, model=model, language=language, backend=backend)
+        mapping = infer_toefl_role_map_from_single_item_asr(
+            task_type, transcript, item=item_number
+        )
+        item_artifact: dict[str, object] = {
+            "item": item_number,
+            "status": "needs_confirmation" if mapping.requires_confirmation else "ready_for_diagnostic",
+            "transcript": transcript,
+            "mapping": mapping.artifact(),
+        }
+        if include_segment_quality and mapping.rows:
+            item_artifact["segment_quality"] = build_segment_quality_artifact(
+                path,
+                mapping.artifact(),
+                transcript,
+                runner=quality_runner,
+                ffmpeg=ffmpeg,
+            )
+        all_ready = all_ready and not mapping.requires_confirmation
+        items.append(item_artifact)
+    return {
+        "schema_version": 1,
+        "task_type": task_type,
+        "status": "ready_for_diagnostic" if all_ready else "needs_confirmation",
+        "item_count": len(items),
+        "items": items,
+    }

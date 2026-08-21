@@ -451,3 +451,64 @@ def infer_toefl_role_map_from_asr(
     if len(filtered) != ITEM_COUNTS["take_an_interview"] * 2:
         return _ambiguous("take_an_interview", filtered, "ASR interview structure is incomplete or contains extra turns")
     return _interview(filtered)
+
+
+def _collapse_asr_rows(rows: Sequence[_TranscriptRow]) -> _TranscriptRow:
+    if not rows:
+        raise ValidationError("cannot collapse empty ASR turn")
+    return _TranscriptRow(
+        segment_id="+".join(row.segment_id for row in rows),
+        start=rows[0].start,
+        end=rows[-1].end,
+        text=" ".join(row.text for row in rows).strip(),
+    )
+
+
+def infer_toefl_role_map_from_single_item_asr(
+    task_type: str,
+    transcript: Mapping | Sequence[Mapping],
+    *,
+    item: int = 1,
+    minimum_boundary_pause: float = 0.25,
+) -> RoleMapResult:
+    """Map one complete prompt→learner recording without global item drift.
+
+    The largest pause is used as the candidate prompt/response boundary. This
+    is deliberately item-local: a missing turn makes only this item ambiguous
+    instead of shifting every later item in a batch.
+    """
+    if task_type not in ITEM_COUNTS:
+        raise ValidationError("unknown TOEFL speaking task")
+    if type(item) is not int or not 1 <= item <= ITEM_COUNTS[task_type]:
+        raise ValidationError("single-item number is invalid")
+    if not isfinite(minimum_boundary_pause) or minimum_boundary_pause < 0:
+        raise ValidationError("single-item boundary pause is invalid")
+    rows = _merge_adjacent_rows(_asr_rows(transcript), max_gap_seconds=0.15)
+    filtered = _drop_near_duplicate_rows(_filter_directions(task_type, rows))
+    if len(filtered) < 2:
+        return _ambiguous(task_type, filtered, "single item needs both prompt and learner turns", [item])
+    gaps = [filtered[index + 1].start - filtered[index].end for index in range(len(filtered) - 1)]
+    split = max(range(len(gaps)), key=gaps.__getitem__)
+    if gaps[split] < minimum_boundary_pause:
+        return _ambiguous(task_type, filtered, "single-item prompt/learner pause is not clear", [item])
+    prompt = _collapse_asr_rows(filtered[: split + 1])
+    response = _collapse_asr_rows(filtered[split + 1 :])
+    if task_type == "listen_and_repeat":
+        if _similarity(prompt.text, response.text) < 0.15:
+            return _ambiguous(task_type, filtered, "single-item repeat similarity cannot confirm pairing", [item])
+        reasons = ("asr_item_pause", "asr_item_repeat_similarity")
+    else:
+        if not _question(prompt.text) or not _answer_discourse_evidence(prompt.text, response.text):
+            return _ambiguous(task_type, filtered, "single-item interview pairing cannot be confirmed", [item])
+        reasons = ("asr_item_pause", "asr_item_answer_discourse")
+    return RoleMapResult(
+        task_type=task_type,
+        rows=(
+            _mapped(item, "examiner", prompt, reasons[0]),
+            _mapped(item, "learner", response, reasons[1]),
+        ),
+        ambiguous_rows=(),
+        requires_confirmation=False,
+        reason="complete single-item prompt/learner structure",
+        source_transcript_hash=_source_hash(filtered),
+    )

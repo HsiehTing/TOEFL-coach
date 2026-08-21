@@ -111,6 +111,8 @@ Item 1 — Learner: Ask info desk to help today.
 
 `listen_and_repeat` 需要完整 7 題，`take_an_interview` 需要完整 4 題，才可作為 formal original。未提供的音訊表現（發音、重音、節奏、流暢度與可懂度）會標示為無法評估，不會從文字臆測。
 
+如果每個檔案就是一題完整的「題目＋回答」，可依題目順序批次輸入；系統會逐檔切分並獨立分析，單一檔案的 ASR 問題不會讓後續題目錯位。題目與回答之間的最大停頓會作為候選邊界，回答內的短停頓會保留在同一題。
+
 ## 評分與紀錄原則
 
 - Writing 單題使用 ETS 公開 rubric，提供 `0–5` 的模擬任務分數。

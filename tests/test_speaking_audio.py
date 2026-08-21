@@ -1,8 +1,10 @@
 from pathlib import Path
 from subprocess import CompletedProcess
 
+import pytest
+
 from toefl_tracker.speaking import _validate_segment_quality_artifact
-from toefl_tracker.speaking_audio import prepare_speaking_session
+from toefl_tracker.speaking_audio import prepare_speaking_item_batch, prepare_speaking_session
 
 
 def asr_backend(*_: object, **__: object) -> dict:
@@ -69,3 +71,44 @@ def test_prepare_speaking_session_keeps_text_usable_separate_from_low_audio_qual
     assert all(row["asr_recognizability"]["status"] == "proxy" for row in rows)
     assert str(audio) not in str(artifact)
     assert _validate_segment_quality_artifact(rows)[0]["acoustic_usable"] is False
+
+
+def test_prepare_speaking_item_batch_isolates_item_boundaries(tmp_path: Path) -> None:
+    paths = []
+    for item in range(1, 8):
+        path = tmp_path / f"item-{item}.m4a"
+        path.write_bytes(b"fixture")
+        paths.append(path)
+
+    def one_item_backend(path: str, **_: object) -> dict:
+        number = int(Path(path).stem.split("-")[-1])
+        sentence = f"The campus library opens at eight for item {number}."
+        return {
+            "segments": [
+                {"id": "prompt", "start": 0.0, "end": 1.0, "text": sentence},
+                {"id": "answer", "start": 2.0, "end": 3.0, "text": sentence},
+            ]
+        }
+
+    artifact = prepare_speaking_item_batch(
+        paths,
+        "listen_and_repeat",
+        model="test-model",
+        backend=one_item_backend,
+    )
+
+    assert artifact["status"] == "ready_for_diagnostic"
+    assert artifact["item_count"] == 7
+    assert [item["mapping"]["rows"][0]["item"] for item in artifact["items"]] == list(range(1, 8))
+
+
+def test_prepare_speaking_item_batch_requires_expected_item_count(tmp_path: Path) -> None:
+    path = tmp_path / "item-1.m4a"
+    path.write_bytes(b"fixture")
+    with pytest.raises(ValueError, match="expected exactly 7"):
+        prepare_speaking_item_batch(
+            [path],
+            "listen_and_repeat",
+            model="test-model",
+            backend=asr_backend,
+        )

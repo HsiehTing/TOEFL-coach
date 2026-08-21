@@ -4,7 +4,10 @@ from pathlib import Path
 import pytest
 
 from toefl_tracker.models import ValidationError
-from toefl_tracker.role_mapping import infer_toefl_role_map_from_asr
+from toefl_tracker.role_mapping import (
+    infer_toefl_role_map_from_asr,
+    infer_toefl_role_map_from_single_item_asr,
+)
 
 
 ROOT = Path(__file__).parents[1]
@@ -116,3 +119,34 @@ def test_asr_mapping_rejects_overlap_and_unknown_route() -> None:
         )
     with pytest.raises(ValidationError, match="unknown TOEFL speaking task"):
         infer_toefl_role_map_from_asr("unknown", [])
+
+
+def test_single_item_mapping_uses_largest_pause_and_collapses_internal_segments() -> None:
+    result = infer_toefl_role_map_from_single_item_asr(
+        "listen_and_repeat",
+        [
+            {"segment_id": "prompt-1", "start": 0.0, "end": 1.2, "text": "The library closes at five."},
+            {"segment_id": "prompt-2", "start": 1.25, "end": 1.8, "text": "Please plan ahead."},
+            {"segment_id": "answer-1", "start": 3.0, "end": 4.1, "text": "The library closes at five."},
+            {"segment_id": "answer-2", "start": 4.2, "end": 4.8, "text": "Please plan ahead."},
+        ],
+        item=3,
+    )
+
+    assert result.requires_confirmation is False
+    assert [(row.item, row.role) for row in result.rows] == [(3, "examiner"), (3, "learner")]
+    assert result.rows[0].segment_id == "prompt-1+prompt-2"
+    assert result.rows[1].segment_id == "answer-1+answer-2"
+
+
+def test_single_item_mapping_keeps_only_that_item_ambiguous() -> None:
+    result = infer_toefl_role_map_from_single_item_asr(
+        "listen_and_repeat",
+        [{"start": 0.0, "end": 1.0, "text": "The library closes at five."}],
+        item=4,
+    )
+
+    assert result.requires_confirmation is True
+    assert [(row.item, row.reason) for row in result.ambiguous_rows] == [
+        (4, "single item needs both prompt and learner turns")
+    ]

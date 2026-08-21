@@ -69,6 +69,11 @@ def test_speaking_docs_accept_local_audio_or_transcript() -> None:
     assert "path-free local-ASR transcript" in interview
 
 
+def test_speaking_skill_documents_one_item_per_audio_batch() -> None:
+    text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+    assert "tools/prepare_speaking_item_batch.py" in text
+
+
 def test_speaking_skill_uses_dedicated_persistence_commands() -> None:
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
     assert "tools/register_speaking_session.py" in text

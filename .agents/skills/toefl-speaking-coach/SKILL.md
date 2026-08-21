@@ -12,7 +12,7 @@ Treat an explicit learner transcript or the path-free output of the local ASR ad
 ## Intake gate
 
 1. Read `standards/ets-2026/manifest.yaml` and `score-policy.md`.
-2. When the learner provides local audio, invoke `tools/prepare_speaking_session.py` with the explicit route; add `--include-segment-quality` when the file is being prepared for registration. It runs local transcription, route-specific role mapping, and (when requested) learner-turn quality checks. If the adapter or model is unavailable, ask for a transcript instead. Never upload the audio.
+2. When the learner provides local audio, use `tools/prepare_speaking_item_batch.py` when each file is one complete prompt→learner item; use `tools/prepare_speaking_session.py` only when one file contains the complete session. Add `--include-segment-quality` when the file is being prepared for registration. These flows run local transcription, route-specific role mapping, and (when requested) learner-turn quality checks. If the adapter or model is unavailable, ask for a transcript instead. Never upload the audio.
 3. Normalize the path-free ASR artifact, filter directions, and infer the task structure using `role_mapping.py`; preserve supplied transcript text verbatim when the learner provides one.
 4. Require each item to identify the prompt and learner response. Timestamps from ASR are evidence; never invent missing boundaries.
 5. Ask only about a missing or ambiguous prompt/response pairing. A complete transcript with explicit labels needs no reconfirmation.

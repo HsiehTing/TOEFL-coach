@@ -596,6 +596,8 @@ Intake 文件規則已同步：README 與 Listen and Repeat／Interview referenc
 
 ASR role-mapping robustness 也已補強：Listen and Repeat 會過濾 scenario setup、只在文字連續證據足夠時合併相鄰 fragment，並在低相似度 response 時維持 item stride，避免錯位後把後續題目誤配成 learner turn；不足的 item 仍會標記為 ambiguous。
 
+第四個切片已完成第一階段：新增 `tools/prepare_speaking_item_batch.py`，支援「一檔一題完整 prompt→learner response」的 7／4 檔案批次。每個檔案以最大停頓作為候選題目／回答邊界，回答內的短停頓會合併；每題獨立產生 path-free transcript、mapping 與可選 segment quality，單一 item 的缺失只會標記該 item，不會讓後續 item 全部錯位。
+
 ## 建議執行順序
 
 ```text
@@ -616,4 +618,4 @@ Milestone 1 與 2 應視為同一個 P0 release：只有 drill generator 而沒�
 
 ## 下一個開發切入點
 
-目前已完成 Writing naturalness follow-up、Bug Capture P0–P3，以及 Speaking 的 transcript-supported revision、targeted drill、result-only retention、new-session transfer、progress lineage、audio-performance evidence contract 與本機 audio transcription／role-mapping／segment-usability 切片。下一個開發切入點是 audio pipeline hardening：針對 `BUG-20260820-001` 補足 item completeness 的可重現 evidence，並針對 `BUG-20260820-002` 明確化本機運算能力不可用時的 transcript fallback；兩者都不得引入雲端轉錄、聲紋辨識或臆測角色。
+目前已完成 Writing naturalness follow-up、Bug Capture P0–P3，以及 Speaking 的 transcript-supported revision、targeted drill、result-only retention、new-session transfer、progress lineage、audio-performance evidence contract、本機 audio transcription／role-mapping／segment-usability 與一檔一題批次切分。下一個開發切入點是 acoustic evidence evaluator：在逐題邊界穩定後，分開產生 pronunciation／fluency／prosody 的音訊證據，再與文字結果融合；不得把 ASR recognizability proxy 當成發音分數。
