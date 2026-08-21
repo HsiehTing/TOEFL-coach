@@ -100,9 +100,9 @@ identified → practised → provisional → transferred → controlled
 
 目前的基本門檻是：至少兩組 drill 且整體正確率達 `80%` 才能進入 `provisional`。現有 mastery 層屬於診斷基礎版；「只計算 drill 之後的新題 opportunity」與明確的 transfer chain 將在下一個 P0 milestone 補齊，因此目前的 `transferred`／`controlled` 不應單獨視為最終掌握證明。
 
-## 口說功能（逐字稿）
+## 口說功能（本機音檔／逐字稿）
 
-口說教練不再轉錄音檔。請貼上或提供逐字稿，並為每一題清楚標示題目與你的作答；時間戳可提供，但不是必要條件。
+口說教練可直接接收本機音檔，先以本機 ASR 轉成帶時間戳的文字，再依 Listen and Repeat 或 Take an Interview 分流與配對；也可以直接貼上或提供逐字稿。若本機 ASR 或模型不可用，才需要改用逐字稿 fallback。原始音檔不會上傳或寫入 tracker。
 
 ```text
 Item 1 — Prompt: Ask the info desk for help today.
@@ -213,9 +213,9 @@ python3 tools/register_speaking_session.py --help
 
 不可以。Drill 正確率只用來判斷特定能力是否值得進入新題 transfer check；它不是 ETS task score，也不能換算成 Writing section band。
 
-### 我可以附上錄音嗎？
+### 我可以直接提供錄音嗎？
 
-可以保留作為自己的參考，但教練不會轉錄或分析音檔。請同時提供可核對的逐字稿。
+可以。提供本機音檔後，教練會使用本機 ASR 產生 path-free transcript、時間軸與題型配對；若轉錄或配對不可靠，只要求補確認受影響的題目。也可以改提供逐字稿。原始音檔、暫存音訊與模型絕對路徑不會保存到 tracker。
 
 ## 延伸閱讀
 

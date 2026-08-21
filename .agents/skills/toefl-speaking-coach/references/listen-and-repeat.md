@@ -2,14 +2,14 @@
 
 Use rubric ID `ets-speaking-blueprint-2026-diagnostic`.
 
-Use the learner-provided transcript and its explicit item structure before assessment. Confirm only a missing or ambiguous item pairing; preserve explicitly labelled pairs. A set with fewer than 7 completely mapped items is diagnostic only, not a formal session.
+Use either the learner-provided transcript or the path-free local-ASR transcript, together with its explicit item structure, before assessment. Confirm only a missing or ambiguous item pairing; preserve explicitly labelled pairs. A set with fewer than 7 completely mapped items is diagnostic only, not a formal session.
 
 ## Required evidence
 
 - Source reconstruction: omission, addition, substitution, and word order by item
-- Word recognition and intelligibility — unavailable from transcript-only evidence
-- Segmental pronunciation — unavailable from transcript-only evidence
-- Stress, rhythm, and intonation — unavailable from transcript-only evidence
+- Word recognition and intelligibility — unavailable unless the applicable acoustic evidence is usable
+- Segmental pronunciation — unavailable unless the applicable acoustic evidence is usable
+- Stress, rhythm, and intonation — unavailable unless the applicable acoustic evidence is usable
 - Accurate items as positive control evidence
 
 Compare the exact supplied source and learner tokens before classifying or counting any omission, addition, substitution, or word-order difference. Never report a reconstruction difference that the supplied transcript does not support.

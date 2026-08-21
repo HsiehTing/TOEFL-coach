@@ -22,6 +22,7 @@ from toefl_tracker.validation import validate_attempt
 from toefl_tracker.quality import quality_decision
 from toefl_tracker.reports import rebuild_modality
 from toefl_tracker.speaking_progress import write_speaking_progress_overview
+from toefl_tracker.speaking_feedback import validate_segment_usability_feedback
 
 
 ITEM_COUNTS = {"listen_and_repeat": 7, "take_an_interview": 4}
@@ -55,6 +56,7 @@ _PERSISTED_INSPECTION_FIELDS = tuple(
 ) + ("reliable_dimensions",)
 _SEGMENT_QUALITY_FIELD = "segment_quality"
 _DIMENSION_OBSERVATIONS_FIELD = "audio_dimension_observations"
+_SEGMENT_USABILITY_FIELDS = {"text_usable", "acoustic_usable", "asr_recognizability"}
 _DURATION_TOLERANCE_SECONDS = 1e-6
 _PROVENANCE_KEYS = {"executables", "model_identifier", "model_sha256"}
 _EXECUTABLE_NAMES = {"ffmpeg", "ffprobe", "whisper-cli"}
@@ -375,7 +377,8 @@ def _validate_segment_quality_artifact(value: object) -> list[dict]:
         if not isinstance(row, Mapping):
             raise ValidationError("learner segment quality is invalid")
         required = {"segment_id", "start", "end", "mean_dbfs", "peak_dbfs", "clipping", "decodable", "quality", "reliable_dimensions"}
-        if set(row) != required:
+        extra_fields = set(row) - required
+        if not required <= set(row) or (extra_fields and extra_fields != _SEGMENT_USABILITY_FIELDS):
             raise ValidationError("learner segment quality fields are invalid")
         if (
             not isinstance(row["segment_id"], str)
@@ -396,6 +399,26 @@ def _validate_segment_quality_artifact(value: object) -> list[dict]:
             or any(not isinstance(item, str) for item in row["reliable_dimensions"])
         ):
             raise ValidationError("learner segment quality fields are invalid")
+        has_usability = _SEGMENT_USABILITY_FIELDS <= set(row)
+        if has_usability:
+            if type(row["text_usable"]) is not bool or type(row["acoustic_usable"]) is not bool:
+                raise ValidationError("learner segment usability fields are invalid")
+            proxy = row["asr_recognizability"]
+            if (
+                not isinstance(proxy, Mapping)
+                or set(proxy) - {"status", "overlap_segment_count", "avg_logprob", "max_no_speech_prob"}
+                or proxy.get("status") not in {"proxy", "unavailable"}
+                or type(proxy.get("overlap_segment_count")) is not int
+                or proxy["overlap_segment_count"] < 0
+            ):
+                raise ValidationError("learner ASR recognizability is invalid")
+            for field in ("avg_logprob", "max_no_speech_prob"):
+                if field in proxy and (
+                    type(proxy[field]) not in {int, float} or not isfinite(proxy[field])
+                ):
+                    raise ValidationError("learner ASR recognizability is invalid")
+        elif any(field in row for field in _SEGMENT_USABILITY_FIELDS):
+            raise ValidationError("learner segment usability fields are incomplete")
         quality = row["quality"]
         if (
             not isinstance(quality, Mapping)
@@ -485,15 +508,26 @@ def _learner_quality(
             quality["start"] != segment["start"] or quality["end"] != segment["end"]
         ):
             raise ValidationError("learner segment quality does not match mapping")
-        if quality["quality"]["usable"] is not True:
-            raise ValidationError("learner segment audio quality is insufficient")
-        dimensions = _normalized_reliable_dimensions(
-            quality["reliable_dimensions"], task_type, quality["quality"]["dimension_set"]
-        )
+        has_usability = _SEGMENT_USABILITY_FIELDS <= set(quality)
+        if has_usability:
+            if quality["text_usable"] is not True:
+                raise ValidationError("learner segment text is unavailable")
+            # A low-volume learner turn may still support bounded text
+            # reconstruction/interview-content evidence.  It cannot unlock
+            # audio-performance dimensions, even when the whole file is clear.
+            dimensions = _text_reliable_dimensions(task_type)
+        else:
+            if quality["quality"]["usable"] is not True:
+                raise ValidationError("learner segment audio quality is insufficient")
+            dimensions = _normalized_reliable_dimensions(
+                quality["reliable_dimensions"], task_type, quality["quality"]["dimension_set"]
+            )
         provided_dimensions = set(quality["reliable_dimensions"])
-        if quality["quality"]["dimension_set"] == "text_only" and provided_dimensions != dimensions:
+        if has_usability and provided_dimensions != dimensions:
             raise ValidationError("learner segment reliable dimensions are invalid")
-        if quality["quality"]["dimension_set"] == "all" and not dimensions <= provided_dimensions:
+        if not has_usability and quality["quality"]["dimension_set"] == "text_only" and provided_dimensions != dimensions:
+            raise ValidationError("learner segment reliable dimensions are invalid")
+        if not has_usability and quality["quality"]["dimension_set"] == "all" and not dimensions <= provided_dimensions:
             raise ValidationError("learner segment reliable dimensions are invalid")
         reliable = dimensions if reliable is None else reliable & dimensions
     if reliable is None:
@@ -708,6 +742,19 @@ def build_speaking_registration(
         list(event_rows),
         feedback,
     )
+    if persisted_inspection["segment_quality"] and all(
+        _SEGMENT_USABILITY_FIELDS <= set(row)
+        for row in persisted_inspection["segment_quality"]
+    ):
+        try:
+            validate_segment_usability_feedback(
+                bounded_attempt["task_type"],
+                feedback,
+                persisted_inspection["segment_quality"],
+                segment_rows,
+            )
+        except ValueError as error:
+            raise ValidationError(str(error)) from error
     if attempt.get("audio_quality") != {
         "decodable": persisted_inspection["decodable"],
         "clipping": persisted_inspection["clipping"],

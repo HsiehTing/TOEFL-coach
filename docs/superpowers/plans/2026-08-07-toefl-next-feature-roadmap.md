@@ -492,6 +492,92 @@ R1 未完成 → R2 仍未完成 → drill: required → 完成 drill
 
 下一個切入點：回到主 roadmap 的下一個未完成 learner-facing 或資料品質項目；Speaking revision、drill 與 transfer 的 transcript-supported 閉環已可安全使用，audio-performance 維度仍維持獨立 fail-closed。
 
+## Learner clarification — 本機音檔轉錄與 Speaking 題型分流（2026-08-19）
+
+Learner 要求系統直接讀取本機口說音檔，不再把「提供逐字稿」當成一般使用流程的前置條件。目標不是建立通用多人聲紋辨識，而是以本機 ASR 產生可追溯的時間軸文字，再依 TOEFL 題型結構辨識 prompt／learner turn，分別分析 Listen and Repeat 與 Take an Interview。
+
+此 milestone 取代「音檔一律要求 learner 提供 transcript」作為日常 intake 的規則；原有 learner-provided transcript 仍是可接受的覆核或修正證據。任何自動轉錄、角色推斷或音訊推論都維持 `diagnostic_only`，不得產生 official task score 或 Speaking section band。
+
+### 官方構念與路由邊界
+
+- Listen and Repeat 是 7 題的句子重述。其核心是聽到的內容是否被準確重建，以及說出的句子是否清楚可懂；不得用它評估 interview 的理由、例子或論述發展。
+- Take an Interview 是 4 題的模擬訪談。其核心是能否自然、具意義地回答問題，並以清楚連貫的延伸、適當文法、詞彙與可懂的韻律完成回答；不得以逐詞相同作為主要內容判定。
+- 兩條 route 共用音檔技術檢查、本機轉錄、時間軸正規化與隱私規則；配對邏輯、內容分析、錯誤分類、練習設計與正向證據必須分開保存與呈現。
+
+### 共用本機音檔入口
+
+```text
+source audio (local only)
+    ↓
+technical inspection + local Whisper transcription
+    ↓
+timestamped ASR segments, token confidence, and segment quality
+    ↓
+TOEFL structure-based role mapping (not voice identity)
+    ↓
+Listen and Repeat route        Take an Interview route
+```
+
+- 使用 Apple Silicon 本機可執行的 `mlx-whisper`，預設模型為 `mlx-community/whisper-small-mlx`；model 可在 repository 外快取或由明確設定指定，且 model identifier／版本要保存為 provenance。未來可在相同 adapter 介面下支援 `whisper.cpp` fallback，但不得讓兩種 backend 改變資料 schema 或評估邊界。
+- 轉錄器一次處理完整音檔並輸出 word-timestamped ASR segments；它必須正規化大小寫、標點與 segment 邊界，但不得補寫 ASR 未產生的字詞。
+- 原始音檔、暫存 WAV、模型絕對路徑與聲紋資料不得寫入 repository。正式 attempt 只保存 path-free 的轉錄片段、mapping、quality summary、model provenance、使用者確認紀錄與 feedback evidence。
+- 不做 speaker enrollment、聲紋辨識或通用 diarization。角色只根據 TOEFL 題型、時間順序、文字結構及相鄰 turn 的關係推斷；推斷不足時只要求確認受影響 item，不重問整份音檔。
+
+### Listen and Repeat 音檔處理
+
+1. 忽略 scenario instruction／directions，識別七組 source sentence → learner repeat 的時間軸配對。
+2. 以預期交替順序、相鄰文字相似度與 item count 建立配對；learner response 與 source 不必完全相同，因為 omission、addition、substitution 與 word order 都是待分析的 evidence。
+3. 對每一組輸出 token-level reconstruction diff、回應是否完整、ASR recognizability 與可用的 timestamp evidence。
+4. learner 重複錄兩次、ASR 將一句切為多段或尾句重疊時，保留候選與理由；只在無法選出完整且時間合理的 learner response 時要求該 item 的確認。
+5. 不計算 directness、relevance、elaboration 或 coherence；不將「模型辨識到正確句子」誤報成已證實的音素級發音正確。
+
+### Take an Interview 音檔處理
+
+1. 識別四組 interviewer question → learner answer；問題形式、回答長度、回答 discourse 與時間順序可作為結構證據。
+2. 回答內容以 directness、relevance、elaboration、coherence、grammar 與 vocabulary 分析；逐詞比對不得是主要內容評分方式。
+3. 音訊可用時，另外觀察 fluency、pausing、repair、intelligibility 與 prosody；這些觀察與回答內容分開記錄。
+4. 多人插話、問題／回答重疊、缺少其中一方或 ASR 無法確認結構時，只標記受影響 question 為 ambiguous，並要求最小範圍的 learner confirmation。
+
+### 文字可用性與音訊表現必須分離
+
+- decodable audio 一律先嘗試本機轉錄；錄音偏小、背景聲或單一 segment 音量不足不得直接使整份 session 無法分析。
+- 每個 learner segment 都要獨立產生 `text_usable` 與 `acoustic_usable` 狀態。ASR 文字與來源／問題能形成可核對證據時，可進行 reconstruction 或 interview content 診斷；聲音品質不足時，發音、重音、韻律、流暢度與可懂度必須標記為 unavailable／limited，而非由文字臆測。
+- ASR token confidence、跨次轉錄一致性與時間對齊可形成 `asr_recognizability` diagnostic proxy，協助指出需要重錄或確認的字詞；它不是 ETS 發音分數，也不可單獨升格為 `SPK-PRONUNCIATION`、`SPK-INTELLIGIBILITY` 或 prosody 的可靠正式 evidence。
+- 現行 audio-quality policy 要升版為 segment-scoped decision：品質閘門只限制可主張的 audio-performance dimensions，不阻擋可驗證的文字分析。僅在音檔不可解碼或 ASR／結構證據也無法建立最小可用 transcript 時，才拒絕該項正式 session。
+
+### 實作切片與驗收
+
+第一個切片：新增本機 transcription adapter 與 CLI（預計 `tools/toefl_tracker/transcription.py`、`tools/transcribe_speaking_audio.py` 及其測試），輸入本機音檔並輸出 path-free、timestamped ASR artifact；必須有 backend／model preflight、無網路時的清楚錯誤、暫存檔清理與不寫入 raw audio 的測試。
+
+第二個切片：擴充 role mapping，使其可接收 ASR segment、前置 directions、切分／合併 turn、額外重複與 per-item ambiguity；Listen and Repeat 僅接受可證明的七組配對，Interview 僅接受可證明的四組問答。
+
+第三個切片：將 segment-scoped quality 與 `text_usable`／`acoustic_usable` 接入 Speaking registration、feedback 與 progress overview；維持既有 immutable lineage、exact timestamp evidence、`diagnostic_only` 邊界及 raw-audio exclusion。
+
+回歸測試至少涵蓋：
+
+1. 含 directions 的完整 7 題 Listen and Repeat，並保留 reconstruction diff。
+2. 一題漏字／換字、尾句重複兩次與一句被 ASR 切為多段的 Listen and Repeat。
+3. 完整 4 問 4 答的 Interview，確認不使用 token similarity 作為內容評分。
+4. 可解碼但低音量的 learner segment：文字診斷可用、audio-performance 維度受限，整份 session 不會被不必要拒絕。
+5. 重疊、多人插話或結構不明的單一 item：只要求該 item 確認，且不把推測角色當正式 evidence。
+6. raw audio、temporary WAV、model absolute path 與 voice identity data 均不會出現在 canonical attempt 或 Git artifact。
+
+### 實作進度（2026-08-19）
+
+已完成第一個切片的轉錄層：新增 lazy `mlx-whisper` adapter、path-free JSON artifact、timestamp／word provenance、local model hash、backend preflight 錯誤，以及 stdout／檔案輸出 CLI；相關正規化、重疊 segment、空 transcript、缺少套件、隱私與輸出測試已通過。
+
+第二個切片已完成：新增 ASR artifact → directions 過濾 → 7／4 題 role mapping 的 path-free orchestration（`tools/toefl_tracker/speaking_audio.py`、`tools/prepare_speaking_session.py`），可輸出 `ready_for_diagnostic` 或 `needs_confirmation`，並覆蓋切段、尾句重試、方向文字與兩條 route 的回歸測試。
+
+第三個切片已完成第一階段：`--include-segment-quality` 會對每個 learner turn 產生 path-free quality、`text_usable`、`acoustic_usable` 與 ASR recognizability proxy；Speaking registration validator 可保留這些欄位，低音量但文字可用的 segment 不會被錯誤當成整段文字不可分析；progress overview 會顯示兩種 usability 的 segment 計數。這些欄位仍是 diagnostic availability，不會自動建立 pronunciation／intelligibility 等正式 audio-performance evidence。
+
+route-specific feedback renderer 已完成：`tools/render_speaking_usability_feedback.py` 會產生固定的 `## Segment usability (diagnostic only)` 區塊；Listen and Repeat 只顯示 reconstruction 可用性，Interview 只顯示內容維度可用性，並列出每個 learner turn 的 usability／ASR proxy。Registration 會在新格式含有 segment usability 時要求該固定區塊，避免保存沒有邊界說明的 audio-derived feedback。這些欄位仍只支援 diagnostic evidence，不能自動建立 pronunciation／intelligibility 等正式 audio-performance evidence。
+
+資料品質補強已完成：Speaking audit 會重新驗證保存的 segment usability feedback block；若有人直接修改 feedback 而移除該區塊，audit 會 fail closed。這保留 immutable feedback 與 audio-derived boundary 的一致性。
+
+Intake 文件規則已同步：README 與 Listen and Repeat／Interview references 現在明確接受「本機音檔或逐字稿」；本機 ASR 是預設音檔路徑，逐字稿只在 learner 直接提供或本機 ASR 不可用時作為 fallback，不再把逐字稿列為音檔前置條件。
+
+ASR role-mapping robustness 也已補強：Listen and Repeat 會過濾 scenario setup、只在文字連續證據足夠時合併相鄰 fragment，並在低相似度 response 時維持 item stride，避免錯位後把後續題目誤配成 learner turn；不足的 item 仍會標記為 ambiguous。
+
 ## 建議執行順序
 
 ```text

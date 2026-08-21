@@ -132,6 +132,83 @@ def _validate_rows(transcript_rows: Sequence[Mapping]) -> tuple[_TranscriptRow, 
     return tuple(result)
 
 
+def _asr_rows(transcript: Mapping | Sequence[Mapping]) -> tuple[_TranscriptRow, ...]:
+    """Read either a normalized ASR artifact or its segment list."""
+    if isinstance(transcript, Mapping):
+        rows = transcript.get("segments")
+    else:
+        rows = transcript
+    if isinstance(rows, (str, bytes)) or not isinstance(rows, Sequence):
+        raise ValidationError("ASR transcript must contain a segment sequence")
+    return _validate_rows(rows)
+
+
+def _merge_adjacent_rows(
+    rows: Sequence[_TranscriptRow], *, max_gap_seconds: float
+) -> tuple[_TranscriptRow, ...]:
+    """Join only near-contiguous ASR fragments from one spoken turn."""
+    if not isfinite(max_gap_seconds) or max_gap_seconds < 0:
+        raise ValidationError("ASR merge gap is invalid")
+    merged: list[_TranscriptRow] = []
+    for row in rows:
+        gap = row.start - merged[-1].end if merged else None
+        if (
+            merged
+            # A zero-gap boundary can be a real source→learner turn change;
+            # only merge fragments with a small positive pause.
+            and gap is not None
+            and 0.05 <= gap <= max_gap_seconds
+            and (
+                _similarity(merged[-1].text, row.text) >= 0.25
+                or min(len(_tokens(merged[-1].text)), len(_tokens(row.text))) <= 3
+            )
+        ):
+            previous = merged[-1]
+            merged[-1] = _TranscriptRow(
+                segment_id=f"{previous.segment_id}+{row.segment_id}",
+                start=previous.start,
+                end=max(previous.end, row.end),
+                text=f"{previous.text} {row.text}".strip(),
+            )
+        else:
+            merged.append(row)
+    return tuple(merged)
+
+
+def _is_repeat_direction(text: str) -> bool:
+    normalized = " ".join(text.casefold().split())
+    return (
+        normalized.startswith("repeat only once")
+        or normalized.startswith("listen and repeat")
+        or ("listen" in normalized and "repeat" in normalized)
+    )
+
+
+def _is_repeat_setup(text: str) -> bool:
+    """Filter scenario narration before the seven sentence pairs."""
+    normalized = " ".join(text.casefold().split())
+    return normalized.startswith((
+        "you are explaining ",
+        "you are describing ",
+        "in this task ",
+        "in this scenario ",
+    ))
+
+
+def _is_interview_direction(text: str) -> bool:
+    normalized = " ".join(text.casefold().split())
+    return "interview" in normalized and not _question(normalized)
+
+
+def _filter_directions(task_type: str, rows: Sequence[_TranscriptRow]) -> tuple[_TranscriptRow, ...]:
+    if task_type == "listen_and_repeat":
+        return tuple(
+            row for row in rows
+            if not _is_repeat_direction(row.text) and not _is_repeat_setup(row.text)
+        )
+    return tuple(row for row in rows if not _is_interview_direction(row.text))
+
+
 def _tokens(text: str) -> set[str]:
     return set(_TOKEN.findall(text.casefold()))
 
@@ -141,6 +218,24 @@ def _similarity(first: str, second: str) -> float:
     if not first_tokens or not second_tokens:
         return 0.0
     return len(first_tokens & second_tokens) / len(first_tokens | second_tokens)
+
+
+def _drop_near_duplicate_rows(
+    rows: Sequence[_TranscriptRow], *, max_gap_seconds: float = 0.5
+) -> tuple[_TranscriptRow, ...]:
+    """Drop a short trailing ASR fragment that repeats the prior turn."""
+    result: list[_TranscriptRow] = []
+    for row in rows:
+        if result:
+            previous = result[-1]
+            if (
+                row.end - row.start <= 0.75
+                and 0 <= row.start - previous.end <= max_gap_seconds
+                and _similarity(previous.text, row.text) >= 0.8
+            ):
+                continue
+        result.append(row)
+    return tuple(result)
 
 
 def _question(text: str) -> bool:
@@ -283,3 +378,76 @@ def infer_toefl_role_map(task_type: str, transcript_rows: Sequence[Mapping]) -> 
     if task_type == "listen_and_repeat":
         return _listen_and_repeat(rows)
     return _interview(rows)
+
+
+def _asr_repeat_role_map(rows: Sequence[_TranscriptRow]) -> RoleMapResult:
+    """Map ASR rows with directions and occasional extra response attempts."""
+    expected = ITEM_COUNTS["listen_and_repeat"]
+    mapped: list[RoleMapRow] = []
+    ambiguities: list[AmbiguousRoleRow] = []
+    cursor = 0
+    for item in range(1, expected + 1):
+        if cursor >= len(rows):
+            ambiguities.append(AmbiguousRoleRow(item, "missing source or learner ASR turn"))
+            continue
+        source = rows[cursor]
+        candidates = list(rows[cursor + 1:cursor + 3])
+        if not candidates:
+            ambiguities.append(AmbiguousRoleRow(item, "missing learner ASR turn"))
+            continue
+        ranked = sorted(
+            ((_similarity(source.text, candidate.text), index, candidate) for index, candidate in enumerate(candidates)),
+            key=lambda row: (-row[0], row[1]),
+        )
+        best_score, best_offset, response = ranked[0]
+        second_score = ranked[1][0] if len(ranked) > 1 else -1.0
+        if best_score < 0.15:
+            ambiguities.append(AmbiguousRoleRow(item, "ASR source and learner turns are not similar enough"))
+            # Preserve the expected source→response stride so a bad or
+            # repeated response does not shift every later item by one turn.
+            cursor += 2
+            continue
+        if best_offset > 0 and best_score - second_score < 0.10:
+            ambiguities.append(AmbiguousRoleRow(item, "multiple learner ASR turns have ambiguous pairing"))
+        mapped.extend((
+            _mapped(item, "examiner", source, "asr_expected_item_order"),
+            _mapped(item, "learner", response, "asr_repeat_similarity"),
+        ))
+        cursor += best_offset + 2
+
+    if cursor < len(rows):
+        ambiguities.append(AmbiguousRoleRow(expected, "extra ASR turn remains after the expected seven items"))
+    return RoleMapResult(
+        task_type="listen_and_repeat",
+        rows=tuple(mapped),
+        ambiguous_rows=tuple(ambiguities),
+        requires_confirmation=bool(ambiguities),
+        reason=(
+            "ASR structure requires item confirmation"
+            if ambiguities else "complete ASR Listen and Repeat structure"
+        ),
+        source_transcript_hash=_source_hash(rows),
+    )
+
+
+def infer_toefl_role_map_from_asr(
+    task_type: str,
+    transcript: Mapping | Sequence[Mapping],
+    *,
+    merge_gap_seconds: float = 0.15,
+) -> RoleMapResult:
+    """Infer TOEFL roles from normalized local-ASR segments.
+
+    Directions are removed before route-specific mapping.  The function is
+    intentionally conservative: uncertain pairings are returned as
+    ``ambiguous_rows`` instead of assigning a speaker identity from acoustics.
+    """
+    if task_type not in ITEM_COUNTS:
+        raise ValidationError("unknown TOEFL speaking task")
+    rows = _merge_adjacent_rows(_asr_rows(transcript), max_gap_seconds=merge_gap_seconds)
+    filtered = _drop_near_duplicate_rows(_filter_directions(task_type, rows))
+    if task_type == "listen_and_repeat":
+        return _asr_repeat_role_map(filtered)
+    if len(filtered) != ITEM_COUNTS["take_an_interview"] * 2:
+        return _ambiguous("take_an_interview", filtered, "ASR interview structure is incomplete or contains extra turns")
+    return _interview(filtered)

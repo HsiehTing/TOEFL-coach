@@ -1,22 +1,24 @@
 ---
 name: toefl-speaking-coach
-description: Use when the learner provides a TOEFL 2026 speaking transcript, Listen and Repeat practice, an Interview set, a re-recording transcript, a speaking diagnosis request, or a speaking progress review. Do not transcribe or assess raw audio; the learner supplies the transcript.
+description: Use when the learner provides TOEFL 2026 speaking audio or transcript, Listen and Repeat practice, an Interview set, a re-recording transcript, a speaking diagnosis request, or a speaking progress review. Local audio may be transcribed through the project-local ASR adapter; do not use cloud transcription or speaker identity data.
 ---
 
 # TOEFL Speaking Coach
 
 ## Core rule
 
-Treat the learner-provided transcript as the sole textual record. Do not transcribe raw audio, infer missing words, infer speakers from acoustics, or make pronunciation claims from a transcript.
+Treat an explicit learner transcript or the path-free output of the local ASR adapter as the textual record. A learner-provided transcript remains the fallback when local ASR is unavailable. Do not use cloud transcription, speaker enrollment, voiceprints, or generic diarization; do not infer missing words or roles from acoustics alone. ASR recognizability is a diagnostic proxy, not proof of phoneme-level pronunciation.
 
 ## Intake gate
 
 1. Read `standards/ets-2026/manifest.yaml` and `score-policy.md`.
-2. Ask the learner for a transcript when they provide audio alone. Do not attempt transcription.
-3. Require each item to identify the prompt and learner response. Preserve the supplied English verbatim; timestamps are optional but must not be invented.
-4. Ask only about a missing or ambiguous prompt/response pairing. A complete transcript with explicit labels needs no reconfirmation.
-5. 配對完成前不得正式評估。A partial 7-item Listen and Repeat set or 4-question Interview set is diagnostic only and cannot be registered as a formal session.
-6. Mark pronunciation, stress, rhythm, intonation, fluency, and intelligibility as unavailable unless the learner separately supplies reliable human-observed evidence for every relevant learner segment. A clear recording alone is not proof that any of those dimensions was reliably assessed.
+2. When the learner provides local audio, invoke `tools/prepare_speaking_session.py` with the explicit route; add `--include-segment-quality` when the file is being prepared for registration. It runs local transcription, route-specific role mapping, and (when requested) learner-turn quality checks. If the adapter or model is unavailable, ask for a transcript instead. Never upload the audio.
+3. Normalize the path-free ASR artifact, filter directions, and infer the task structure using `role_mapping.py`; preserve supplied transcript text verbatim when the learner provides one.
+4. Require each item to identify the prompt and learner response. Timestamps from ASR are evidence; never invent missing boundaries.
+5. Ask only about a missing or ambiguous prompt/response pairing. A complete transcript with explicit labels needs no reconfirmation.
+6. 配對完成前不得正式評估。A partial 7-item Listen and Repeat set or 4-question Interview set is diagnostic only and cannot be registered as a formal session.
+7. Keep `text_usable` and `acoustic_usable` separate for every learner segment. A low-volume but decodable turn may remain text-usable while acoustic dimensions are limited; ASR recognizability is a diagnostic proxy, not phoneme-level proof. Pronunciation, stress, rhythm, intonation, fluency, and intelligibility are unavailable for formal evidence unless the applicable audio evidence contract is satisfied.
+8. When segment quality is available, insert the exact block produced by `tools/render_speaking_usability_feedback.py` under the first-round feedback. Keep its route focus unchanged: Listen and Repeat reports reconstruction availability; Interview reports content dimensions. The block is diagnostic only and must not be rewritten as a pronunciation score.
 
 ## Route
 
@@ -39,7 +41,7 @@ Give these parts in order:
 
 Across these parts, name every dimension in the selected route's `Required evidence` and mark it as an observed strength, observed issue, no issue found, or unavailable; never silently omit a listed dimension. Transcript-only evidence supports content, reconstruction, grammar, and vocabulary—not audio-performance dimensions.
 
-Do not convert the session to a Speaking section band. Do not provide complete model responses before the learner re-records.
+Do not convert the session to a Speaking section band. Do not provide complete model responses before the learner re-records. Do not persist raw audio, temporary audio, model absolute paths, or voice identity data.
 
 ## Revision
 
@@ -49,9 +51,9 @@ Compare the assigned segments and priorities only. Report resolved, partly resol
 
 Use only the project CLIs for speaking persistence; never edit transcripts, events, attempts, or derived views by hand.
 
-- Complete original session or transfer: `tools/register_speaking_session.py`; store only the learner-provided transcript, explicit prompt/learner segments, assessment, and exact-excerpt events.
+- Complete original session or transfer: `tools/register_speaking_session.py`; a prepared local-audio artifact may be supplied with `--prepared-session`, which carries the path-free ASR mapping and segment quality into registration. Store only the path-free transcript or ASR artifact, explicit prompt/learner segments, task mapping, segment-scoped `text_usable`／`acoustic_usable` quality, model provenance, assessment, and exact-excerpt events.
 - Re-recording: `tools/validate_speaking_rerecording.py` before `tools/register_speaking_rerecording.py`.
 - Targeted drill: `tools/validate_speaking_drill.py` before `tools/register_speaking_drill.py`.
 - `tools/register_attempt.py` is a shared internal compatibility entry point; do not call it from this learner-facing skill.
 
-Register a formal original only for a complete 7-item or 4-question set. After every state-changing CLI, run `tools/validate_tracker.py` and report the session or drill ID. Do not persist raw audio or audio-derived artifacts.
+Register a formal original only for a complete 7-item or 4-question set. After every state-changing CLI, run `tools/validate_tracker.py` and report the session or drill ID. Do not persist raw audio or audio-derived files; path-free transcript and mapping artifacts are allowed.

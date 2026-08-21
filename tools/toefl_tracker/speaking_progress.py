@@ -46,6 +46,24 @@ def _mapping_confirmed(root: Path, attempt_id: str) -> bool | None:
     )
 
 
+def _segment_usability(root: Path, attempt_id: str) -> dict[str, int]:
+    """Summarize segment-scoped text/audio availability without scoring."""
+    path = root / "tracker/speaking/attempts" / attempt_id / "audio-inspection.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"learner_segments": 0, "text_usable_segments": 0, "acoustic_usable_segments": 0}
+    rows = data.get("segment_quality") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        return {"learner_segments": 0, "text_usable_segments": 0, "acoustic_usable_segments": 0}
+    usable_rows = [row for row in rows if isinstance(row, dict)]
+    return {
+        "learner_segments": len(usable_rows),
+        "text_usable_segments": sum(row.get("text_usable") is True for row in usable_rows),
+        "acoustic_usable_segments": sum(row.get("acoustic_usable") is True for row in usable_rows),
+    }
+
+
 def _practice_lifecycle(rows: list[dict]) -> list[dict]:
     """Summarize retained drill/transfer lineage without inferring a score."""
     by_code: dict[str, dict] = {}
@@ -186,6 +204,7 @@ def build_speaking_progress_overview(root: Path) -> dict:
                 "counted_events": errors[row["attempt_id"]],
                 "reliable_dimensions": _reliable_dimensions(root, row["attempt_id"]),
                 "role_mapping_confirmed": _mapping_confirmed(root, row["attempt_id"]),
+                **_segment_usability(root, row["attempt_id"]),
             }
             for row in recent
         ],
@@ -196,6 +215,7 @@ def build_speaking_progress_overview(root: Path) -> dict:
             "Transcript evidence never establishes pronunciation, prosody, fluency, or intelligibility unless the persisted audio inspection marks that dimension reliable.",
             "Speaking drill and transfer lifecycle is result lineage only; it does not establish a TOEFL task score, section band, or audio-performance claim.",
             "Speaking re-recordings are revisions, not formal sessions; their transcript-supported outcomes do not establish audio-performance results.",
+            "Segment usability is diagnostic availability only: text-usable turns may support bounded content analysis, while acoustic-usable turns do not by themselves prove pronunciation or intelligibility.",
         ],
     }
 
@@ -208,17 +228,18 @@ def write_speaking_progress_overview(root: Path) -> Path:
         "Diagnostic progress view only; not a TOEFL Speaking section band.", "",
         f"Formal sessions: {overview['formal_session_count']}", "",
         "## Recent formal sessions",
-        "| Attempt | Task | Duration | Counted events | Reliable dimensions | Role mapping |",
-        "| --- | --- | ---: | ---: | --- | --- |",
+        "| Attempt | Task | Duration | Counted events | Reliable dimensions | Text usable | Acoustic usable | Role mapping |",
+        "| --- | --- | ---: | ---: | --- | ---: | ---: | --- |",
     ]
     for row in overview["recent_sessions"]:
         lines.append(
             f"| `{row['attempt_id']}` | `{row['task_type']}` | {row['duration_seconds'] or 'unknown'} | "
             f"{row['counted_events']} | {', '.join(row['reliable_dimensions']) or 'text-only / unknown'} | "
+            f"{row['text_usable_segments']}/{row['learner_segments']} | {row['acoustic_usable_segments']}/{row['learner_segments']} | "
             f"{'confirmed' if row['role_mapping_confirmed'] is True else 'unknown'} |"
         )
     if not overview["recent_sessions"]:
-        lines.append("| — | — | — | — | — | — |")
+        lines.append("| — | — | — | — | — | — | — | — |")
     lines.extend(["", "## Route signals"])
     for route, summary in overview["routes"].items():
         lines.append(f"### `{route}` — {summary['formal_session_count']} formal sessions")

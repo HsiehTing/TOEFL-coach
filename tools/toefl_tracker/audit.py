@@ -31,6 +31,7 @@ from toefl_tracker.speaking import (
     validate_speaking_assessment,
     validate_transcript_role_mapping,
 )
+from toefl_tracker.speaking_feedback import validate_segment_usability_feedback
 from toefl_tracker.validation import validate_attempt, validate_error_event
 
 
@@ -120,6 +121,19 @@ def _audit_speaking_artifacts(
         segments, _ = validate_transcript_role_mapping(
             attempt["task_type"], transcript_segments, segments
         )
+        quality_rows = inspection.get("segment_quality")
+        if (
+            isinstance(quality_rows, list)
+            and quality_rows
+            and all(
+                {"text_usable", "acoustic_usable", "asr_recognizability"} <= set(row)
+                for row in quality_rows
+                if isinstance(row, dict)
+            )
+        ):
+            validate_segment_usability_feedback(
+                attempt["task_type"], feedback, quality_rows, segments
+            )
         learner_segments = tuple(
             row for row in segments if isinstance(row, dict) and row.get("role") == "learner"
         )

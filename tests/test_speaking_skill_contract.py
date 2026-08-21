@@ -49,11 +49,24 @@ def test_skill_requires_user_transcript_and_pairing_before_assessment() -> None:
     assert "learner-provided transcript" in text
 
 
-def test_speaking_skill_does_not_transcribe_or_infer_audio_evidence() -> None:
+def test_speaking_skill_uses_local_transcription_without_voice_identity() -> None:
     text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
-    assert "Do not transcribe raw audio" in text
-    assert "tools/prepare_speaking_session.py" not in text
-    assert "voiceprint" not in text.lower()
+    assert "tools/prepare_speaking_session.py" in text
+    assert "cloud transcription" in text
+    assert "voiceprints" in text
+    assert "Do not transcribe raw audio" not in text
+
+
+def test_speaking_docs_accept_local_audio_or_transcript() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    listen = (SKILL / "references/listen-and-repeat.md").read_text(encoding="utf-8")
+    interview = (SKILL / "references/take-an-interview.md").read_text(encoding="utf-8")
+
+    assert "本機音檔／逐字稿" in readme
+    assert "可直接接收本機音檔" in readme
+    assert "不再轉錄音檔" not in readme
+    assert "path-free local-ASR transcript" in listen
+    assert "path-free local-ASR transcript" in interview
 
 
 def test_speaking_skill_uses_dedicated_persistence_commands() -> None:

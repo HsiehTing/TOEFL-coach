@@ -23,6 +23,7 @@ from toefl_tracker.speaking_practice import register_transcript_drill
 from toefl_tracker.speaking_revision import register_transcript_rerecording
 from toefl_tracker.speaking_transfer import prepare_speaking_transfer_attempt
 from toefl_tracker.speaking_progress import build_speaking_progress_overview
+from toefl_tracker.speaking_feedback import render_segment_usability_feedback
 from toefl_tracker.audit import audit_workspace
 
 
@@ -1268,6 +1269,48 @@ def test_cli_registers_valid_speaking_session(
     assert (destination / "source-reference.txt").read_text() == (
         "source:" + sha256(b"/private/source/practice.m4a").hexdigest() + "\n"
     )
+
+
+def test_audit_rejects_missing_segment_usability_feedback_block(tmp_path: Path) -> None:
+    standards = tmp_path / "standards/ets-2026"
+    standards.mkdir(parents=True)
+    (standards / "manifest.yaml").write_text(yaml.safe_dump(MANIFEST), encoding="utf-8")
+    (standards / "score-policy.md").write_text(
+        (ROOT / "standards/ets-2026/score-policy.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    artifact = inspection("/private/source/practice.m4a")
+    mapped = segments(7)
+    for row in artifact["segment_quality"]:
+        row["text_usable"] = True
+        row["acoustic_usable"] = True
+        row["asr_recognizability"] = {
+            "status": "proxy",
+            "overlap_segment_count": 1,
+        }
+        row["reliable_dimensions"] = [
+            "content", "grammar", "reconstruction", "vocabulary",
+        ]
+    feedback = FEEDBACK + "\n" + render_segment_usability_feedback(
+        "listen_and_repeat", artifact["segment_quality"], mapped
+    )
+    register_speaking_session(
+        tmp_path,
+        MANIFEST,
+        registration_attempt("Seven source sentences", "Seven learner repetitions"),
+        "Seven source sentences",
+        "Seven learner repetitions",
+        feedback,
+        [],
+        mapped,
+        artifact,
+    )
+    feedback_path = tmp_path / "tracker/speaking/attempts/S-LR-20260731-001/feedback-round-1.md"
+    feedback_path.write_text(FEEDBACK, encoding="utf-8")
+
+    problems = audit_workspace(tmp_path)
+
+    assert any("segment usability block" in problem for problem in problems), problems
 
 
 def test_end_to_end_speaking_drill_transfer_keeps_result_only_lineage(tmp_path: Path) -> None:

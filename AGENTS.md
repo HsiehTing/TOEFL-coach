@@ -13,7 +13,7 @@ Coach this learner toward TOEFL iBT 2026 Writing and Speaking section band 6 usi
 ## Routing
 
 - Writing prompt, response, revision, or writing progress request: use `.agents/skills/toefl-writing-coach`.
-- Speaking prompt, transcript, re-recording transcript, or speaking progress request: use `.agents/skills/toefl-speaking-coach`. For audio alone, ask the learner to provide a transcript; do not transcribe it.
+- Speaking prompt, transcript, audio, re-recording transcript, or speaking progress request: use `.agents/skills/toefl-speaking-coach`. For local audio, let the skill invoke the local-only transcription adapter; if the adapter or its model is unavailable, ask the learner for a transcript instead.
 - Load only the selected task route and its directly relevant references.
 - Build a Sentence belongs to the 2026 Writing section but is outside the two open-response coaching routes in this phase.
 
@@ -46,7 +46,11 @@ Coach this learner toward TOEFL iBT 2026 Writing and Speaking section band 6 usi
 
 ## Speaking Transcript
 
-- The learner supplies the transcript and explicitly identifies prompt and learner turns.
-- Ask only about missing or ambiguous pairings; do not infer words, roles, timestamps, or audio performance.
-- A partial or incomplete transcript is never a formal session.
-- Store transcripts, labelled segments, analysis, and exact-excerpt evidence; never store raw audio or audio-derived artifacts.
+- A learner-provided transcript remains valid evidence; for local audio, the skill may invoke `tools/prepare_speaking_session.py` (with `--include-segment-quality` for registration) to produce a path-free timestamped transcript, route mapping, and segment-scoped usability through the local ASR adapter.
+- The learner supplies the transcript when local ASR is unavailable or when an automatic pairing needs correction.
+- The adapter must not use cloud transcription, speaker enrollment, voiceprints, or generic diarization. Roles are inferred only from TOEFL task structure, timestamps, and text relationships.
+- Ask only about missing or ambiguous pairings; do not silently invent words, roles, timestamps, or audio performance.
+- Keep `text_usable` and `acoustic_usable` separate; ASR recognizability is a diagnostic proxy and never formal phoneme-level or TOEFL Speaking evidence.
+- When segment quality is persisted, include the fixed block from `tools/render_speaking_usability_feedback.py`; keep Listen and Repeat reconstruction and Interview content feedback separate.
+- A partial or incomplete 7-item Listen and Repeat set or 4-question Interview is diagnostic only and cannot be registered as a formal session.
+- Store only path-free transcripts, labelled segments, mapping, model provenance, analysis, and exact-excerpt evidence; never store raw audio, temporary audio, or model absolute paths.
